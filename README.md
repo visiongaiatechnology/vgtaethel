@@ -79,7 +79,7 @@ VGT Aethel/
 └── 📁 vgt_workspace/      # Persistent Mount Point (Memory & Config)
 
 
-🚀 Installation & Deployment
+#🚀 Installation & Deployment
 
 VGT Aethel ist für den Betrieb in isolierten Docker-Umgebungen optimiert.
 
@@ -101,7 +101,7 @@ Konfiguration
 Erstelle eine .env Datei im Root:
 
 GROQ_API_KEY=gsk_your_key_here
-# Optional: Messenger Tokens
+//Optional: Messenger Tokens
 TELEGRAM_TOKEN=...
 
 
