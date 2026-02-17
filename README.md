@@ -39,7 +39,7 @@ Groq API Key: Erforderlich für High-Speed Inferenz-Uplink.
 
 Installation
 
-git clone [https://github.com/VisionGaiaTechnology/vgt-aethel.git](https://github.com/VisionGaiaTechnology/vgt-aethel.git)
+git clone [https://github.com/VisionGaiaTechnology/vgtaethel.git](https://github.com/VisionGaiaTechnology/vgtaethel.git)
 cd vgt-aethel
 
 
