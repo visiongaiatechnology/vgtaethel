@@ -4,6 +4,8 @@ Sovereign Intelligence Interface & Neural Nexus Hub
 
 ⚠️ CLASSIFIED DEVELOPMENT PREVIEW
 
+[Die Roadmap für das Projekt gibt es hier ](https://github.com/visiongaiatechnology/vgtaethel/blob/main/Roadmap)
+
 WARNUNG: Dies ist eine Phase II (Expansion) Implementierung des AETHEL-Kerns.
 
 Die autonomen Agenten-Logiken und der Security Guard sind scharf geschaltet. Das System operiert mit Ring-0-nahen Kompetenzen (Shell/FS) innerhalb der Container-Isolation. Fehlkonfigurationen der vgt-skills können zur irreversiblen Datenexfiltration führen. NUR FÜR AUTORISIERTES VGT-PERSONAL.
