@@ -1,4 +1,56 @@
-VGT AETHEL :: Sovereign Intelligence Interface"Sovereign Intelligence Interface :: Online"VGT Aethel ist ein modulares, hochperformantes KI-Agenten-Framework, entwickelt für maximale Souveränität, Sicherheit und Erweiterbarkeit. Anders als herkömmliche Chatbots agiert Aethel als autonome Entität mit direktem Zugriff auf System-Tools, einem persistenten Vektor-Gedächtnis (Nexus) und einer omnidirektionalen Kommunikations-Bridge.Der Kern ("Cortex") ist in Rust geschrieben, um Latenz zu minimieren und Typsicherheit zu garantieren. Das Interface ("Face") nutzt Next.js für eine reaktive Echtzeit-Steuerung.🚧 EntwicklungsstatusDieses Projekt befindet sich in aktiver Entwicklung. Derzeit sind ca. 30% der Roadmap erreicht (Phase I abgeschlossen). Es ist funktionsfähig, aber einige Schnittstellen (insbesondere in der Bridge) befinden sich noch im Alpha-Stadium.👉 Hier geht es zur detaillierten ROADMAP⚡ Kernfunktionen🧠 VGT Core & API (The Brain)Rust-Native Performance: Basierend auf Axum und Tokio für asynchrone Hochgeschwindigkeits-Verarbeitung.Modell-Agnostisch: Integrierter Support für Groq-beschleunigte Modelle (LLaMA, Mixtral) via vgt-core.Nexus Memory: Lokaler RAG-Vektor-Speicher (vgt-skills/rag.rs), der es dem Agenten erlaubt, Fakten zu lernen und sich an Kontext über Sessions hinweg zu erinnern.🛡️ Security Guard SystemSicherheit ist kein Nachgedanke. Der integrierte Security Guard (vgt-skills/guard.rs) analysiert jeden Tool-Aufruf in Echtzeit:Regex-basierte Bedrohungsanalyse: Erkennt Shell-Injection, Path-Traversal und destruktive Befehle (rm -rf, mkfs).Risk Scoring: Klassifiziert Aktionen in Safe, Moderate und Critical.Human-in-the-Loop: Kritische Systemeingriffe erfordern explizite Bestätigung durch den Benutzer im UI.🌉 Polyglot Bridge (The Connector)Ein zentraler TypeScript-Service verbindet Aethel mit der Außenwelt. Der Agent ist nicht im Browser gefangen.Unterstützte Kanäle: WhatsApp, Telegram, Discord, Signal, Matrix, MS Teams.Unified Protocol: Alle Nachrichten werden in ein internes NexusMessage-Format normalisiert.🖥️ Supreme UI (The Face)Cyberpunk/Terminal Ästhetik: Entwickelt mit Tailwind CSS, optimiert für Dark Mode und visuelle Klarheit.Echtzeit-Streaming: Server-Sent Events (SSE) für sofortige Antwort-Generierung.Tool-Visualisierung: Interaktive Karten für Tool-Approval und Status-Updates.🏗️ ArchitekturDas Projekt folgt einer strikten Monorepo-Struktur:VGT Aethel/
+VGT AETHEL :: Sovereign Intelligence Interface
+
+"Sovereign Intelligence Interface :: Online"
+
+VGT Aethel ist ein modulares, hochperformantes KI-Agenten-Framework, entwickelt für maximale Souveränität, Sicherheit und Erweiterbarkeit. Anders als herkömmliche Chatbots agiert Aethel als autonome Entität mit direktem Zugriff auf System-Tools, einem persistenten Vektor-Gedächtnis (Nexus) und einer omnidirektionalen Kommunikations-Bridge.
+
+Der Kern ("Cortex") ist in Rust geschrieben, um Latenz zu minimieren und Typsicherheit zu garantieren. Das Interface ("Face") nutzt Next.js für eine reaktive Echtzeit-Steuerung.
+
+🚧 Entwicklungsstatus
+
+Dieses Projekt befindet sich in aktiver Entwicklung. Derzeit sind ca. 30% der Roadmap erreicht (Phase I abgeschlossen). Es ist funktionsfähig, aber einige Schnittstellen (insbesondere in der Bridge) befinden sich noch im Alpha-Stadium.
+
+👉 Hier geht es zur detaillierten ROADMAP
+
+⚡ Kernfunktionen
+
+🧠 VGT Core & API (The Brain)
+
+Rust-Native Performance: Basierend auf Axum und Tokio für asynchrone Hochgeschwindigkeits-Verarbeitung.
+
+Modell-Agnostisch: Integrierter Support für Groq-beschleunigte Modelle (LLaMA, Mixtral) via vgt-core.
+
+Nexus Memory: Lokaler RAG-Vektor-Speicher (vgt-skills/rag.rs), der es dem Agenten erlaubt, Fakten zu lernen und sich an Kontext über Sessions hinweg zu erinnern.
+
+🛡️ Security Guard System
+
+Sicherheit ist kein Nachgedanke. Der integrierte Security Guard (vgt-skills/guard.rs) analysiert jeden Tool-Aufruf in Echtzeit:
+
+Regex-basierte Bedrohungsanalyse: Erkennt Shell-Injection, Path-Traversal und destruktive Befehle (rm -rf, mkfs).
+
+Risk Scoring: Klassifiziert Aktionen in Safe, Moderate und Critical.
+
+Human-in-the-Loop: Kritische Systemeingriffe erfordern explizite Bestätigung durch den Benutzer im UI.
+
+🌉 Polyglot Bridge (The Connector)
+
+Ein zentraler TypeScript-Service verbindet Aethel mit der Außenwelt. Der Agent ist nicht im Browser gefangen.
+
+Unterstützte Kanäle: WhatsApp, Telegram, Discord, Signal, Matrix, MS Teams.
+
+Unified Protocol: Alle Nachrichten werden in ein internes NexusMessage-Format normalisiert.
+
+🖥️ Supreme UI (The Face)
+
+Cyberpunk/Terminal Ästhetik: Entwickelt mit Tailwind CSS, optimiert für Dark Mode und visuelle Klarheit.
+
+Echtzeit-Streaming: Server-Sent Events (SSE) für sofortige Antwort-Generierung.
+
+Tool-Visualisierung: Interaktive Karten für Tool-Approval und Status-Updates.
+
+🏗️ Architektur
+
+Das Projekt folgt einer strikten Monorepo-Struktur:
 ├── ROADMAP.md        # Projektfortschritt & Planung
 ├── crates/
 │   ├── vgt-api/      # HTTP Gateway, WebSocket & State Management (Rust)
@@ -28,4 +80,26 @@ npm run dev
 Bridge (Node.js)cd crates/vgt-bridge
 npm install
 npm run dev
-🔒 SicherheitskonzeptVGT Aethel gewährt einer KI Zugriff auf Systemebene. Um Risiken zu minimieren, gelten folgende Prinzipien:Sandbox: In der Standard-Konfiguration operiert der Agent innerhalb eines Docker-Containers ohne Root-Rechte (Distroless Image).File System Jail: Dateizugriffe sind auf ./vgt_workspace beschränkt.Guard Intervention: Der Security Guard blockiert erkannte Angriffsvektoren proaktiv, bevor der Code ausgeführt wird.🤝 MitwirkenBeiträge sind willkommen. Bitte beachten Sie, dass dieses Projekt einen hohen Standard an Code-Qualität (Typsicherheit, Error Handling) pflegt.📜 LizenzVeröffentlicht unter der GNU Affero General Public License v3 (AGPLv3).Dies bedeutet kurzgefasst: Wenn Sie diesen Code (oder modifizierte Versionen davon) über ein Netzwerk (z.B. als Web-Service) verfügbar machen, müssen Sie den Quellcode Ihrer Version unter derselben Lizenz offenlegen.<div align="center"><sub>VGT AETHEL SYSTEM // STATUS: DEVELOPMENT (30%)</sub></div>
+🔒 Sicherheitskonzept
+
+VGT Aethel gewährt einer KI Zugriff auf Systemebene. Um Risiken zu minimieren, gelten folgende Prinzipien:
+
+Sandbox: In der Standard-Konfiguration operiert der Agent innerhalb eines Docker-Containers ohne Root-Rechte (Distroless Image).
+
+File System Jail: Dateizugriffe sind auf ./vgt_workspace beschränkt.
+
+Guard Intervention: Der Security Guard blockiert erkannte Angriffsvektoren proaktiv, bevor der Code ausgeführt wird.
+
+🤝 Mitwirken
+
+Beiträge sind willkommen. Bitte beachten Sie, dass dieses Projekt einen hohen Standard an Code-Qualität (Typsicherheit, Error Handling) pflegt.
+
+📜 Lizenz
+
+Veröffentlicht unter der GNU Affero General Public License v3 (AGPLv3).
+
+Dies bedeutet kurzgefasst: Wenn Sie diesen Code (oder modifizierte Versionen davon) über ein Netzwerk (z.B. als Web-Service) verfügbar machen, müssen Sie den Quellcode Ihrer Version unter derselben Lizenz offenlegen.
+
+<div align="center">
+<sub>VGT AETHEL SYSTEM // STATUS: DEVELOPMENT (30%)</sub>
+</div>
