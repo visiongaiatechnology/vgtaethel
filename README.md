@@ -51,6 +51,7 @@ Tool-Visualisierung: Interaktive Karten für Tool-Approval und Status-Updates.
 🏗️ Architektur
 
 Das Projekt folgt einer strikten Monorepo-Struktur:
+
 VGT Aethel/
 ├── ROADMAP.md        # Projektfortschritt & Planung
 ├── crates/
@@ -61,26 +62,75 @@ VGT Aethel/
 │   └── vgt-ui/       # Dashboard & Control Interface (Next.js)
 ├── infrastructures/  # Docker & Deployment Konfigurationen
 └── vgt_workspace/    # Persistenter Speicher für Memory & Configs
-🚀 Installation & DeploymentVGT Aethel ist für den Betrieb in containerisierten Umgebungen optimiert.VoraussetzungenDocker & Docker ComposeEin gültiger Groq API Key (für die Inferenz)SchnellstartRepository klonengit clone [https://github.com/username/vgt-aethel.git](https://github.com/username/vgt-aethel.git)
+
+
+🚀 Installation & Deployment
+
+VGT Aethel ist für den Betrieb in containerisierten Umgebungen optimiert.
+
+Voraussetzungen
+
+Docker & Docker Compose
+
+Ein gültiger Groq API Key (für die Inferenz)
+
+Schnellstart
+
+Repository klonen
+
+git clone [https://github.com/username/vgt-aethel.git](https://github.com/username/vgt-aethel.git)
 cd vgt-aethel
-Umgebung konfigurierenErstellen Sie eine .env Datei im Hauptverzeichnis:# .env
+
+
+Umgebung konfigurieren
+Erstellen Sie eine .env Datei im Hauptverzeichnis:
+
+# .env
 GROQ_API_KEY=gsk_DeinGroqKeyHier...
 
 # Optional: Bridge Credentials
 TELEGRAM_TOKEN=...
 DISCORD_TOKEN=...
-System starten (Genesis)docker-compose up --build -d
-ZugriffInterface: http://localhost:3001API Status: http://localhost:3000/health🛠️ EntwicklungBackend (Rust)Das Backend nutzt cargo workspace.# Tests ausführen
+
+
+System starten (Genesis)
+
+docker-compose up --build -d
+
+
+Zugriff
+
+Interface: http://localhost:3001
+
+API Status: http://localhost:3000/health
+
+🛠️ Entwicklung
+
+Backend (Rust)
+
+Das Backend nutzt cargo workspace.
+
+# Tests ausführen
 cargo test
 
 # API lokal starten
 cargo run --bin vgt-api
-Frontend (Next.js)cd crates/vgt-ui
+
+
+Frontend (Next.js)
+
+cd crates/vgt-ui
 npm install
 npm run dev
-Bridge (Node.js)cd crates/vgt-bridge
+
+
+Bridge (Node.js)
+
+cd crates/vgt-bridge
 npm install
 npm run dev
+
+
 🔒 Sicherheitskonzept
 
 VGT Aethel gewährt einer KI Zugriff auf Systemebene. Um Risiken zu minimieren, gelten folgende Prinzipien:
