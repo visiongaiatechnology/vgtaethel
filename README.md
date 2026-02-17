@@ -51,6 +51,7 @@ Tool-Visualisierung: Interaktive Karten für Tool-Approval und Status-Updates.
 🏗️ Architektur
 
 Das Projekt folgt einer strikten Monorepo-Struktur:
+VGT Aethel/
 ├── ROADMAP.md        # Projektfortschritt & Planung
 ├── crates/
 │   ├── vgt-api/      # HTTP Gateway, WebSocket & State Management (Rust)
