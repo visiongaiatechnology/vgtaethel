@@ -14,7 +14,7 @@ Die autonomen Agenten-Logiken und der Security Guard sind scharf geschaltet. Das
 <img width="50%" alt="VGT AETHEL Neural Interface" src="https://github.com/user-attachments/assets/509b3a60-ea7f-44a8-8c11-bc61bbbcc188" />
 </div>
 
-🏛 Architecture: The Neural Shield
+#🏛Architecture: The Neural Shield
 
 AETHEL implementiert eine kompromisslose "Defense in Depth" Strategie für autonome Intelligenz:
 
@@ -27,7 +27,7 @@ Security Guard: Proaktive AST-Analyse und heuristische Regex-Filterung (guard.rs
 Polyglot Bridge: Universeller Kommunikations-Layer (TypeScript/NodeNext) für verschlüsselte Endpunkte.
 
 
-🚀 Getting Started (Neural Uplink)
+#🚀Getting Started (Neural Uplink)
 
 Prerequisites
 
@@ -41,12 +41,13 @@ Installation
 
 git clone [https://github.com/VisionGaiaTechnology/vgt-aethel.git](https://github.com/VisionGaiaTechnology/vgt-aethel.git)
 cd vgt-aethel
+
+
 # Genesis Konfiguration
 cp .env.example .env
 docker-compose up --build -d
 
-
-System Operation
+#System Operation
 
 Starten Sie den lokalen Interface-Uplink:
 
@@ -54,16 +55,24 @@ Supreme UI: http://localhost:3001
 
 API Cortex: http://localhost:3000/health
 
-🏗 System Structure (Monorepo)
+#🏗System Structure (Monorepo)
 
 vgt-aethel/
+
 ├── crates/
+
 │   ├── vgt-api/        # Axum Gateway & SSE Streaming (Rust)
+
 │   ├── vgt-core/       # Neural Inferenz-Engine & Model-Registry (Rust)
+
 │   ├── vgt-skills/     # FS, Shell, RAG & Security Guard (Rust)
+
 │   ├── vgt-bridge/     # Polyglot Messenger Adapters (TypeScript)
+
 │   └── vgt-ui/         # Cyberpunk Dashboard Interface (Next.js)
+
 ├── infrastructures/    # Docker Hardening & Build Specs
+
 └── vgt_workspace/      # Persistenter Nexus-Speicher (Sled DB)
 
 
