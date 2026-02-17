@@ -1,80 +1,86 @@
-VGT AETHEL :: Sovereign Intelligence Interface
+🌌 VGT AETHEL :: Sovereign Intelligence Interface
 
-"Sovereign Intelligence Interface :: Online"
+<div align="center">
 
-VGT Aethel ist ein modulares, hochperformantes KI-Agenten-Framework, entwickelt für maximale Souveränität, Sicherheit und Erweiterbarkeit. Anders als herkömmliche Chatbots agiert Aethel als autonome Entität mit direktem Zugriff auf System-Tools, einem persistenten Vektor-Gedächtnis (Nexus) und einer omnidirektionalen Kommunikations-Bridge.
+"Sovereign Intelligence Interface :: System Online"
 
-Der Kern ("Cortex") ist in Rust geschrieben, um Latenz zu minimieren und Typsicherheit zu garantieren. Das Interface ("Face") nutzt Next.js für eine reaktive Echtzeit-Steuerung.
+VGT Aethel ist ein modulares, hochperformantes KI-Agenten-Framework, entwickelt für maximale Souveränität, Sicherheit und Erweiterbarkeit. Es bricht das Paradigma herkömmlicher Chatbots auf und agiert als autonome Entität mit direktem Systemzugriff, persistentem Gedächtnis und einer universellen Kommunikations-Bridge.
+
+Features • Architektur • Installation • Sicherheit • Roadmap
+
+</div>
 
 🚧 Entwicklungsstatus
 
-Dieses Projekt befindet sich in aktiver Entwicklung. Derzeit sind ca. 30% der Roadmap erreicht (Phase I abgeschlossen). Es ist funktionsfähig, aber einige Schnittstellen (insbesondere in der Bridge) befinden sich noch im Alpha-Stadium.
+Dieses System befindet sich in der aktiven Phase II (Expansion) der Entwicklung.
 
-👉 Hier geht es zur detaillierten ROADMAP
+Aktueller Fortschritt: 30% der Gesamt-Roadmap.
 
-⚡ Kernfunktionen
+Status: Kern-Inferenz und Security-Layer sind stabil; Multi-Channel-Adapter sind im Alpha-Stadium.
 
-🧠 VGT Core & API (The Brain)
+👉 Detaillierter Projektfortschritt: ROADMAP.md
 
-Rust-Native Performance: Basierend auf Axum und Tokio für asynchrone Hochgeschwindigkeits-Verarbeitung.
+⚡ Features
 
-Modell-Agnostisch: Integrierter Support für Groq-beschleunigte Modelle (LLaMA, Mixtral) via vgt-core.
+🧠 VGT Core (The Brain)
 
-Nexus Memory: Lokaler RAG-Vektor-Speicher (vgt-skills/rag.rs), der es dem Agenten erlaubt, Fakten zu lernen und sich an Kontext über Sessions hinweg zu erinnern.
+Rust-Native Performance: Hochperformante Inferenz-Abstraktion basierend auf Axum und Tokio.
 
-🛡️ Security Guard System
+Groq-Beschleunigung: Unterstützung für LLaMA- und Mixtral-Modelle mit extrem niedriger Latenz.
 
-Sicherheit ist kein Nachgedanke. Der integrierte Security Guard (vgt-skills/guard.rs) analysiert jeden Tool-Aufruf in Echtzeit:
+Nexus Neural Memory: Lokales RAG-System (vgt-skills/rag.rs) für persistente Wissensspeicherung und semantischen Recall.
 
-Regex-basierte Bedrohungsanalyse: Erkennt Shell-Injection, Path-Traversal und destruktive Befehle (rm -rf, mkfs).
+🛡️ Security Guard (The Shield)
 
-Risk Scoring: Klassifiziert Aktionen in Safe, Moderate und Critical.
+Sicherheit ist integraler Bestandteil der Architektur. Jeder Tool-Aufruf wird in Echtzeit gescannt:
 
-Human-in-the-Loop: Kritische Systemeingriffe erfordern explizite Bestätigung durch den Benutzer im UI.
+Heuristische Analyse: Erkennt Shell-Injections, Path-Traversals und riskante Systembefehle.
+
+Human-in-the-Loop: Kritische Operationen (File-Write, Shell-Exec) erfordern eine explizite Nutzer-Autorisierung im Interface.
 
 🌉 Polyglot Bridge (The Connector)
 
-Ein zentraler TypeScript-Service verbindet Aethel mit der Außenwelt. Der Agent ist nicht im Browser gefangen.
+Ein universeller Kommunikations-Layer, der Aethel mit externen Netzwerken verbindet:
 
-Unterstützte Kanäle: WhatsApp, Telegram, Discord, Signal, Matrix, MS Teams.
+Messenger-Integration: WhatsApp, Telegram, Discord, Signal, Matrix und MS Teams.
 
-Unified Protocol: Alle Nachrichten werden in ein internes NexusMessage-Format normalisiert.
+Unified Messaging: Alle Kanäle werden auf ein standardisiertes NexusMessage-Protokoll gemappt.
 
-🖥️ Supreme UI (The Face)
+🖥️ Supreme Interface (The Face)
 
-Cyberpunk/Terminal Ästhetik: Entwickelt mit Tailwind CSS, optimiert für Dark Mode und visuelle Klarheit.
+Cyberpunk Terminal: Modernes Next.js Interface mit Tailwind CSS für maximale Übersicht.
 
-Echtzeit-Streaming: Server-Sent Events (SSE) für sofortige Antwort-Generierung.
+Real-Time Streaming: Direkte Token-Anzeige via SSE (Server-Sent Events).
 
-Tool-Visualisierung: Interaktive Karten für Tool-Approval und Status-Updates.
+Visual Debugging: Interaktive Karten für Tool-Status und Sicherheits-Interventionen.
 
 🏗️ Architektur
 
-Das Projekt folgt einer strikten Monorepo-Struktur:
+VGT Aethel nutzt eine strikte Monorepo-Struktur für maximale Wartbarkeit und klare Modulgrenzen:
 
 VGT Aethel/
-├── ROADMAP.md        # Projektfortschritt & Planung
-├── crates/
-│   ├── vgt-api/      # HTTP Gateway, WebSocket & State Management (Rust)
-│   ├── vgt-core/     # Inferenz-Engine, LLM-Connector & Nexus Logic (Rust)
-│   ├── vgt-skills/   # Tool-Registry (FS, Shell, RAG) & Security Guard (Rust)
-│   ├── vgt-bridge/   # Multi-Channel Messenger Adapter (TypeScript)
-│   └── vgt-ui/       # Dashboard & Control Interface (Next.js)
-├── infrastructures/  # Docker & Deployment Konfigurationen
-└── vgt_workspace/    # Persistenter Speicher für Memory & Configs
+├── 📄 ROADMAP.md          # Strategische Planung & Fortschritt
+├── 📁 crates/             # Rust & TypeScript Module
+│   ├── 🦀 vgt-api/        # Gateway, WebSocket & State Management
+│   ├── 🦀 vgt-core/       # Inferenz-Logic & Modell-Registry
+│   ├── 🦀 vgt-skills/     # Tool-Registry (FS, Shell, RAG) & Guard
+│   ├── 🌉 vgt-bridge/     # Messenger-Adapter (TypeScript)
+│   └── ⚛️ vgt-ui/         # Dashboard & Control Face (Next.js)
+├── 📁 infrastructures/    # Docker-Files & Deployment-Scripts
+└── 📁 vgt_workspace/      # Persistent Mount Point (Memory & Config)
 
 
 🚀 Installation & Deployment
 
-VGT Aethel ist für den Betrieb in containerisierten Umgebungen optimiert.
+VGT Aethel ist für den Betrieb in isolierten Docker-Umgebungen optimiert.
 
 Voraussetzungen
 
 Docker & Docker Compose
 
-Ein gültiger Groq API Key (für die Inferenz)
+Ein gültiger Groq API Key
 
-Schnellstart
+Schnellstart (Genesis Sequence)
 
 Repository klonen
 
@@ -82,75 +88,45 @@ git clone [https://github.com/username/vgt-aethel.git](https://github.com/userna
 cd vgt-aethel
 
 
-Umgebung konfigurieren
-Erstellen Sie eine .env Datei im Hauptverzeichnis:
+Konfiguration
+Erstelle eine .env Datei im Root:
 
-# .env
-GROQ_API_KEY=gsk_DeinGroqKeyHier...
-
-# Optional: Bridge Credentials
+GROQ_API_KEY=gsk_your_key_here
+# Optional: Messenger Tokens
 TELEGRAM_TOKEN=...
-DISCORD_TOKEN=...
 
 
-System starten (Genesis)
+Bootvorgang
 
 docker-compose up --build -d
 
 
-Zugriff
+Uplink herstellen
 
 Interface: http://localhost:3001
 
-API Status: http://localhost:3000/health
-
-🛠️ Entwicklung
-
-Backend (Rust)
-
-Das Backend nutzt cargo workspace.
-
-# Tests ausführen
-cargo test
-
-# API lokal starten
-cargo run --bin vgt-api
-
-
-Frontend (Next.js)
-
-cd crates/vgt-ui
-npm install
-npm run dev
-
-
-Bridge (Node.js)
-
-cd crates/vgt-bridge
-npm install
-npm run dev
-
+API Core: http://localhost:3000/health
 
 🔒 Sicherheitskonzept
 
-VGT Aethel gewährt einer KI Zugriff auf Systemebene. Um Risiken zu minimieren, gelten folgende Prinzipien:
+Das System verfolgt einen Security-First Ansatz:
 
-Sandbox: In der Standard-Konfiguration operiert der Agent innerhalb eines Docker-Containers ohne Root-Rechte (Distroless Image).
+Isolation: Container-Runtime nutzt standardmäßig Distroless-Images ohne Shell-Zugriff für das API-Gateway.
 
-File System Jail: Dateizugriffe sind auf ./vgt_workspace beschränkt.
+Sandboxing: Dateizugriffe sind hardwareseitig auf den vgt_workspace gemappt.
 
-Guard Intervention: Der Security Guard blockiert erkannte Angriffsvektoren proaktiv, bevor der Code ausgeführt wird.
+Guard-Protocol: Proaktive Blockierung destruktiver Befehle durch kompilierte Regex-Pattern.
 
 🤝 Mitwirken
 
-Beiträge sind willkommen. Bitte beachten Sie, dass dieses Projekt einen hohen Standard an Code-Qualität (Typsicherheit, Error Handling) pflegt.
+Wir begrüßen Beiträge, die den Standard für souveräne Intelligenz weiter vorantreiben. Bitte beachte die CONTRIBUTING.md (in Arbeit) bezüglich der Coding-Standards in Rust und TypeScript.
 
 📜 Lizenz
 
-Veröffentlicht unter der GNU Affero General Public License v3 (AGPLv3).
+Dieses Projekt ist unter der GNU Affero General Public License v3 (AGPLv3) lizenziert.
 
-Dies bedeutet kurzgefasst: Wenn Sie diesen Code (oder modifizierte Versionen davon) über ein Netzwerk (z.B. als Web-Service) verfügbar machen, müssen Sie den Quellcode Ihrer Version unter derselben Lizenz offenlegen.
+Wichtiger Hinweis: Wenn Sie dieses System modifizieren und über ein Netzwerk bereitstellen, sind Sie verpflichtet, den Quellcode Ihrer Version unter derselben Lizenz öffentlich zugänglich zu machen.
 
 <div align="center">
-<sub>VGT AETHEL SYSTEM // STATUS: DEVELOPMENT (30%)</sub>
+<sub>VGT AETHEL // SYSTEM STATUS: ACTIVE (30%) // SOVEREIGN INTELLIGENCE PROTOCOL</sub>
 </div>
