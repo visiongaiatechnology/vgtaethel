@@ -1,108 +1,70 @@
+VGT-OMEGA PROTOCOL: AETHEL
+
+Sovereign Intelligence Interface & Neural Nexus Hub
+
+⚠️ CLASSIFIED DEVELOPMENT PREVIEW
+
+WARNUNG: Dies ist eine Phase II (Expansion) Implementierung des AETHEL-Kerns.
+
+Die autonomen Agenten-Logiken und der Security Guard sind scharf geschaltet. Das System operiert mit Ring-0-nahen Kompetenzen (Shell/FS) innerhalb der Container-Isolation. Fehlkonfigurationen der vgt-skills können zur irreversiblen Datenexfiltration führen. NUR FÜR AUTORISIERTES VGT-PERSONAL.
+
 <div align="center">
-
-🌌 VGT AETHEL :: Sovereign Intelligence Interface
-
-VGT Aethel ist ein modulares, hochperformantes KI-Agenten-Framework für maximale Souveränität und Sicherheit. Es agiert als autonome Entität mit direktem Systemzugriff, persistentem Gedächtnis und einer universellen Kommunikations-Bridge.
-
-Features • Architektur • Installation • Sicherheit • Roadmap
-
+<img width="50%" alt="VGT AETHEL Neural Interface" src="https://github.com/user-attachments/assets/509b3a60-ea7f-44a8-8c11-bc61bbbcc188" />
 </div>
 
-🚧 Projektstatus: Aktiv (Phase II)
+🏛 Architecture: The Neural Shield
 
-Das System befindet sich in der aktiven Expansion. Der Fokus liegt auf der Stabilisierung des Rust-Kerns und der Skalierung der Messenger-Adapter.
-👉 Aktueller Fortschritt: ROADMAP.md (30% erreicht)
+AETHEL implementiert eine kompromisslose "Defense in Depth" Strategie für autonome Intelligenz:
 
-⚡ Features
+Inference Core: Rust (Edition 2024), High-Concurrency via Tokio & Axum, Zero-Panic Policy.
 
-🧠 VGT Core (The Brain)
+Nexus Memory: Lokales RAG-System mit Sled DB für blitzschnelle, persistente Vektor-Speicherung.
 
-Rust-Native Performance: Inferenz-Abstraktion via Axum/Tokio für Zero-Overhead.
+Security Guard: Proaktive AST-Analyse und heuristische Regex-Filterung (guard.rs) gegen Shell-Injections.
 
-Groq-Beschleunigung: Native LPU-Integration für Inferenz-Latenzen im Millisekundenbereich.
-
-Nexus Neural Memory: Vektorbasiertes RAG-System (vgt-skills/rag.rs) für semantischen Recall.
-
-🛡️ Security Guard (The Shield)
-
-Heuristische Analyse: Real-time Scan auf Shell-Injections und Path-Traversals.
-
-Human-in-the-Loop: Explizite Autorisierung kritischer Systembefehle über das Interface.
-
-🌉 Polyglot Bridge (The Connector)
-
-Unified Messaging: Standardisiertes NexusMessage-Protokoll für WhatsApp, Telegram, Discord und MS Teams.
-
-Async Adapter: Hochkonkurrente Verarbeitung eingehender Events via TypeScript-Bridge.
-
-🖥️ Supreme Interface (The Face)
-
-Cyberpunk Terminal: Hochmodernes Next.js Dashboard mit Tailwind CSS und Framer Motion.
-
-Real-Time Streaming: Token-by-Token Visualisierung via Server-Sent Events (SSE).
-
-🏗️ Architektur
-
-VGT Aethel nutzt eine strikte Monorepo-Struktur zur Gewährleistung der Systemintegrität:
-
-VGT Aethel/
-├── crates/
-│   ├── vgt-api/       # Axum API Gateway & Auth (Rust)
-│   ├── vgt-core/      # LLM-Orchestrierung & Logic (Rust)
-│   ├── vgt-skills/    # RAG & Security Protocols (Rust)
-│   ├── vgt-bridge/    # Messenger-Adapter (TypeScript)
-│   └── vgt-ui/        # High-End Dashboard (Next.js)
-├── infrastructures/   # Docker-Spezifikationen & K8s Manifeste
-└── vgt_workspace/     # Persistente DB & Config-State
+Polyglot Bridge: Universeller Kommunikations-Layer (TypeScript/NodeNext) für verschlüsselte Endpunkte.
 
 
-🚀 Installation & Deployment
+🚀 Getting Started (Neural Uplink)
 
-Voraussetzungen
+Prerequisites
 
-Docker & Docker Compose (v2.20+)
+Docker Engine & Compose: Erforderlich für Microservice-Orchestrierung.
 
-Groq API Key (LPU Inferenz)
+Rust Toolchain: Für lokale Builds (C-Compiler für PQ-Bindings benötigt).
 
-Genesis Sequence
+Groq API Key: Erforderlich für High-Speed Inferenz-Uplink.
 
-Repository klonen:
+Installation
 
-git clone [https://github.com/vgt-tech/vgt-aethel.git](https://github.com/vgt-tech/vgt-aethel.git)
+git clone [https://github.com/VisionGaiaTechnology/vgt-aethel.git](https://github.com/VisionGaiaTechnology/vgt-aethel.git)
 cd vgt-aethel
-
-
-Umgebung konfigurieren:
-Erstelle eine .env Datei:
-
-GROQ_API_KEY=gsk_...
-TELEGRAM_TOKEN=...
-DATABASE_URL=postgres://vgt:vgt@vgt-db:5432/aethel
-
-
-System-Boot:
-
+# Genesis Konfiguration
+cp .env.example .env
 docker-compose up --build -d
 
 
-Uplinks:
+System Operation
 
-Interface: http://localhost:3001
+Starten Sie den lokalen Interface-Uplink:
 
-API Core: http://localhost:3000/health
+Supreme UI: http://localhost:3001
 
-🔒 Sicherheitskonzept
+API Cortex: http://localhost:3000/health
 
-Distroless Runtime: API-Container ohne Shell zur Minimierung der Angriffsfläche.
+🏗 System Structure (Monorepo)
 
-Strict Scoping: Dateizugriffe sind hardwareseitig auf den vgt_workspace limitiert.
+vgt-aethel/
+├── crates/
+│   ├── vgt-api/        # Axum Gateway & SSE Streaming (Rust)
+│   ├── vgt-core/       # Neural Inferenz-Engine & Model-Registry (Rust)
+│   ├── vgt-skills/     # FS, Shell, RAG & Security Guard (Rust)
+│   ├── vgt-bridge/     # Polyglot Messenger Adapters (TypeScript)
+│   └── vgt-ui/         # Cyberpunk Dashboard Interface (Next.js)
+├── infrastructures/    # Docker Hardening & Build Specs
+└── vgt_workspace/      # Persistenter Nexus-Speicher (Sled DB)
 
-Regex Guard: Proaktives Blocking destruktiver Befehle im Pre-Inference-Stadium.
-
-📜 Lizenz
-
-Lizenziert unter der GNU Affero General Public License v3 (AGPLv3).
 
 <div align="center">
-<sub>VGT AETHEL // SYSTEM STATUS: ACTIVE (30%) // SOVEREIGN INTELLIGENCE PROTOCOL</sub>
+<sub>VGT AETHEL // SYSTEM https://www.google.com/search?q=STATUS: ACTIVE (30%) // SOVEREIGN INTELLIGENCE PROTOCOL // NO MERCY IN CODE</sub>
 </div>
