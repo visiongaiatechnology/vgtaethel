@@ -77,5 +77,5 @@ vgt-aethel/
 
 
 <div align="center">
-<sub>VGT AETHEL // SYSTEM https://www.google.com/search?q=STATUS: ACTIVE (30%) // SOVEREIGN INTELLIGENCE PROTOCOL // NO MERCY IN CODE</sub>
+<sub>VGT AETHEL // SYSTEMSTATUS: ACTIVE (30%) // SOVEREIGN INTELLIGENCE PROTOCOL // NO MERCY IN CODE</sub>
 </div>
