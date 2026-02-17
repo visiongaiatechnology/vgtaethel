@@ -59,14 +59,23 @@ Visual Debugging: Interaktive Karten für Tool-Status und Sicherheits-Interventi
 VGT Aethel nutzt eine strikte Monorepo-Struktur für maximale Wartbarkeit und klare Modulgrenzen:
 
 VGT Aethel/
+
 ├── 📄 ROADMAP.md          # Strategische Planung & Fortschritt
+
 ├── 📁 crates/             # Rust & TypeScript Module
+
 │   ├── 🦀 vgt-api/        # Gateway, WebSocket & State Management
+
 │   ├── 🦀 vgt-core/       # Inferenz-Logic & Modell-Registry
+
 │   ├── 🦀 vgt-skills/     # Tool-Registry (FS, Shell, RAG) & Guard
+
 │   ├── 🌉 vgt-bridge/     # Messenger-Adapter (TypeScript)
+
 │   └── ⚛️ vgt-ui/         # Dashboard & Control Face (Next.js)
+
 ├── 📁 infrastructures/    # Docker-Files & Deployment-Scripts
+
 └── 📁 vgt_workspace/      # Persistent Mount Point (Memory & Config)
 
 
