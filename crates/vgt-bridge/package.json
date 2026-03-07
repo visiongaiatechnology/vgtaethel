@@ -1,0 +1,29 @@
+{
+  "name": "vgt-nexus-bridge",
+  "version": "1.0.0",
+  "description": "VGT Supreme Polyglot Bridge for External Channels",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "dev": "ts-node src/main.ts"
+  },
+  "dependencies": {
+    "@adiwajshing/baileys": "^5.0.0",
+    "grammy": "^1.19.0",
+    "discord.js": "^14.14.0",
+    "matrix-js-sdk": "^30.0.0",
+    "botframework-schema": "^4.14.1",
+    "ws": "^8.16.0",
+    "uuid": "^9.0.1",
+    "dotenv": "^16.3.1",
+    "pino": "^8.17.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/node": "^20.10.5",
+    "@types/ws": "^8.5.10",
+    "@types/uuid": "^9.0.7",
+    "ts-node": "^10.9.2"
+  }
+}

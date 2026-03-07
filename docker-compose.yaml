@@ -1,0 +1,39 @@
+services:
+  # --- THE BRAIN (Rust API) ---
+  vgt-api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.api
+    container_name: vgt_omega_core
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - RUST_LOG=info,vgt_api=debug
+      - GROQ_API_KEY=${GROQ_API_KEY} # Zieht Key aus lokaler .env
+    volumes:
+      # Persistenz für Nexus Memory & Logs
+      - ./vgt_workspace:/app/vgt_workspace
+    networks:
+      - vgt_neural_net
+
+  # --- THE FACE (Next.js UI) ---
+  vgt-ui:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.ui
+    container_name: vgt_omega_interface
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      # API URL muss für Server-Side Calls intern erreichbar sein
+      - NEXT_PUBLIC_API_URL=http://localhost:3000 
+    depends_on:
+      - vgt-api
+    networks:
+      - vgt_neural_net
+
+networks:
+  vgt_neural_net:
+    driver: bridge

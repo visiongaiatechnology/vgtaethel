@@ -1,0 +1,16 @@
+[workspace]
+members = [
+    "crates/vgt-core",
+    "crates/vgt-api",
+    "crates/vgt-cli"
+]
+resolver = "2"
+
+# VGT PERFORMANCE PROFILE
+# Maximale Optimierung für Production Builds.
+[profile.release]
+opt-level = 3           # Maximale Optimierung
+lto = "fat"             # Link Time Optimization (Cross-Crate)
+codegen-units = 1       # Reduziert Parallelität für besseren Code, dauert länger
+panic = "abort"         # Kein Stack Unwinding = Kleinere Binary & Sicherheit
+strip = true            # Entfernt Debug-Symbole

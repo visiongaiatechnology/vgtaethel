@@ -1,0 +1,39 @@
+# STAGE 1: PLANNER (Cache Optimierung für Cargo)
+FROM rust:1.76-slim-bookworm as planner
+WORKDIR /app
+# Wir nutzen cargo-chef für maximales Layer-Caching bei Rust Builds
+RUN cargo install cargo-chef
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# STAGE 2: CACHER
+FROM rust:1.76-slim-bookworm as cacher
+WORKDIR /app
+RUN cargo install cargo-chef
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+
+# STAGE 3: BUILDER (Compiling the Binary)
+FROM rust:1.76-slim-bookworm as builder
+WORKDIR /app
+COPY . .
+# Kopiere die vorkompilierten Dependencies
+COPY --from=cacher /app/target target
+# Build VGT API (Release Mode mit Strip & LTO Settings aus Cargo.toml)
+RUN cargo build --release --bin vgt-api
+
+# STAGE 4: RUNTIME (Distroless - No Shell, Maximum Security)
+# Wir nutzen gcr.io/distroless/cc-debian12 für minimale Attack Surface
+FROM gcr.io/distroless/cc-debian12
+WORKDIR /app
+
+# Kopiere Binary
+COPY --from=builder /app/target/release/vgt-api /app/vgt-api
+# Kopiere Env-Beispiel (Muss im Container gesetzt werden)
+COPY --from=builder /app/.env.example ./.env
+
+# Ports
+EXPOSE 3000
+
+# Start
+CMD ["./vgt-api"]
