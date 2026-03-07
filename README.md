@@ -12,6 +12,14 @@ ALPHA 1.0
 </div>
 ---
 
+## 💙 SUPPORT THE MISSION
+
+AETHEL ist free & open source. Wenn du das Projekt unterstützen möchtest:
+
+[![Donate](https://img.shields.io/badge/DONATE-PayPal-blue?style=for-the-badge&logo=paypal)](https://paypal.me/dergoldenelotus)
+
+*Jede Unterstützung fließt direkt in die Weiterentwicklung von AETHEL und dem VGT Ökosystem.*
+
 VGT Aethel ist keine herkömmliche Chat-Schnittstelle.
 
 Es ist eine asymmetrische, militärisch gehärtete KI-Architektur, konzipiert für absolute Datenhoheit (**Sovereignty**) und deterministische Ausführung in Hochsicherheitsumgebungen.
