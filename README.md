@@ -10,27 +10,28 @@ ALPHA 1.0
 <div align="center">
 <img width="50%" alt="VGT AETHEL Neural Interface" src="https://github.com/user-attachments/assets/509b3a60-ea7f-44a8-8c11-bc61bbbcc188" />
 </div>
+
 ---
 
 ## 💙 SUPPORT THE MISSION
 
-AETHEL ist free & open source. Wenn du das Projekt unterstützen möchtest:
+AETHEL is free & open source. If you'd like to support the project:
 
 [![Donate](https://img.shields.io/badge/DONATE-PayPal-blue?style=for-the-badge&logo=paypal)](https://paypal.me/dergoldenelotus)
 
-*Jede Unterstützung fließt direkt in die Weiterentwicklung von AETHEL und dem VGT Ökosystem.*
+*Every contribution flows directly into the development of AETHEL and the VGT ecosystem.*
 
-VGT Aethel ist keine herkömmliche Chat-Schnittstelle.
+VGT Aethel is not a conventional chat interface.
 
-Es ist eine asymmetrische, militärisch gehärtete KI-Architektur, konzipiert für absolute Datenhoheit (**Sovereignty**) und deterministische Ausführung in Hochsicherheitsumgebungen.
+It is an asymmetric, military-grade AI architecture designed for absolute data sovereignty and deterministic execution in high-security environments.
 
-Während andere AI-Agents in ungesicherten Python-Umgebungen mit vollen Systemrechten laufen, implementiert Aethel eine **strikte Trennung von Intelligenz, Ausführung und Kommunikation** – die Governance-Schicht die allen anderen fehlt.
+While other AI agents run in unsecured Python environments with full system privileges, Aethel implements a **strict separation of intelligence, execution and communication** – the governance layer that everyone else is missing.
 
-Entwickelt von **[VisionGaia Technology](https://visiongaiatechnology.de)**.
+Developed by **[VisionGaia Technology](https://visiongaiatechnology.de)**.
 
 ---
 
-## 🏛 ARCHITEKTUR-PARADIGMA (THE VGT STANDARD)
+## 🏛 ARCHITECTURE PARADIGM (THE VGT STANDARD)
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -54,21 +55,21 @@ Entwickelt von **[VisionGaia Technology](https://visiongaiatechnology.de)**.
 
 ## 1. THE CORTEX (Rust Core)
 
-Der Kern von Aethel (`vgt-core`, `vgt-api`, `vgt-skills`) ist vollständig in **Rust (Edition 2024)** geschrieben.
+The core of Aethel (`vgt-core`, `vgt-api`, `vgt-skills`) is written entirely in **Rust (Edition 2024)**.
 
 **Memory Safety & Performance**  
-Kompiliert mit maximaler Optimierung (`lto = "fat"`, `panic = "abort"`). Zero-Panic Policy. Kein Runtime-Overhead.
+Compiled with maximum optimization (`lto = "fat"`, `panic = "abort"`). Zero-Panic Policy. No runtime overhead.
 
 **Neural RAG (Nexus)**  
-In-Process Vektor-Datenbank mittels `fastembed` (lokale Embeddings, AllMiniLML6V2) für Langzeitgedächtnis das niemals den Host verlässt. Persistiert in `./vgt_workspace` – vollständig air-gap-fähig.
+In-process vector database using `fastembed` (local embeddings, AllMiniLML6V2) for long-term memory that never leaves the host. Persisted in `./vgt_workspace` – fully air-gap capable.
 
 **The Security Guard (`guard.rs`)**  
-Eine native Regex-basierte Firewall in der Skill-Execution-Schicht. Blockiert **proaktiv** bevor die LLM-Ausgabe den Kernel erreicht:
+A native regex-based firewall in the skill execution layer. Blocks **proactively** before LLM output reaches the kernel:
 
 ```
 ✗  Path Traversal    →  ../  ../../
 ✗  Shell Injections  →  && || ; | `
-✗  Destruktiv        →  rm -rf  dd  mkfs
+✗  Destructive       →  rm -rf  dd  mkfs
 ✗  Privilege Esc.    →  sudo  chmod 777
 ```
 
@@ -83,27 +84,27 @@ Eine native Regex-basierte Firewall in der Skill-Execution-Schicht. Blockiert **
 
 ## 2. THE INTERFACE (Next.js 15)
 
-Eine forensische, reaktive Kommandozentrale im **VGT Supreme Glass-Design**.
+A forensic, reactive command center in the **VGT Supreme Glass Design**.
 
 **Zero-Trust Execution**  
-Jeder Versuch der KI, System-Tools aufzurufen (Dateisystem-Schreibzugriffe, Shell-Kommandos), wird abgefangen und erfordert explizite Autorisierung durch den Operator.
+Every attempt by the AI to invoke system tools (filesystem writes, shell commands) is intercepted and requires explicit authorization by the operator.
 
 **Red Card Lockdown System**  
-Wenn `guard.rs` anschlägt → UI triggert sofortigen Lockdown-Status. Kein Tool-Call passiert ohne Operator-Sichtbarkeit.
+When `guard.rs` triggers → UI immediately activates lockdown status. No tool call passes without operator visibility.
 
 **Genesis Setup**  
-Erster Start: `SetupWizard` injiziert API-Credentials dynamisch über `/v1/setup` – keine Hardcoded Keys im Repository.
+First launch: `SetupWizard` dynamically injects API credentials via `/v1/setup` – no hardcoded keys in the repository.
 
 ---
 
 ## 3. THE NEXUS BRIDGE (TypeScript)
 
-Ein polyglotter Daemon als Übersetzer zwischen externen Netzwerken und dem Rust-Cortex.
+A polyglot daemon acting as translator between external networks and the Rust Cortex.
 
-**Aktuelle Provider:**
+**Current Providers:**
 
-| Provider | Protokoll | Status |
-|----------|-----------|--------|
+| Provider | Protocol | Status |
+|----------|----------|--------|
 | Telegram | grammY | ✅ Active |
 | WhatsApp | Baileys / QR | ✅ Active |
 | Discord | discord.js | ✅ Active |
@@ -115,14 +116,14 @@ Ein polyglotter Daemon als Übersetzer zwischen externen Netzwerken und dem Rust
 
 ## ⚙️ DEPLOYMENT (DISTROLESS)
 
-Aethel ist für **Zero-Day-Resilienz** konzipiert. Der Rust-Cortex läuft in einem **Distroless Container** – keine Shell, kein Paketmanager, keine Post-Exploitation-Tools.
+Aethel is designed for **Zero-Day resilience**. The Rust Cortex runs in a **Distroless Container** – no shell, no package manager, no post-exploitation tools.
 
 ```bash
-# 1. Konfiguration initialisieren
+# 1. Initialize configuration
 cp .env.example .env
 # GROQ_API_KEY=gsk_your_key
 
-# 2. VGT Neural Sequenz starten
+# 2. Launch VGT Neural Sequence
 docker-compose up --build -d
 ```
 
@@ -132,7 +133,7 @@ docker-compose up --build -d
 | API Gateway | `http://localhost:3000` |
 | Health Check | `http://localhost:3000/health` |
 
-**Persistenz:** Nexus-Gedächtnis wird automatisch in `./vgt_workspace` gemountet.
+**Persistence:** Nexus memory is automatically mounted in `./vgt_workspace`.
 
 ---
 
@@ -142,24 +143,24 @@ docker-compose up --build -d
 vgt-aethel/
 ├── crates/
 │   ├── vgt-api/        # Axum Gateway & SSE Streaming (Rust)
-│   ├── vgt-core/       # Neural Inferenz-Engine & Model-Registry (Rust)
+│   ├── vgt-core/       # Neural Inference Engine & Model Registry (Rust)
 │   ├── vgt-skills/     # FS, Shell, RAG & Security Guard (Rust)
 │   ├── vgt-bridge/     # Polyglot Messenger Adapters (TypeScript)
 │   └── vgt-ui/         # Cyberpunk Dashboard Interface (Next.js)
 ├── infrastructures/    # Docker Hardening & Build Specs
-└── vgt_workspace/      # Persistenter Nexus-Speicher (Sled DB)
+└── vgt_workspace/      # Persistent Nexus Storage (Sled DB)
 ```
 
 ---
 
-## 🔒 LIZENZ & NUTZUNG
+## 🔒 LICENSE & USAGE
 
-Dieses Projekt steht unter der **[GNU AGPL-3.0 Lizenz](LICENSE)**.
+This project is licensed under the **[GNU AGPL-3.0 License](LICENSE)**.
 
-Der Einsatz in Cloud-Umgebungen (SaaS) erfordert die vollständige Offenlegung der verbundenen Server-Infrastruktur-Codes. Wer Aethel kommerziell nutzt ohne den eigenen Code zu veröffentlichen, braucht eine kommerzielle Ausnahmelizenz.
+Deployment in cloud environments (SaaS) requires full disclosure of all connected server infrastructure code. Anyone using Aethel commercially without publishing their own code requires a commercial exception license.
 
-**Enterprise & Kommerziell:**  
-Für Enterprise-Deployments, TIER-0 Auditierungen (VGT SafetySys™) und kommerzielle Ausnahmelizenzen:  
+**Enterprise & Commercial:**  
+For enterprise deployments, TIER-0 audits (VGT SafetySys™) and commercial exception licenses:  
 → **[VisionGaia Technology](https://visiongaiatechnology.de)**
 
 ---
