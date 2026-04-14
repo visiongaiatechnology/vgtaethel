@@ -12,6 +12,21 @@ ALPHA 1.0
 </div>
 
 ---
+## ⚠️ DISCLAIMER: EXPERIMENTAL R&D PROJECT
+
+This project is a **Proof of Concept (PoC)** and part of ongoing research and development at
+VisionGaia Technology. It is **not** a certified or production-ready product.
+
+**Use at your own risk.** The software may contain security vulnerabilities, bugs, or
+unexpected behavior. It may break your environment if misconfigured or used improperly.
+
+**Do not deploy in critical production environments** unless you have thoroughly audited
+the code and understand the implications. For enterprise-grade, verified protection,
+we recommend established and officially certified solutions.
+
+Found a vulnerability or have an improvement? **Open an issue or contact us.**
+
+
 
 ## 💙 SUPPORT THE MISSION
 
