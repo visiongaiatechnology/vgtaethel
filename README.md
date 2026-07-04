@@ -168,7 +168,7 @@ vgt-aethel/
 
 ---
 
-## 🔒 LICENSE & USAGE
+## 🔒 LICENSE & USAGE 
 
 This project is licensed under the **[GNU AGPL-3.0 License](LICENSE)**.
 
