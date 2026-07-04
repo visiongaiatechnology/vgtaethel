@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <title>VGT AETHEL // Sovereign Intelligence Interface</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background grid -->
+    <div class="grid-pattern"></div>
+    <div class="glow-orb orange"></div>
+    <div class="glow-orb cyan"></div>
+
+    <!-- Onboarding / Setup Wizard -->
+    <div id="setup-wizard" class="modal-overlay hidden">
+        <div class="glass-card setup-card">
+            <div class="logo-animation">
+                <svg viewBox="0 0 24 24" width="48" height="48" stroke="var(--vgt-cyan)" stroke-width="1.5" fill="none" class="pulse-icon">
+                    <rect x="2" y="2" width="20" height="20" rx="4" />
+                    <rect x="9" y="9" width="6" height="6" rx="1" />
+                    <path d="M9 1v8M15 1v8M9 15v8M15 15v8M1 9h8M1 15h8M15 9h8M15 15h8" />
+                </svg>
+            </div>
+            <h2>VGT GENESIS</h2>
+            <p class="subtitle">Initial System Configuration</p>
+            
+            <div class="input-group">
+                <label for="api-key">
+                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--vgt-cyan)" stroke-width="2" fill="none"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                    NEURAL UPLINK KEY (GROQ)
+                </label>
+                <input type="password" id="api-key" placeholder="gsk_..." autocomplete="off">
+            </div>
+
+            <div class="input-group" style="margin-bottom: 20px;">
+                <label for="openai-api-key" style="color: var(--vgt-purple);">
+                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--vgt-purple)" stroke-width="2" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    PREMIUM STIMMEN UPLINK (OPENAI - OPTIONAL)
+                </label>
+                <input type="password" id="openai-api-key" placeholder="sk-..." autocomplete="off">
+                <div id="setup-error" class="error-msg hidden">
+                    <span class="dot red-dot"></span>
+                    <span id="setup-error-text">API Key invalid</span>
+                </div>
+            </div>
+
+            <button id="btn-initiate" class="cyber-button">
+                <span>SYSTEM INITIALISIEREN</span>
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+
+            <div class="card-footer">
+                <span class="secure-badge">
+                    <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    LOCAL ENCRYPTION ACTIVE
+                </span>
+                <p class="footnote">Stored locally in ./vgt_workspace/aethel_config.json</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permission Gate Modal -->
+    <div id="permission-gate-modal" class="modal-overlay hidden" style="z-index: 110;">
+        <div class="glass-card security-gate-card" style="width: 100%; max-width: 500px; border-color: var(--vgt-orange); box-shadow: 0 0 50px rgba(255, 123, 0, 0.15); padding: 30px; text-align: center;">
+            <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                <svg viewBox="0 0 24 24" width="40" height="40" stroke="var(--vgt-orange)" stroke-width="1.5" fill="none" class="pulse-icon" style="animation-duration: 1.5s;">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+            </div>
+            <h3 style="color: var(--vgt-orange); font-family: var(--font-mono); letter-spacing: 0.15em; font-size: 16px; font-weight: 700; margin-bottom: 5px; text-transform: uppercase;">Operator-Zustimmung erforderlich</h3>
+            <p class="subtitle" style="margin-bottom: 20px; font-size: 10px;">Security Gate Intervention</p>
+            
+            <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.06); padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: left;" class="font-mono text-xs">
+                <div style="margin-bottom: 8px;"><span style="color: var(--vgt-text-dim);">TOOL:</span> <span id="gate-tool-name" style="color: var(--vgt-cyan);">sys_exec_cmd</span></div>
+                <div style="margin-bottom: 8px;"><span style="color: var(--vgt-text-dim);">BENÖTIGTE CAPABILITY:</span> <span id="gate-capability" style="color: var(--vgt-purple);">system.exec</span></div>
+                <div style="margin-bottom: 8px;"><span style="color: var(--vgt-text-dim);">RISK LEVEL:</span> <span id="gate-risk-level" style="color: var(--vgt-red);">HIGH</span></div>
+                <div style="margin-bottom: 8px;"><span style="color: var(--vgt-text-dim);">ARGUMENTE:</span></div>
+                <pre id="gate-arguments" style="background: rgba(0,0,0,0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.03); max-height: 120px; overflow-y: auto; white-space: pre-wrap; font-size: 9px; color: var(--vgt-text);"></pre>
+            </div>
+
+            <div id="gate-threat-warning" class="hidden" style="border: 1px solid var(--vgt-red); background: rgba(255, 0, 79, 0.05); padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: left;">
+                <h5 style="color: var(--vgt-red); font-size: 10px; font-family: var(--font-mono); margin-bottom: 6px; font-weight: 700; letter-spacing: 0.05em;">⚠️ GEFAHR ERKANNT (FIREWALL WARNUNG)</h5>
+                <ul id="gate-threat-list" style="font-size: 9px; color: var(--vgt-text-dim); padding-left: 15px; line-height: 1.4;"></ul>
+            </div>
+
+            <div class="tool-actions" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                <button id="gate-btn-approve-once" class="cyber-button" style="background: rgba(0, 240, 255, 0.1); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan); padding: 12px;">EINMALIG ERLAUBEN</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button id="gate-btn-approve-15m" class="cyber-button" style="background: rgba(157, 78, 221, 0.1); border: 1px solid var(--vgt-purple); color: var(--vgt-purple); padding: 12px; font-size: 10px;">15 MIN FREIGEBEN</button>
+                    <button id="gate-btn-approve-1h" class="cyber-button" style="background: rgba(157, 78, 221, 0.1); border: 1px solid var(--vgt-purple); color: var(--vgt-purple); padding: 12px; font-size: 10px;">1 STD FREIGEBEN</button>
+                </div>
+                <button id="gate-btn-reject" class="cyber-button" style="background: rgba(255, 0, 79, 0.1); border: 1px solid var(--vgt-red); color: var(--vgt-red); padding: 12px; margin-top: 5px;">ABLEHNEN / BLOCKIEREN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Handoff Modal -->
+    <div id="handoff-modal" class="modal-overlay hidden" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+        <div class="glass-card" style="width: 90%; max-width: 600px; max-height: 85vh; padding: 30px; display: flex; flex-direction: column; gap: 20px; border: 1px solid var(--vgt-cyan); box-shadow: 0 0 30px rgba(0, 240, 255, 0.25);">
+            <div style="border-bottom: 1px solid rgba(0, 240, 255, 0.3); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-family: var(--font-mono); font-size: 14px; color: var(--vgt-cyan); margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    EXTERNAL AGENT HANDOFF PROMPT
+                </h3>
+                <span id="handoff-agent-badge" style="font-family: var(--font-mono); font-size: 9px; padding: 2px 8px; background: rgba(0,240,255,0.2); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan); border-radius: 4px;">CURSOR</span>
+            </div>
+            
+            <div style="flex-grow: 1; overflow-y: auto; background: rgba(0,0,0,0.6); border: 1px solid rgba(0,240,255,0.15); border-radius: 6px; padding: 15px; font-family: var(--font-mono); font-size: 11px; color: #fff; line-height: 1.5; white-space: pre-wrap;" id="handoff-modal-content">
+                Lade Übergabe-Protokoll...
+            </div>
+            
+            <p style="font-family: var(--font-mono); font-size: 9px; color: var(--vgt-text-dim); margin: 0; line-height: 1.4;">
+                * Hinweis: Dieser Prompt wird in <code class="cyan-text">./vgt_workspace/handoff_payload.md</code> gespeichert. Sie können ihn kopieren und direkt in das externe Tool einfügen.
+            </p>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="handoff-btn-copy" class="cyber-button font-mono" style="width: auto; padding: 10px 20px; font-size: 10px; background: rgba(0,240,255,0.1); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan);">PROMPT KOPIEREN</button>
+                <button id="handoff-btn-close" class="cyber-button font-mono" style="width: auto; padding: 10px 20px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: #fff;">SCHLIESSEN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app-container" class="app-layout">
+        <!-- Header -->
+        <header class="glass-card header-bar">
+            <div class="branding">
+                <h1>VGT <span class="white-text">AETHEL</span></h1>
+                <p class="status-sub">Sovereign Intelligence Interface :: <span id="current-mode-label" class="cyan-text">NEURAL CORE</span></p>
+            </div>
+            
+            <div class="system-status-hud">
+                <div class="hud-item">
+                    <span class="label">CORE:</span>
+                    <span class="value font-mono">GO-CORTEX 1.0</span>
+                </div>
+                <div class="hud-item">
+                    <span class="label">LEASES:</span>
+                    <span id="hud-leases-count" class="value font-mono">0</span>
+                </div>
+                <div class="hud-item">
+                    <span class="label">VOICE CALL:</span>
+                    <button id="btn-voice-link" class="hud-action" title="Kontinuierlichen Freisprech-Sprachmodus starten/stoppen">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M15.05 5A5 5 0 0 1 19 8.95M15.05 1A9 9 0 0 1 23 8.94m-1 7.98v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    </button>
+                </div>
+                <div class="hud-item">
+                    <span class="label">VOICE:</span>
+                    <button id="btn-toggle-voice" class="hud-action active" title="Mute/Unmute AI Voice Response">
+                        <svg id="icon-voice-on" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                        <svg id="icon-voice-off" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" class="hidden"><path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/></svg>
+                    </button>
+                </div>
+                <div class="hud-indicator">
+                    <span id="hud-integrity-dot" class="pulse-dot green"></span>
+                    <span id="hud-integrity-label" class="font-mono">SECURE</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main HUD Grid -->
+        <div class="hud-grid">
+            <!-- Sidebar: Navigation, Models and Config -->
+            <aside class="glass-card sidebar">
+                <!-- Mode Navigation Switcher -->
+                <div class="mode-navigation font-mono" style="margin-bottom: 10px; width: 100%; display: flex; flex-direction: column; gap: 8px;">
+                    <label style="font-size: 9px; color: var(--vgt-text-dim); display: block; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 4px;">Command Modes</label>
+                    <button id="nav-btn-core" class="nav-menu-btn active">
+                        <svg class="nav-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+                        <span>NEURAL CORE</span>
+                    </button>
+                    <button id="nav-btn-chat" class="nav-menu-btn">
+                        <svg class="nav-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        <span>CHAT TERMINAL</span>
+                    </button>
+                    <button id="nav-btn-agent" class="nav-menu-btn">
+                        <svg class="nav-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 17h6M9 12h6M9 7h6"/></svg>
+                        <span>AGENT TRACKER</span>
+                    </button>
+                    <button id="nav-btn-control" class="nav-menu-btn">
+                        <svg class="nav-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        <span>LIVE OPERATOR</span>
+                    </button>
+                    <button id="nav-btn-security" class="nav-menu-btn">
+                        <svg class="nav-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        <span>SECURITY CORE</span>
+                    </button>
+                    <button id="nav-btn-memory" class="nav-menu-btn">
+                        <svg class="nav-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        <span>NEXUS Gedächtnis</span>
+                    </button>
+                    <button id="nav-btn-tasks" class="nav-menu-btn">
+                        <svg class="nav-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <span>TASK ENGINE</span>
+                    </button>
+                </div>
+
+                <div class="model-select-container font-mono" style="margin-bottom: 12px; width: 100%;">
+                    <label style="font-size: 9px; color: var(--vgt-text-dim); display: block; margin-bottom: 5px; letter-spacing: 0.1em; text-transform: uppercase;">Neural Core Registry</label>
+                    <select id="model-dropdown" class="cyber-select font-mono" style="width: 100%; background: rgba(0,0,0,0.7); border: 1px solid var(--vgt-border); color: var(--vgt-cyan); padding: 8px; border-radius: 4px; font-size: 10px; outline: none; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em;"></select>
+                </div>
+
+                <div class="voice-select-container font-mono" style="margin-bottom: 12px; width: 100%;">
+                    <label style="font-size: 9px; color: var(--vgt-text-dim); display: block; margin-bottom: 5px; letter-spacing: 0.1em; text-transform: uppercase;">Aethel Voice Identity</label>
+                    <select id="voice-dropdown" class="cyber-select font-mono" style="width: 100%; background: rgba(0,0,0,0.7); border: 1px solid var(--vgt-border); color: var(--vgt-cyan); padding: 8px; border-radius: 4px; font-size: 10px; outline: none; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em;"></select>
+                </div>
+
+                <button id="btn-new-chat" class="cyber-button font-mono" style="width: 100%; margin-bottom: 12px; text-transform: uppercase; font-size: 9px; letter-spacing: 0.1em; padding: 10px; background: rgba(0, 240, 255, 0.06); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan); cursor: pointer; border-radius: 4px; box-shadow: 0 0 10px rgba(0, 240, 255, 0.15); transition: all 0.2s;">+ Neuer Chat-Impuls</button>
+
+                <div class="sidebar-info font-mono" style="display: flex; flex-direction: column; flex-grow: 1; min-height: 120px; margin-bottom: 12px; width: 100%;">
+                    <h4>CHAT ARCHIVE</h4>
+                    <div id="sessions-list-container" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; max-height: 120px; padding-right: 4px;">
+                        <div style="color: var(--vgt-text-dim); font-size: 9px; text-align: center; padding: 10px 0;">Keine gespeicherten Chats.</div>
+                    </div>
+                </div>
+
+                <div class="sidebar-info font-mono" style="width: 100%;">
+                    <h4>SYSTEM PARAMETERS</h4>
+                    <div class="info-row">
+                        <span>SANDBOX:</span> <span class="green-text">ENABLED</span>
+                    </div>
+                    <div class="info-row">
+                        <span>FIREWALL:</span> <span class="green-text">ACTIVE</span>
+                    </div>
+                    <div class="info-row">
+                        <span>MEMORY:</span> <span class="cyan-text" id="memory-count">0 Einträge</span>
+                    </div>
+                    <div class="info-row">
+                        <span>CONTEXT:</span> <span class="cyan-text" id="context-utilization">0 / 128k</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Dynamic Viewport Area (Takes 1fr) -->
+            <div class="console-container main-viewport" style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+                
+                <!-- 1. VIEW PANEL: IDLE / CORE HUD -->
+                <div id="view-core" class="viewport-panel" style="display: flex; flex-direction: column; height: 100%; width: 100%; overflow-y: auto; padding: 24px; gap: 20px;">
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; flex-shrink: 0; min-height: 320px;">
+                        <!-- Sphere panel left -->
+                        <div class="glass-card" style="display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 30px; text-align: center; background: rgba(0, 0, 0, 0.15);">
+                            <div class="sphere-wrapper">
+                                <div class="voice-sphere" id="voice-sphere">
+                                    <div class="sphere-inner"></div>
+                                </div>
+                                <p class="sphere-status font-mono" id="sphere-hud-status" style="margin-top: 25px; letter-spacing: 0.2em; font-size: 11px; color: var(--vgt-cyan);">CORE ONLINE</p>
+                            </div>
+                        </div>
+                        
+                        <!-- HUD Stats right -->
+                        <div class="glass-card" style="padding: 24px; display: flex; flex-direction: column; gap: 15px; font-family: var(--font-mono); font-size: 11px;">
+                            <h3 style="font-size: 12px; letter-spacing: 0.1em; color: var(--vgt-cyan); border-bottom: 1px solid rgba(0, 240, 255, 0.15); padding-bottom: 8px;">AETHEL CORE HUD</h3>
+                            
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px;">
+                                <span style="color: var(--vgt-text-dim);">SYSTEM INTEGRITY:</span>
+                                <span id="core-status-integrity" class="green-text">SECURE</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px;">
+                                <span style="color: var(--vgt-text-dim);">AKTIVE LEASES:</span>
+                                <span id="core-status-leases" class="cyan-text">0 active leases</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px;">
+                                <span style="color: var(--vgt-text-dim);">UPTIME:</span>
+                                <span class="white-text">Local Host Uplink</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px;">
+                                <span style="color: var(--vgt-text-dim);">ACTIVE VOICE PROFILE:</span>
+                                <span id="core-status-voice" class="white-text">Onyx (Premium)</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px;">
+                                <span style="color: var(--vgt-text-dim);">LLM CORE LEVEL:</span>
+                                <span class="white-text">Groq Server Uplink</span>
+                            </div>
+                            
+                            <div style="margin-top: auto; display: flex; gap: 10px;">
+                                <button id="core-btn-test-voice" class="cyber-button font-mono" style="padding: 10px 15px; font-size: 9px; width: auto; background: rgba(0, 240, 255, 0.05); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan);">TEST VOICE RESPONSE</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Voice Subsystem Panel -->
+                    <div class="glass-card font-mono" style="padding: 20px; display: flex; flex-direction: column; background: rgba(0, 0, 0, 0.15); font-size: 11px;">
+                        <h4 style="font-size: 10px; letter-spacing: 0.15em; color: var(--vgt-cyan); margin-bottom: 12px; border-bottom: 1px solid rgba(0, 240, 255, 0.15); padding-bottom: 6px;">VOICE SUBSYSTEM DIAGNOSTICS</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px;">
+                            <!-- Diagnostics Status -->
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
+                                    <span style="color: var(--vgt-text-dim);">VOICE SUBSYSTEM:</span>
+                                    <span id="voice-health-status" class="cyan-text">ONLINE</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
+                                    <span style="color: var(--vgt-text-dim);">OPENAI TTS (PREMIUM):</span>
+                                    <span id="voice-health-openai" class="green-text">ACTIVE</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
+                                    <span style="color: var(--vgt-text-dim);">LOCAL SAPI5 (WINDOWS):</span>
+                                    <span id="voice-health-sapi5" class="green-text">ACTIVE</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
+                                    <span style="color: var(--vgt-text-dim);">GROQ WHISPER (STT):</span>
+                                    <span id="voice-health-whisper" class="green-text">ACTIVE</span>
+                                </div>
+                            </div>
+                            <!-- Dry Run Tester -->
+                            <div style="display: flex; flex-direction: column; justify-content: center; gap: 10px; border-left: 1px solid rgba(255,255,255,0.05); padding-left: 20px;">
+                                <div style="font-size: 10px; color: var(--vgt-text-dim); margin-bottom: 4px;">VOICE DRY RUN VERIFICATION</div>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="text" id="voice-test-phrase" placeholder="Geben Sie einen Testsatz ein..." value="Aethel, Systemtest abgeschlossen." class="font-mono" style="flex-grow: 1; background: rgba(0,0,0,0.5); border: 1px solid var(--vgt-border); color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 10px; outline: none;">
+                                    <button id="voice-btn-run-test" class="cyber-button font-mono" style="width: auto; padding: 6px 14px; font-size: 10px; background: rgba(157, 78, 221, 0.1); border: 1px solid var(--vgt-purple); color: var(--vgt-purple);">DRY RUN</button>
+                                </div>
+                                <div id="voice-test-result" style="font-size: 8px; color: var(--vgt-text-dark); margin-top: 4px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timeline kernel events bottom -->
+                    <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; flex-grow: 1; min-height: 200px; background: rgba(0,0,0,0.1); font-family: var(--font-mono);">
+                        <h4 style="font-size: 10px; letter-spacing: 0.15em; color: var(--vgt-cyan); margin-bottom: 10px; border-bottom: 1px solid rgba(0, 240, 255, 0.15); padding-bottom: 6px;">RECENT EVENT LOGS</h4>
+                        <div style="overflow-y: auto; flex-grow: 1; font-size: 9px;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="color: var(--vgt-text-dim); border-bottom: 1px solid rgba(255,255,255,0.06); text-align: left;">
+                                        <th style="padding: 6px 4px; width: 80px;">TIME</th>
+                                        <th style="padding: 6px 4px; width: 100px;">OP</th>
+                                        <th style="padding: 6px 4px;">TARGET</th>
+                                        <th style="padding: 6px 4px; width: 80px; text-align: right;">STATUS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="core-logs-tbody">
+                                    <tr>
+                                        <td colspan="4" style="padding: 10px; text-align: center; color: var(--vgt-text-dim);">Lade Logbuch Einträge...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. VIEW PANEL: CHAT CONSOLE -->
+                <div id="view-chat" class="viewport-panel hidden" style="display: flex; flex-direction: column; height: 100%; width: 100%;">
+                    <div class="terminal-screen" id="chat-output" style="flex-grow: 1; padding: 24px;">
+                        <div class="system-message font-mono">
+                            <p>[VGT PROTOCOL INITIALIZED]</p>
+                            <p>Souveräne Terminal-Schnittstelle betriebsbereit. Drücke den Mikrofon-Button, um per Sprache zu interagieren, oder tippe Befehle direkt in die Konsole.</p>
+                        </div>
+                    </div>
+
+                    <!-- Input Panel -->
+                    <div class="input-panel" style="padding: 16px 24px;">
+                        <div class="input-wrapper">
+                            <button id="btn-mic" class="mic-button" title="Spracheingabe starten (Push-to-Talk)">
+                                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" class="mic-icon">
+                                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+                                </svg>
+                                <span class="mic-wave"></span>
+                            </button>
+
+                            <input type="text" id="user-input" placeholder="Neuralen Impuls eingeben..." autocomplete="off">
+                            
+                            <button id="btn-send" class="send-button" title="Absenden">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            </button>
+                        </div>
+                        <div class="speech-status font-mono" id="speech-indicator">Push-to-Talk inaktiv</div>
+                    </div>
+                </div>
+
+                <!-- 3. VIEW PANEL: AGENT TRACKER -->
+                <div id="view-agent" class="viewport-panel hidden" style="display: flex; flex-direction: column; height: 100%; width: 100%; padding: 24px; gap: 20px; overflow-y: auto;">
+                    <div class="glass-card" style="padding: 24px; font-family: var(--font-mono);">
+                        <h3 style="color: var(--vgt-cyan); font-size: 14px; letter-spacing: 0.1em; border-bottom: 1px solid rgba(0, 240, 255, 0.15); padding-bottom: 8px; margin-bottom: 16px;">AKTIVES AGENTEN RUN-PROFIL</h3>
+                        <div style="font-size: 11px; line-height: 1.6;">
+                            <div><span style="color: var(--vgt-text-dim);">RUN OBJECTIVE / FOCUS:</span> <span style="color: #fff;" id="agent-current-focus">Kein aktiver Agenten-Run gestartet.</span></div>
+                            <div style="margin-top: 10px;"><span style="color: var(--vgt-text-dim);">SYSTEM STATUS:</span> <span class="green-text" id="agent-status-label">Bereit für Aufgaben</span></div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex-grow: 1; min-height: 300px;">
+                        <!-- Agent Steps -->
+                        <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; font-family: var(--font-mono);">
+                            <h4 style="font-size: 11px; color: var(--vgt-cyan); border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">PLAN & STEP LIST</h4>
+                            <div id="agent-steps-container" style="overflow-y: auto; flex-grow: 1; font-size: 10px; display: flex; flex-direction: column; gap: 10px;">
+                                <div style="color: var(--vgt-text-dim); text-align: center; margin-top: 40px;">Warte auf einen Agent-Run, um den Plan anzuzeigen...</div>
+                            </div>
+                        </div>
+
+                        <!-- Running Actions & Approvals -->
+                        <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; font-family: var(--font-mono);">
+                            <h4 style="font-size: 11px; color: var(--vgt-cyan); border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">LOGBUCH DES AGENTEN</h4>
+                            <div id="agent-logs-container" style="overflow-y: auto; flex-grow: 1; font-size: 9px; color: var(--vgt-text-dim); line-height: 1.4; display: flex; flex-direction: column; gap: 6px;">
+                                <div>[STANDBY] Bereit zur Orchestrierung.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. VIEW PANEL: LIVE OPERATOR (CONTROL VIEW) -->
+                <div id="view-control" class="viewport-panel hidden" style="display: flex; flex-direction: column; height: 100%; width: 100%; overflow: hidden;">
+                    <!-- Headless address bar mockup -->
+                    <div class="browser-address-bar" style="border-bottom: 1px solid var(--vgt-border); padding: 10px 16px; background: rgba(0,0,0,0.3);">
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--vgt-cyan)" stroke-width="2" fill="none" class="lock-icon"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <input type="text" id="browser-url-input" class="font-mono" value="about:blank" readonly style="background: transparent; border: none; color: var(--vgt-cyan); outline: none; font-size: 10px; width: 100%; margin-left: 10px;">
+                        <div class="browser-indicator" id="browser-load-status">
+                            <span class="pulse-dot green"></span>
+                        </div>
+                    </div>
+
+                    <!-- Operator screenshot display -->
+                    <div class="browser-viewport" style="flex-grow: 1; position: relative; overflow: hidden; background: #060412; display: flex; justify-content: center; align-items: center; padding: 12px;">
+                        <div class="viewport-placeholder font-mono" id="browser-placeholder" style="text-align: center;">
+                            <svg viewBox="0 0 24 24" width="48" height="48" stroke="var(--vgt-text-dim)" stroke-width="1.2" fill="none" style="opacity: 0.25; margin-bottom: 16px;">
+                                <circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/>
+                            </svg>
+                            <p>OPERATOR VIEW DISCONNECTED</p>
+                            <p style="font-size: 9px; opacity: 0.5; margin-top: 6px; letter-spacing: 0.05em;">Lade Browser Screenshot...</p>
+                        </div>
+                        <img id="browser-screenshot" src="" class="hidden" alt="Live Viewport Screenshot" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; box-shadow: 0 4px 30px rgba(0,0,0,0.6);">
+                    </div>
+
+                    <!-- Control command bar -->
+                    <div class="glass-card" style="border-radius: 0; border-left: none; border-right: none; border-bottom: none; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); font-size: 11px;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <span class="pulse-dot green" id="control-active-dot"></span>
+                            <span style="color: var(--vgt-text-dim);">AUTOMATION UPLINK ACTIVE</span>
+                            <div style="display: flex; align-items: center; gap: 10px; border-left: 1px solid rgba(255,255,255,0.15); padding-left: 15px; margin-left: 5px;">
+                                <div id="control-voice-sphere" class="voice-sphere-mini" style="width: 10px; height: 10px; border-radius: 50%; background: var(--vgt-cyan); box-shadow: 0 0 8px var(--vgt-cyan); transition: all 0.3s ease;"></div>
+                                <span id="control-voice-status" style="font-size: 9px; color: var(--vgt-cyan); text-transform: uppercase; font-weight: bold;">CORE STANDBY</span>
+                                <button id="control-btn-mic" class="cyber-button font-mono" style="width: auto; padding: 4px 12px; font-size: 8px; border-color: var(--vgt-cyan); color: var(--vgt-cyan); margin-left: 5px;">SPRECHEN</button>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px;">
+                            <button id="control-btn-pause" class="cyber-button font-mono" style="width: auto; padding: 8px 16px; background: rgba(255, 123, 0, 0.08); border: 1px solid var(--vgt-orange); color: var(--vgt-orange); font-size: 9px;">PAUSE RUN</button>
+                            <button id="control-btn-kill" class="cyber-button font-mono" style="width: auto; padding: 8px 16px; background: rgba(255, 0, 79, 0.08); border: 1px solid var(--vgt-red); color: var(--vgt-red); font-size: 9px;">STOP OPERATION</button>
+                            <button id="control-btn-revoke" class="cyber-button font-mono" style="width: auto; padding: 8px 16px; background: rgba(255, 0, 79, 0.15); border: 1.5px solid var(--vgt-red); color: #fff; font-size: 9px; font-weight: bold; box-shadow: 0 0 10px rgba(255,0,79,0.3);">REVOKE ALL RIGHTS</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. VIEW PANEL: SECURITY CORE -->
+                <div id="view-security" class="viewport-panel hidden" style="display: flex; flex-direction: column; height: 100%; width: 100%; padding: 24px; gap: 20px; overflow-y: auto;">
+                    <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; flex-shrink: 0;">
+                        <!-- Active leases -->
+                        <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; font-family: var(--font-mono); min-height: 240px;">
+                            <h4 style="font-size: 11px; color: var(--vgt-cyan); border-bottom: 1px solid rgba(0,240,255,0.15); padding-bottom: 8px;">AKTIVE BERECHTIGUNGS-LEASES</h4>
+                            <div id="sec-leases-container" style="overflow-y: auto; flex-grow: 1; font-size: 10px; display: flex; flex-direction: column; gap: 8px;">
+                                <div style="color: var(--vgt-text-dim); text-align: center; margin-top: 30px;">Keine aktiven Leases vorhanden.</div>
+                            </div>
+                        </div>
+
+                        <!-- System capabilities -->
+                        <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; font-family: var(--font-mono); min-height: 240px;">
+                            <h4 style="font-size: 11px; color: var(--vgt-cyan); border-bottom: 1px solid rgba(0,240,255,0.15); padding-bottom: 8px;">SYSTEM FIREWALL RULES & RISKS</h4>
+                            <div style="overflow-y: auto; flex-grow: 1; font-size: 9px; line-height: 1.4; display: flex; flex-direction: column; gap: 8px;">
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
+                                    <span style="color: var(--vgt-purple); font-weight: bold;">system.exec</span>
+                                    <span style="color: var(--vgt-red);">HIGH RISK (RESTRICED)</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
+                                    <span style="color: var(--vgt-purple); font-weight: bold;">fs.write / fs.delete</span>
+                                    <span style="color: var(--vgt-orange);">MODERATE RISK</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
+                                    <span style="color: var(--vgt-purple); font-weight: bold;">gui.type / gui.press_key</span>
+                                    <span style="color: var(--vgt-orange);">MODERATE RISK</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
+                                    <span style="color: var(--vgt-purple); font-weight: bold;">fs.read / fs.mount</span>
+                                    <span style="color: var(--vgt-text-dim);">LOW RISK</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
+                                    <span style="color: var(--vgt-purple); font-weight: bold;">memory.read / memory.write</span>
+                                    <span style="color: var(--vgt-green);">SAFE</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hash-Chained Audit Logs -->
+                    <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; flex-grow: 1; min-height: 250px; background: rgba(0,0,0,0.1); font-family: var(--font-mono);">
+                        <h4 style="font-size: 11px; color: var(--vgt-cyan); margin-bottom: 10px; border-bottom: 1px solid rgba(0, 240, 255, 0.15); padding-bottom: 6px;">CRYPTOGRAPHIC AUDIT LOG TRAIL</h4>
+                        <div style="overflow-y: auto; flex-grow: 1; font-size: 8px;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="color: var(--vgt-text-dim); border-bottom: 1px solid rgba(255,255,255,0.06); text-align: left;">
+                                        <th style="padding: 6px 4px; width: 110px;">TIMESTAMP</th>
+                                        <th style="padding: 6px 4px; width: 90px;">OP/CAP</th>
+                                        <th style="padding: 6px 4px; width: 60px;">RISK</th>
+                                        <th style="padding: 6px 4px; width: 90px;">DECISION</th>
+                                        <th style="padding: 6px 4px;">HASH BLÖCKE</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sec-audit-tbody">
+                                    <tr>
+                                        <td colspan="5" style="padding: 20px; text-align: center; color: var(--vgt-text-dim);">Lade Audit Trail...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. VIEW PANEL: NEXUS MEMORY -->
+                <div id="view-memory" class="viewport-panel hidden" style="display: flex; flex-direction: column; height: 100%; width: 100%; padding: 24px; gap: 20px; overflow-y: auto;">
+                    <!-- Memory Search & Add Form -->
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; flex-shrink: 0;">
+                        <!-- Search card -->
+                        <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; font-family: var(--font-mono);">
+                            <h4 style="font-size: 11px; color: var(--vgt-cyan); border-bottom: 1px solid rgba(0,240,255,0.15); padding-bottom: 8px;">MEMORIES SEMANTISCH DURCHSUCHEN</h4>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="mem-search-query" placeholder="Suchbegriff eingeben..." style="flex-grow: 1; background: rgba(0,0,0,0.5); border: 1px solid var(--vgt-border); border-radius: 4px; color: #fff; padding: 10px; font-size: 11px; outline: none; font-family: var(--font-mono);">
+                                <button id="mem-btn-search" class="cyber-button font-mono" style="width: auto; padding: 10px 20px; font-size: 10px;">SUCHEN</button>
+                            </div>
+                        </div>
+
+                        <!-- Add memory card -->
+                        <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; font-family: var(--font-mono);">
+                            <h4 style="font-size: 11px; color: var(--vgt-cyan); border-bottom: 1px solid rgba(0,240,255,0.15); padding-bottom: 8px;">MANUELLE ERINNERUNG ERSTELLEN</h4>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="mem-add-content" placeholder="Erinnerungsinhalt (z.B. Git token)..." style="flex-grow: 1; background: rgba(0,0,0,0.5); border: 1px solid var(--vgt-border); border-radius: 4px; color: #fff; padding: 10px; font-size: 11px; outline: none; font-family: var(--font-mono);">
+                                <select id="mem-add-category" style="background: rgba(0,0,0,0.7); border: 1px solid var(--vgt-border); color: var(--vgt-cyan); padding: 8px; border-radius: 4px; font-size: 10px; outline: none; font-family: var(--font-mono);">
+                                    <option value="project">Project</option>
+                                    <option value="preference">Preference</option>
+                                    <option value="task">Task</option>
+                                    <option value="secret_reference">Secret Ref</option>
+                                </select>
+                                <button id="mem-btn-add" class="cyber-button font-mono" style="width: auto; padding: 10px 20px; font-size: 10px;">SPEICHERN</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Memories display lists -->
+                    <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; flex-grow: 1; min-height: 300px; font-family: var(--font-mono);">
+                        <h4 style="font-size: 11px; color: var(--vgt-cyan); margin-bottom: 12px; border-bottom: 1px solid rgba(0, 240, 255, 0.15); padding-bottom: 6px;">NEXUS SPEICHER-EINTRÄGE</h4>
+                        <div id="mem-list-container" style="overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 10px; font-size: 10px;">
+                            <div style="color: var(--vgt-text-dim); text-align: center; margin-top: 40px;">Lade Gedächtnis Einträge...</div>
+                        </div>
+                    </div>
+
+                    <!-- Secret Vault Section -->
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; flex-shrink: 0; margin-top: 10px;">
+                        <!-- Stored Secrets List -->
+                        <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; font-family: var(--font-mono); min-height: 220px;">
+                            <h4 style="font-size: 11px; color: var(--vgt-purple); border-bottom: 1px solid rgba(157, 78, 221, 0.15); padding-bottom: 8px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                SECRETS VAULT (METADATEN)
+                            </h4>
+                            <div id="secrets-list-container" style="overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; font-size: 10px;">
+                                <div style="color: var(--vgt-text-dim); text-align: center; margin-top: 20px;">Lade Tresor Einträge...</div>
+                            </div>
+                        </div>
+
+                        <!-- Add Secret Form -->
+                        <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 10px; font-family: var(--font-mono);">
+                            <h4 style="font-size: 11px; color: var(--vgt-purple); border-bottom: 1px solid rgba(157, 78, 221, 0.15); padding-bottom: 8px; margin-bottom: 5px;">SECRET HINZUFÜGEN</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                <input type="text" id="secr-add-id" placeholder="Schlüssel ID (z.B. github_token)" style="background: rgba(0,0,0,0.5); border: 1px solid var(--vgt-border); border-radius: 4px; color: #fff; padding: 8px; font-size: 10px; outline: none;">
+                                <input type="text" id="secr-add-service" placeholder="Service (z.B. github)" style="background: rgba(0,0,0,0.5); border: 1px solid var(--vgt-border); border-radius: 4px; color: #fff; padding: 8px; font-size: 10px; outline: none;">
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 8px;">
+                                <select id="secr-add-type" style="background: rgba(0,0,0,0.7); border: 1px solid var(--vgt-border); color: var(--vgt-cyan); padding: 8px; border-radius: 4px; font-size: 10px; outline: none;">
+                                    <option value="api_token">API Token</option>
+                                    <option value="password">Passwort</option>
+                                    <option value="key">Key/Zertifikat</option>
+                                </select>
+                                <input type="password" id="secr-add-token" placeholder="Klartext Secret Wert" style="background: rgba(0,0,0,0.5); border: 1px solid var(--vgt-border); border-radius: 4px; color: #fff; padding: 8px; font-size: 10px; outline: none;">
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                                <label style="font-size: 9px; color: var(--vgt-text-dim); display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" id="secr-add-approval" checked style="cursor: pointer;">
+                                    Freigabe vor Nutzung verlangen
+                                </label>
+                                <button id="secr-btn-add" class="cyber-button font-mono" style="width: auto; padding: 8px 16px; font-size: 10px; background: rgba(157, 78, 221, 0.1); border: 1px solid var(--vgt-purple); color: var(--vgt-purple);">SPEICHERN</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. VIEW PANEL: TASK ENGINE -->
+                <div id="view-tasks" class="viewport-panel hidden" style="display: flex; flex-direction: column; height: 100%; width: 100%; padding: 24px; gap: 20px; overflow-y: auto;">
+                    <!-- Tasks creation card -->
+                    <!-- Tasks creation card -->
+                    <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; font-family: var(--font-mono); flex-shrink: 0;">
+                        <h4 style="font-size: 11px; color: var(--vgt-cyan); border-bottom: 1px solid rgba(0,240,255,0.15); padding-bottom: 8px;">NEUEN AGENTEN-TASK PLANEN</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <input type="text" id="task-add-text" placeholder="Task Titel (z.B. Log-Audit Check)..." style="background: rgba(0,0,0,0.5); border: 1px solid var(--vgt-border); border-radius: 4px; color: #fff; padding: 8px; font-size: 10px; outline: none; font-family: var(--font-mono);">
+                            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px;">
+                                <select id="task-add-schedule" style="background: rgba(0,0,0,0.7); border: 1px solid var(--vgt-border); color: var(--vgt-cyan); padding: 8px; border-radius: 4px; font-size: 10px; outline: none;">
+                                    <option value="once">Einmalig (Sofort)</option>
+                                    <option value="interval">Intervall (Sekunden)</option>
+                                </select>
+                                <input type="number" id="task-add-interval" placeholder="Intervall (s)" value="60" disabled style="background: rgba(0,0,0,0.5); border: 1px solid var(--vgt-border); border-radius: 4px; color: #fff; padding: 8px; font-size: 10px; outline: none; font-family: var(--font-mono); opacity: 0.5;">
+                            </div>
+                        </div>
+                        <textarea id="task-add-objective" placeholder="Detailliertes Agenten-Ziel (z.B. Prüfe den Inhalt von './vgt_workspace/security_audit.json', filtere nach blockierten Aktionen und erstelle einen Report)..." rows="2" style="background: rgba(0,0,0,0.5); border: 1px solid var(--vgt-border); border-radius: 4px; color: #fff; padding: 8px; font-size: 10px; outline: none; font-family: var(--font-mono); resize: none;"></textarea>
+                        <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 10px;">
+                            <input type="text" id="task-add-capabilities" placeholder="Erforderliche Capabilities (z.B. system.exec, fs.read)..." style="background: rgba(0,0,0,0.5); border: 1px solid var(--vgt-border); border-radius: 4px; color: #fff; padding: 8px; font-size: 10px; outline: none; font-family: var(--font-mono);">
+                            <select id="task-add-risk" style="background: rgba(0,0,0,0.7); border: 1px solid var(--vgt-border); color: var(--vgt-orange); padding: 8px; border-radius: 4px; font-size: 10px; outline: none;">
+                                <option value="Low">Limit: Low Risk</option>
+                                <option value="Moderate" selected>Limit: Moderate Risk</option>
+                                <option value="High">Limit: High Risk</option>
+                                <option value="Critical">Limit: Critical Risk</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; margin-top: 5px;">
+                            <button id="task-btn-add" class="cyber-button font-mono" style="width: auto; padding: 8px 24px; font-size: 10px;">TASK PLANEN</button>
+                        </div>
+                    </div>
+
+                    <!-- Tasks queue monitor -->
+                    <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; flex-grow: 1; min-height: 300px; font-family: var(--font-mono);">
+                        <h4 style="font-size: 11px; color: var(--vgt-cyan); margin-bottom: 12px; border-bottom: 1px solid rgba(0, 240, 255, 0.15); padding-bottom: 6px;">TASK SCHEDULER WARTESCHLANGE</h4>
+                        <div id="tasks-list-container" style="overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; font-size: 10px;">
+                            <div style="color: var(--vgt-text-dim); text-align: center; margin-top: 40px;">Lade Tasks...</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
