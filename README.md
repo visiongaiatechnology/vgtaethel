@@ -42,6 +42,9 @@ Found a vulnerability or have an improvement? **Open an issue or contact us.**
 
 ---
 
+<img width="1920" height="1009" alt="image" src="https://github.com/user-attachments/assets/7a026e26-f8e0-40bb-84c8-008c92b61513" />
+
+
 ## 🔍 What is VGT AETHEL?
 
 AETHEL is not a chatbot. It is a **local sovereign AI kernel** — personal assistant, code agent, computer-control agent, voice assistant, task orchestrator and security kernel in one system.
