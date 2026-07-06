@@ -163,7 +163,10 @@ export function speak(text) {
         try { state.recognition.stop(); } catch(e) {}
     }
 
-    if (state.currentVoice.startsWith("browser:") || (!state.hasOpenAI && !state.currentVoice.includes("Lokal"))) {
+    const isBrowserVoice = state.currentVoice.startsWith("browser:");
+    const isPremiumVoice = ["onyx", "nova", "alloy", "echo", "fable", "shimmer"].includes(state.currentVoice);
+
+    if (isBrowserVoice || (isPremiumVoice && !state.hasOpenAI)) {
         if (!state.synth) {
             handleAethelSpeechCompleted();
             return;
@@ -177,7 +180,11 @@ export function speak(text) {
         let voice = browserVoices.find(v => v.name === targetVoiceName);
 
         if (!voice) {
-            voice = browserVoices.find(v => v.lang.startsWith("de"));
+            // Prioritize high-quality online neural voices over robotic offline ones
+            voice = browserVoices.find(v => v.lang.startsWith("de") && (v.name.toLowerCase().includes("online") || v.name.toLowerCase().includes("natural")));
+            if (!voice) {
+                voice = browserVoices.find(v => v.lang.startsWith("de"));
+            }
         }
 
         if (voice) {

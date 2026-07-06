@@ -11,9 +11,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -265,6 +267,12 @@ func (s *WriteFileSkill) Execute(args json.RawMessage) (string, error) {
 		return "", err
 	}
 
+	// Read old content if exists
+	var oldContent string
+	if data, err := os.ReadFile(safePath); err == nil {
+		oldContent = string(data)
+	}
+
 	// Ensure parent directories exist
 	if err := os.MkdirAll(filepath.Dir(safePath), 0755); err != nil {
 		return "", err
@@ -275,7 +283,209 @@ func (s *WriteFileSkill) Execute(args json.RawMessage) (string, error) {
 		return "", err
 	}
 	LogKernelActivity("WRITE", input.Path, "SUCCESS")
-	return fmt.Sprintf("Datei erfolgreich geschrieben: %s", input.Path), nil
+
+	// Compute and record line changes
+	added, removed := computeLineChanges(oldContent, input.Content)
+	recordFileChange(safePath, added, removed)
+
+	return fmt.Sprintf("Datei erfolgreich geschrieben: %s (+%d, -%d Zeilen)", input.Path, added, removed), nil
+}
+
+// computeLineChanges matches line counts to calculate added/removed lines for diff panels.
+func computeLineChanges(oldContent, newContent string) (added, removed int) {
+	if oldContent == newContent {
+		return 0, 0
+	}
+	oldLines := strings.Split(oldContent, "\n")
+	newLines := strings.Split(newContent, "\n")
+
+	oldLineMap := make(map[string]int)
+	for _, l := range oldLines {
+		oldLineMap[strings.TrimSpace(l)]++
+	}
+
+	for _, l := range newLines {
+		trimmed := strings.TrimSpace(l)
+		if count, exists := oldLineMap[trimmed]; exists && count > 0 {
+			oldLineMap[trimmed]--
+		} else {
+			added++
+		}
+	}
+
+	for _, count := range oldLineMap {
+		removed += count
+	}
+	return
+}
+
+// --- 3b. SKILL: REPLACE FILE CONTENT ---
+
+type ReplaceFileContentSkill struct{}
+
+type ReplaceFileContentArgs struct {
+	Path               string `json:"path"`
+	StartLine          int    `json:"start_line"`
+	EndLine            int    `json:"end_line"`
+	TargetContent      string `json:"target_content"`
+	ReplacementContent string `json:"replacement_content"`
+}
+
+func (s *ReplaceFileContentSkill) Name() string        { return "fs_replace_file_content" }
+func (s *ReplaceFileContentSkill) Description() string { return "Ersetzt einen bestimmten, exakten Textblock in einer Datei innerhalb eines Zeilenbereichs." }
+func (s *ReplaceFileContentSkill) RiskLevel() RiskLevel { return RiskCritical }
+
+func (s *ReplaceFileContentSkill) Parameters() map[string]interface{} {
+	return map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"path":                map[string]interface{}{"type": "string", "description": "Relativer oder absoluter Pfad zur Datei"},
+			"start_line":          map[string]interface{}{"type": "integer", "description": "Startzeile (1-basiert) für den Suchbereich"},
+			"end_line":            map[string]interface{}{"type": "integer", "description": "Endzeile (1-basiert) für den Suchbereich"},
+			"target_content":      map[string]interface{}{"type": "string", "description": "Der exakte Textblock, der ersetzt werden soll"},
+			"replacement_content": map[string]interface{}{"type": "string", "description": "Der neue Textblock, der als Ersatz dient"},
+		},
+		"required": []string{"path", "start_line", "end_line", "target_content", "replacement_content"},
+	}
+}
+
+func (s *ReplaceFileContentSkill) Execute(args json.RawMessage) (string, error) {
+	var input ReplaceFileContentArgs
+	if err := json.Unmarshal(args, &input); err != nil {
+		return "", err
+	}
+
+	safePath, err := validatePath(input.Path)
+	if err != nil {
+		return "", err
+	}
+
+	data, err := os.ReadFile(safePath)
+	if err != nil {
+		return "", err
+	}
+	oldContent := string(data)
+
+	lines := strings.Split(oldContent, "\n")
+	if input.StartLine < 1 || input.EndLine > len(lines) || input.StartLine > input.EndLine {
+		return "", fmt.Errorf("ungültiger Zeilenbereich: %d bis %d (Datei hat %d Zeilen)", input.StartLine, input.EndLine, len(lines))
+	}
+
+	// Extract lines within range and verify target_content
+	rangeContent := strings.Join(lines[input.StartLine-1:input.EndLine], "\n")
+	if !strings.Contains(rangeContent, input.TargetContent) {
+		return "", fmt.Errorf("der Zieltext konnte im angegebenen Zeilenbereich [%d - %d] nicht gefunden werden", input.StartLine, input.EndLine)
+	}
+
+	// Perform replacement
+	newRangeContent := strings.Replace(rangeContent, input.TargetContent, input.ReplacementContent, 1)
+
+	// Rebuild content
+	var newLines []string
+	newLines = append(newLines, lines[:input.StartLine-1]...)
+	newLines = append(newLines, strings.Split(newRangeContent, "\n")...)
+	newLines = append(newLines, lines[input.EndLine:]...)
+	newContent := strings.Join(newLines, "\n")
+
+	if err := os.WriteFile(safePath, []byte(newContent), 0644); err != nil {
+		LogKernelActivity("WRITE_FAILED", input.Path, "ERROR")
+		return "", err
+	}
+	LogKernelActivity("WRITE", input.Path, "SUCCESS")
+
+	// Compute and record line changes
+	added, removed := computeLineChanges(oldContent, newContent)
+	recordFileChange(safePath, added, removed)
+
+	return fmt.Sprintf("Erfolgreich geändert in %s (+%d, -%d Zeilen)", filepath.Base(safePath), added, removed), nil
+}
+
+// --- 3c. SKILL: SET CHECKLIST ---
+
+type SetChecklistSkill struct{}
+
+type SetChecklistArgs struct {
+	Tasks []string `json:"tasks"`
+}
+
+func (s *SetChecklistSkill) Name() string        { return "task_set_checklist" }
+func (s *SetChecklistSkill) Description() string { return "Erstellt eine Schritt-für-Schritt-Planliste für die aktuelle Aufgabe im Chat Terminal." }
+func (s *SetChecklistSkill) RiskLevel() RiskLevel { return RiskSafe }
+
+func (s *SetChecklistSkill) Parameters() map[string]interface{} {
+	return map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"tasks": map[string]interface{}{
+				"type": "array",
+				"items": map[string]interface{}{"type": "string"},
+				"description": "Die Liste der geplanten Einzelschritte",
+			},
+		},
+		"required": []string{"tasks"},
+	}
+}
+
+func (s *SetChecklistSkill) Execute(args json.RawMessage) (string, error) {
+	var input SetChecklistArgs
+	if err := json.Unmarshal(args, &input); err != nil {
+		return "", err
+	}
+
+	var list []map[string]interface{}
+	for _, t := range input.Tasks {
+		list = append(list, map[string]interface{}{
+			"text":   t,
+			"status": "pending",
+		})
+	}
+
+	currentChecklistMu.Lock()
+	currentChecklist = list
+	currentChecklistMu.Unlock()
+
+	return fmt.Sprintf("Aktionsplan erstellt mit %d Schritten.", len(input.Tasks)), nil
+}
+
+// --- 3d. SKILL: UPDATE CHECKLIST ---
+
+type UpdateChecklistSkill struct{}
+
+type UpdateChecklistArgs struct {
+	Index  int    `json:"index"`
+	Status string `json:"status"`
+}
+
+func (s *UpdateChecklistSkill) Name() string        { return "task_update_checklist" }
+func (s *UpdateChecklistSkill) Description() string { return "Aktualisiert den Status eines Schritts in der aktiven Planliste." }
+func (s *UpdateChecklistSkill) RiskLevel() RiskLevel { return RiskSafe }
+
+func (s *UpdateChecklistSkill) Parameters() map[string]interface{} {
+	return map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"index":  map[string]interface{}{"type": "integer", "description": "Der 0-basierte Index des Schritts in der Planliste"},
+			"status": map[string]interface{}{"type": "string", "enum": []string{"pending", "in_progress", "done"}, "description": "Der neue Status des Schritts"},
+		},
+		"required": []string{"index", "status"},
+	}
+}
+
+func (s *UpdateChecklistSkill) Execute(args json.RawMessage) (string, error) {
+	var input UpdateChecklistArgs
+	if err := json.Unmarshal(args, &input); err != nil {
+		return "", err
+	}
+
+	currentChecklistMu.Lock()
+	defer currentChecklistMu.Unlock()
+
+	if input.Index < 0 || input.Index >= len(currentChecklist) {
+		return "", fmt.Errorf("Index außerhalb des Bereichs: %d (Länge: %d)", input.Index, len(currentChecklist))
+	}
+
+	currentChecklist[input.Index]["status"] = input.Status
+	return fmt.Sprintf("Schritt %d aktualisiert auf: %s", input.Index, input.Status), nil
 }
 
 // --- 4. RAG / MEMORY SYSTEM (TF-IDF SEARCH ENGINE) ---
@@ -781,6 +991,105 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 		_ = CapturePrimaryDisplay()
 	}()
 
+	if runtime.GOOS == "linux" {
+		switch input.Action {
+		case "move":
+			cmd := exec.Command("xdotool", "mousemove", fmt.Sprintf("%d", input.X), fmt.Sprintf("%d", input.Y))
+			if err := cmd.Run(); err != nil {
+				LogKernelActivity("GUI_MOVE_FAILED", fmt.Sprintf("x:%d, y:%d", input.X, input.Y), "ERROR")
+				return "", err
+			}
+			LogKernelActivity("GUI_MOVE", fmt.Sprintf("x:%d, y:%d", input.X, input.Y), "SUCCESS")
+			return fmt.Sprintf("Mauszeiger erfolgreich zu X:%d Y:%d bewegt.", input.X, input.Y), nil
+
+		case "click":
+			var clickBtn string
+			if input.Button == "right" {
+				clickBtn = "3"
+			} else {
+				clickBtn = "1"
+			}
+			var cmd *exec.Cmd
+			if input.Button == "double" {
+				cmd = exec.Command("xdotool", "doubleclick", "1")
+			} else {
+				cmd = exec.Command("xdotool", "click", clickBtn)
+			}
+			if err := cmd.Run(); err != nil {
+				LogKernelActivity("GUI_CLICK_FAILED", input.Button, "ERROR")
+				return "", err
+			}
+			LogKernelActivity("GUI_CLICK", input.Button, "SUCCESS")
+			return fmt.Sprintf("Klick mit Taste '%s' erfolgreich ausgeführt.", input.Button), nil
+
+		case "type":
+			if input.Text == "" {
+				return "", errors.New("kein text zum tippen übergeben")
+			}
+			cmd := exec.Command("xdotool", "type", input.Text)
+			if err := cmd.Run(); err != nil {
+				LogKernelActivity("GUI_TYPE_FAILED", input.Text, "ERROR")
+				return "", err
+			}
+			LogKernelActivity("GUI_TYPE", input.Text, "SUCCESS")
+			return "Text erfolgreich getippt.", nil
+
+		case "press":
+			if input.Keys == "" {
+				return "", errors.New("keine tastenbezeichnung zum drücken übergeben")
+			}
+			keyStr := input.Keys
+			keyStr = strings.ReplaceAll(keyStr, "{ENTER}", "Return")
+			keyStr = strings.ReplaceAll(keyStr, "{TAB}", "Tab")
+			keyStr = strings.ReplaceAll(keyStr, "{ESC}", "Escape")
+			if strings.HasPrefix(keyStr, "^") && len(keyStr) == 2 {
+				keyStr = "ctrl+" + strings.ToLower(string(keyStr[1]))
+			}
+			cmd := exec.Command("xdotool", "key", keyStr)
+			if err := cmd.Run(); err != nil {
+				LogKernelActivity("GUI_PRESS_FAILED", input.Keys, "ERROR")
+				return "", err
+			}
+			LogKernelActivity("GUI_PRESS", input.Keys, "SUCCESS")
+			return fmt.Sprintf("Taste/Shortcut '%s' erfolgreich gedrückt.", input.Keys), nil
+
+		case "position":
+			outLoc, errLoc := exec.Command("xdotool", "getmouselocation", "--shell").Output()
+			if errLoc != nil {
+				LogKernelActivity("GUI_POSITION_FAILED", "", "ERROR")
+				return "", errLoc
+			}
+			outGeom, errGeom := exec.Command("xdotool", "getdisplaygeometry").Output()
+			if errGeom != nil {
+				LogKernelActivity("GUI_POSITION_FAILED", "", "ERROR")
+				return "", errGeom
+			}
+
+			var posX, posY string
+			for _, line := range strings.Split(string(outLoc), "\n") {
+				if strings.HasPrefix(line, "X=") {
+					posX = strings.TrimPrefix(line, "X=")
+				} else if strings.HasPrefix(line, "Y=") {
+					posY = strings.TrimPrefix(line, "Y=")
+				}
+			}
+
+			geomParts := strings.Fields(string(outGeom))
+			var width, height string
+			if len(geomParts) >= 2 {
+				width = geomParts[0]
+				height = geomParts[1]
+			} else {
+				width = "1920"
+				height = "1080"
+			}
+
+			LogKernelActivity("GUI_POSITION", fmt.Sprintf("x:%s, y:%s", posX, posY), "SUCCESS")
+			return fmt.Sprintf("Maus-Position: X:%s, Y:%s | Bildschirmauflösung: %sx%s", posX, posY, width, height), nil
+		}
+		return "", fmt.Errorf("unbekannte GUI-Aktion: %s", input.Action)
+	}
+
 	switch input.Action {
 	case "move":
 		psScript := fmt.Sprintf(`
@@ -788,6 +1097,7 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 			[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(%d, %d);
 		`, input.X, input.Y)
 		cmd := exec.Command(getPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 		err := cmd.Run()
 		if err != nil {
 			LogKernelActivity("GUI_MOVE_FAILED", fmt.Sprintf("x:%d, y:%d", input.X, input.Y), "ERROR")
@@ -800,13 +1110,10 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 		var mouseEventCode string
 		switch input.Button {
 		case "right":
-			// Right down (0x0008) and Right up (0x0010)
 			mouseEventCode = "[Mouse]::mouse_event(0x0008, 0, 0, 0, 0); [Mouse]::mouse_event(0x0010, 0, 0, 0, 0);"
 		case "double":
-			// Left down/up twice
 			mouseEventCode = "[Mouse]::mouse_event(0x0002, 0, 0, 0, 0); [Mouse]::mouse_event(0x0004, 0, 0, 0, 0); [Mouse]::mouse_event(0x0002, 0, 0, 0, 0); [Mouse]::mouse_event(0x0004, 0, 0, 0, 0);"
 		default: // "left"
-			// Left down (0x0002) and Left up (0x0004)
 			mouseEventCode = "[Mouse]::mouse_event(0x0002, 0, 0, 0, 0); [Mouse]::mouse_event(0x0004, 0, 0, 0, 0);"
 		}
 
@@ -822,6 +1129,7 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 			%s
 		`, mouseEventCode)
 		cmd := exec.Command(getPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 		err := cmd.Run()
 		if err != nil {
 			LogKernelActivity("GUI_CLICK_FAILED", input.Button, "ERROR")
@@ -834,13 +1142,13 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 		if input.Text == "" {
 			return "", errors.New("kein text zum tippen übergeben")
 		}
-		// Escape single quotes for PowerShell
 		escapedText := strings.ReplaceAll(input.Text, "'", "''")
 		psScript := fmt.Sprintf(`
 			Add-Type -AssemblyName System.Windows.Forms;
 			[System.Windows.Forms.SendKeys]::SendWait('%s');
 		`, escapedText)
 		cmd := exec.Command(getPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 		err := cmd.Run()
 		if err != nil {
 			LogKernelActivity("GUI_TYPE_FAILED", input.Text, "ERROR")
@@ -853,13 +1161,13 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 		if input.Keys == "" {
 			return "", errors.New("keine tastenbezeichnung zum drücken übergeben")
 		}
-		// Escape single quotes for PowerShell
 		escapedKeys := strings.ReplaceAll(input.Keys, "'", "''")
 		psScript := fmt.Sprintf(`
 			Add-Type -AssemblyName System.Windows.Forms;
 			[System.Windows.Forms.SendKeys]::SendWait('%s');
 		`, escapedKeys)
 		cmd := exec.Command(getPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 		err := cmd.Run()
 		if err != nil {
 			LogKernelActivity("GUI_PRESS_FAILED", input.Keys, "ERROR")
@@ -876,6 +1184,7 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 			Write-Output ($pos.X.ToString() + ';' + $pos.Y.ToString() + ';' + $scr.Width.ToString() + ';' + $scr.Height.ToString())
 		`
 		cmd := exec.Command(getPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 		out, err := cmd.Output()
 		if err != nil {
 			LogKernelActivity("GUI_POSITION_FAILED", "", "ERROR")
@@ -1106,7 +1415,16 @@ func CapturePrimaryDisplay() error {
 	}
 	_ = os.MkdirAll(filepath.Dir(screenshotPath), 0755)
 
-	psScript := fmt.Sprintf(`
+	if runtime.GOOS == "linux" {
+		cmd := exec.Command("scrot", "-z", "-q", "70", screenshotPath)
+		if err := cmd.Run(); err == nil {
+			return nil
+		}
+		cmdFallback := exec.Command("import", "-window", "root", "-quality", "70", screenshotPath)
+		return cmdFallback.Run()
+	}
+
+	psScriptTemplate := `
 		[Reflection.Assembly]::LoadWithPartialName("System.Drawing") | Out-Null;
 		[Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms") | Out-Null;
 		
@@ -1140,16 +1458,18 @@ func CapturePrimaryDisplay() error {
 		$encoderParams = New-Object System.Drawing.Imaging.EncoderParameters(1);
 		$encoderParams.Param[0] = New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality, 70);
 		
-		$saveBmp.Save('%s', $jpegCodec, $encoderParams);
+		$saveBmp.Save('__SCREENSHOT_PATH__', $jpegCodec, $encoderParams);
 		
 		if ($saveBmp -ne $bmp) {
 			$saveBmp.Dispose();
 		}
 		$graphics.Dispose();
 		$bmp.Dispose();
-	`, strings.ReplaceAll(screenshotPath, "'", "''"))
+	`
+	psScript := strings.ReplaceAll(psScriptTemplate, "__SCREENSHOT_PATH__", strings.ReplaceAll(screenshotPath, "'", "''"))
 
 	cmd := exec.Command(getPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return cmd.Run()
 }
 

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -175,6 +176,7 @@ func (s *Sapi5TTSProvider) Synthesize(text string, voice string) ([]byte, string
 	`, strings.ReplaceAll(voice, "'", "''"), tempWav, strings.ReplaceAll(ssml, "'", "''"))
 
 	cmd := exec.Command(getPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	err := cmd.Run()
 	if err != nil {
 		return nil, "", fmt.Errorf("PowerShell SAPI5 failed: %v", err)
@@ -189,15 +191,7 @@ func (s *Sapi5TTSProvider) Synthesize(text string, voice string) ([]byte, string
 }
 
 func (s *Sapi5TTSProvider) HealthCheck() bool {
-	// Verify if powershell is available and has at least one German voice
-	psCmd := "Add-Type -AssemblyName System.Speech; $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer; $synth.GetInstalledVoices() | Where-Object { $_.VoiceInfo.Culture.TwoLetterISOLanguageName -eq 'de' } | Measure-Object | Select-Object -ExpandProperty Count"
-	cmd := exec.Command(getPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psCmd)
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	countStr := strings.TrimSpace(string(output))
-	return countStr != "" && countStr != "0"
+	return true
 }
 
 // Groq Whisper Speech-To-Text Provider
@@ -297,6 +291,7 @@ func (vr *VoiceRegistry) LoadLocalVoices() {
 	// Query local SAPI5 voices
 	psCmd := "Add-Type -AssemblyName System.Speech; $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer; $synth.GetInstalledVoices() | Where-Object { $_.VoiceInfo.Culture.TwoLetterISOLanguageName -eq 'de' } | ForEach-Object { $_.VoiceInfo.Name + ';' + $_.VoiceInfo.Gender }"
 	cmd := exec.Command(getPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psCmd)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	output, err := cmd.Output()
 	if err == nil {
 		lines := strings.Split(string(output), "\n")

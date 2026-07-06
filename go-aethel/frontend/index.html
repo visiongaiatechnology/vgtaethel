@@ -8,6 +8,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <title>VGT AETHEL // Sovereign Intelligence Interface</title>
     <link rel="stylesheet" href="style.css">
+
+    <script defer src="marked.min.js"></script>
+
+    <script type='module' src='app.js'></script>
 </head>
 <body>
     <!-- Background grid -->
@@ -31,9 +35,17 @@
             <div class="input-group">
                 <label for="api-key">
                     <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--vgt-cyan)" stroke-width="2" fill="none"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-                    NEURAL UPLINK KEY (GROQ)
+                    NEURAL UPLINK KEY (GROQ) — Optional wenn DeepSeek vorhanden
                 </label>
                 <input type="password" id="api-key" placeholder="gsk_..." autocomplete="off">
+            </div>
+
+            <div class="input-group" style="margin-bottom: 12px;">
+                <label for="deepseek-api-key" style="color: #00c8ff;">
+                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="#00c8ff" stroke-width="2" fill="none"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                    DEEPSEEK KEY (sk-...) — Empfohlen
+                </label>
+                <input type="password" id="deepseek-api-key" placeholder="sk-..." autocomplete="off">
             </div>
 
             <div class="input-group" style="margin-bottom: 20px;">
@@ -199,6 +211,14 @@
                         <svg class="nav-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         <span>TASK ENGINE</span>
                     </button>
+                    <button id="nav-btn-archive" class="nav-menu-btn">
+                        <svg class="nav-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        <span>CHAT ARCHIV</span>
+                    </button>
+                    <button id="nav-btn-settings" class="nav-menu-btn" style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+                        <svg class="nav-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        <span>SETTINGS</span>
+                    </button>
                 </div>
 
                 <div class="model-select-container font-mono" style="margin-bottom: 12px; width: 100%;">
@@ -213,13 +233,6 @@
 
                 <button id="btn-new-chat" class="cyber-button font-mono" style="width: 100%; margin-bottom: 12px; text-transform: uppercase; font-size: 9px; letter-spacing: 0.1em; padding: 10px; background: rgba(0, 240, 255, 0.06); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan); cursor: pointer; border-radius: 4px; box-shadow: 0 0 10px rgba(0, 240, 255, 0.15); transition: all 0.2s;">+ Neuer Chat-Impuls</button>
 
-                <div class="sidebar-info font-mono" style="display: flex; flex-direction: column; flex-grow: 1; min-height: 120px; margin-bottom: 12px; width: 100%;">
-                    <h4>CHAT ARCHIVE</h4>
-                    <div id="sessions-list-container" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; max-height: 120px; padding-right: 4px;">
-                        <div style="color: var(--vgt-text-dim); font-size: 9px; text-align: center; padding: 10px 0;">Keine gespeicherten Chats.</div>
-                    </div>
-                </div>
-
                 <div class="sidebar-info font-mono" style="width: 100%;">
                     <h4>SYSTEM PARAMETERS</h4>
                     <div class="info-row">
@@ -228,11 +241,24 @@
                     <div class="info-row">
                         <span>FIREWALL:</span> <span class="green-text">ACTIVE</span>
                     </div>
+                    <div class="info-row" style="cursor: pointer; user-select: none;" id="sidebar-full-machine-row" title="Klicke hier, um den vollautonomen Modus zu steuern">
+                        <span>FULL AUTONOMY:</span> <span class="red-text" id="full-machine-status" style="font-weight: bold; color: var(--vgt-red);">DISABLED</span>
+                    </div>
                     <div class="info-row">
                         <span>MEMORY:</span> <span class="cyan-text" id="memory-count">0 Einträge</span>
                     </div>
                     <div class="info-row">
                         <span>CONTEXT:</span> <span class="cyan-text" id="context-utilization">0 / 128k</span>
+                    </div>
+                    <!-- Version Badge & Donation Button -->
+                    <div style="margin-top: 16px; width: 100%; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: var(--vgt-text-dim);">
+                            <span>SYSTEM VERSION:</span>
+                            <span style="background: rgba(0, 240, 255, 0.15); color: var(--vgt-cyan); padding: 2px 6px; border-radius: 3px; font-weight: bold; border: 1px solid rgba(0, 240, 255, 0.25);">v0.5.0-alpha</span>
+                        </div>
+                        <button id="btn-donation" class="cyber-button font-mono" style="width: 100%; font-size: 9px; letter-spacing: 0.1em; padding: 8px; background: rgba(157, 78, 221, 0.08); border: 1px solid var(--vgt-purple); color: var(--vgt-purple); cursor: pointer; border-radius: 4px; transition: all 0.2s;">
+                            ❤️ UNTERSTÜTZEN
+                        </button>
                     </div>
                 </div>
             </aside>
@@ -344,6 +370,17 @@
 
                 <!-- 2. VIEW PANEL: CHAT CONSOLE -->
                 <div id="view-chat" class="viewport-panel hidden" style="display: flex; flex-direction: column; height: 100%; width: 100%;">
+                    <!-- Current Task Checklist Panel -->
+                    <div id="current-task-checklist-panel" class="hidden" style="margin: 16px 24px 0 24px; padding: 12px 16px; border: 1px solid rgba(0, 240, 255, 0.25); background: rgba(0, 240, 255, 0.03); border-radius: 6px; font-family: var(--font-mono); display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 10px; font-weight: 700; color: var(--vgt-cyan); letter-spacing: 0.1em;">⚙ AKTIONSPLAN DES AGENTEN</span>
+                            <button id="btn-close-checklist" style="background: none; border: none; color: var(--vgt-text-dim); font-size: 10px; cursor: pointer; padding: 0;">[ MINIMIEREN ]</button>
+                        </div>
+                        <div id="current-task-checklist-items" style="display: flex; flex-direction: column; gap: 4px; font-size: 10px;">
+                            <!-- Dynamically populated checklist items -->
+                        </div>
+                    </div>
+
                     <div class="terminal-screen" id="chat-output" style="flex-grow: 1; padding: 24px;">
                         <div class="system-message font-mono">
                             <p>[VGT PROTOCOL INITIALIZED]</p>
@@ -586,7 +623,6 @@
                 <!-- 7. VIEW PANEL: TASK ENGINE -->
                 <div id="view-tasks" class="viewport-panel hidden" style="display: flex; flex-direction: column; height: 100%; width: 100%; padding: 24px; gap: 20px; overflow-y: auto;">
                     <!-- Tasks creation card -->
-                    <!-- Tasks creation card -->
                     <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; font-family: var(--font-mono); flex-shrink: 0;">
                         <h4 style="font-size: 11px; color: var(--vgt-cyan); border-bottom: 1px solid rgba(0,240,255,0.15); padding-bottom: 8px;">NEUEN AGENTEN-TASK PLANEN</h4>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -623,10 +659,278 @@
                     </div>
                 </div>
 
+                <!-- 8. VIEW PANEL: SETTINGS -->
+                <div id="view-settings" class="viewport-panel hidden" style="display: flex; flex-direction: column; height: 100%; width: 100%; padding: 24px; gap: 20px; overflow-y: auto;">
+
+                    <!-- Key Status Banner -->
+                    <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px; font-family: var(--font-mono); flex-shrink: 0; border-color: rgba(0,240,255,0.2);">
+                        <h4 style="font-size: 12px; color: var(--vgt-cyan); border-bottom: 1px solid rgba(0,240,255,0.15); padding-bottom: 8px; letter-spacing: 0.15em;">⚡ SYSTEM CREDENTIALS STATUS</h4>
+
+                        <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                            <span id="settings-groq-status" class="pulse-dot"></span>
+                            <span id="settings-groq-label" style="font-size: 10px; color: var(--vgt-text-dim);">Lade Status...</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                            <span id="settings-deepseek-status" class="pulse-dot"></span>
+                            <span id="settings-deepseek-label" style="font-size: 10px; color: var(--vgt-text-dim);">Lade Status...</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                            <span id="settings-openai-status" class="pulse-dot"></span>
+                            <span id="settings-openai-label" style="font-size: 10px; color: var(--vgt-text-dim);">Lade Status...</span>
+                        </div>
+                    </div>
+
+                    <!-- Key Update Form -->
+                    <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px; font-family: var(--font-mono); flex-shrink: 0;">
+                        <h4 style="font-size: 12px; color: var(--vgt-cyan); border-bottom: 1px solid rgba(0,240,255,0.15); padding-bottom: 8px; letter-spacing: 0.15em;">🔑 API KEYS AKTUALISIEREN</h4>
+
+                        <div class="input-group" style="margin: 0;">
+                            <label for="settings-groq-input" style="font-size: 9px; color: var(--vgt-text-dim); display: flex; align-items: center; gap: 6px; margin-bottom: 6px; letter-spacing: 0.12em; text-transform: uppercase;">
+                                <svg viewBox="0 0 24 24" width="10" height="10" stroke="var(--vgt-cyan)" stroke-width="2" fill="none"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                                NEURAL UPLINK KEY (GROQ) — Neuer Wert
+                            </label>
+                            <input type="password" id="settings-groq-input" placeholder="gsk_... (leer lassen = unverändert)" autocomplete="off"
+                                style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid var(--vgt-border); border-radius: 4px; color: #fff; padding: 10px; font-size: 11px; outline: none; font-family: var(--font-mono); box-sizing: border-box;">
+                        </div>
+
+                        <div class="input-group" style="margin: 0;">
+                            <label for="settings-deepseek-input" style="font-size: 9px; color: #00c8ff; display: flex; align-items: center; gap: 6px; margin-bottom: 6px; letter-spacing: 0.12em; text-transform: uppercase;">
+                                <svg viewBox="0 0 24 24" width="10" height="10" stroke="#00c8ff" stroke-width="2" fill="none"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                                DEEPSEEK KEY (sk-...) — Empfohlen
+                            </label>
+                            <input type="password" id="settings-deepseek-input" placeholder="sk-... (leer lassen = unverändert)" autocomplete="off"
+                                style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid #00c8ff44; border-radius: 4px; color: #fff; padding: 10px; font-size: 11px; outline: none; font-family: var(--font-mono); box-sizing: border-box;">
+                        </div>
+
+                        <div class="input-group" style="margin: 0;">
+                            <label for="settings-openai-input" style="font-size: 9px; color: var(--vgt-text-dim); display: flex; align-items: center; gap: 6px; margin-bottom: 6px; letter-spacing: 0.12em; text-transform: uppercase;">
+                                <svg viewBox="0 0 24 24" width="10" height="10" stroke="var(--vgt-purple)" stroke-width="2" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                OPENAI PREMIUM VOICE KEY — Optional
+                            </label>
+                            <input type="password" id="settings-openai-input" placeholder="sk-... (leer lassen = unverändert / entfernen)" autocomplete="off"
+                                style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid var(--vgt-border); border-radius: 4px; color: #fff; padding: 10px; font-size: 11px; outline: none; font-family: var(--font-mono); box-sizing: border-box;">
+                        </div>
+
+                        <div id="settings-save-feedback" class="hidden" style="font-size: 10px; padding: 8px 12px; border-radius: 4px; font-family: var(--font-mono);"></div>
+
+                        <button id="settings-btn-save" class="cyber-button font-mono" style="background: rgba(0,240,255,0.1); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan); padding: 12px; font-size: 10px; letter-spacing: 0.1em;">
+                            KEYS SPEICHERN
+                        </button>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 10px; font-family: var(--font-mono); flex-shrink: 0;">
+                        <h4 style="font-size: 12px; color: var(--vgt-orange); border-bottom: 1px solid rgba(255,123,0,0.15); padding-bottom: 8px; letter-spacing: 0.15em;">⚙ SYSTEM AKTIONEN</h4>
+
+                        <button id="settings-btn-force-setup" class="cyber-button font-mono" style="background: rgba(157,78,221,0.1); border: 1px solid var(--vgt-purple); color: var(--vgt-purple); padding: 12px; font-size: 10px; letter-spacing: 0.1em;">
+                            🔧 SETUP WIZARD ÖFFNEN
+                        </button>
+                        <p style="font-size: 9px; color: var(--vgt-text-dim); margin: 0;">Öffnet das Onboarding zur Erstkonfiguration, ohne die App neu zu starten.</p>
+
+                        <button id="settings-btn-reset" class="cyber-button font-mono" style="background: rgba(255,0,79,0.08); border: 1px solid var(--vgt-red); color: var(--vgt-red); padding: 12px; font-size: 10px; letter-spacing: 0.1em; margin-top: 6px;">
+                            🗑 CONFIG VOLLSTÄNDIG ZURÜCKSETZEN
+                        </button>
+                        <p style="font-size: 9px; color: var(--vgt-text-dim); margin: 0;">Löscht alle Keys und Konfiguration. App startet neu im Setup-Modus.</p>
+                    </div>
+
+                    <!-- Mounted Dirs -->
+                    <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 10px; font-family: var(--font-mono);">
+                        <h4 style="font-size: 12px; color: var(--vgt-cyan); border-bottom: 1px solid rgba(0,240,255,0.15); padding-bottom: 8px; letter-spacing: 0.15em;">📁 EINGEBUNDENE VERZEICHNISSE</h4>
+                        <div id="settings-mounted-dirs" style="display: flex; flex-direction: column; gap: 4px;">
+                            <span style="color: var(--vgt-text-dim); font-size: 10px;">Lade...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 9. VIEW PANEL: CHAT ARCHIVE -->
+                <div id="view-archive" class="viewport-panel hidden" style="display: flex; flex-direction: column; height: 100%; width: 100%; padding: 24px; gap: 20px; overflow-y: auto;">
+                    <div class="glass-card" style="padding: 20px; display: flex; flex-direction: column; gap: 10px; font-family: var(--font-mono); flex-grow: 1;">
+                        <h4 style="font-size: 12px; color: var(--vgt-cyan); border-bottom: 1px solid rgba(0,240,255,0.15); padding-bottom: 8px; letter-spacing: 0.15em;">📁 CHAT ARCHIVIERUNG</h4>
+                        <p style="font-size: 9px; color: var(--vgt-text-dim); margin-bottom: 15px;">Verwalte deine vergangenen Impuls-Sitzungen und lade sie zurück in den Chat-Terminal.</p>
+                        
+                        <div id="archive-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 15px; overflow-y: auto; align-content: start;">
+                            <!-- Dynamically loaded chat cards -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Full Machine Activation Modal -->
+    <div id="full-machine-modal" class="modal-overlay hidden" style="z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center;">
+        <div class="glass-card" style="max-width: 480px; padding: 25px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--vgt-red); background: rgba(18, 5, 10, 0.95); box-shadow: 0 0 30px rgba(255,0,79,0.25); border-radius: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px; color: var(--vgt-red); font-family: var(--font-mono);">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></svg>
+                <h3 style="margin: 0; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 800; color: var(--vgt-red);">⚠️ SYSTEM WARNUNG: VOLLAUTONOMER MODUS</h3>
+            </div>
+            
+            <p style="font-size: 11px; line-height: 1.5; color: var(--vgt-text-dim); margin: 0; font-family: var(--font-mono);">
+                Du bist im Begriff, den <strong style="color: var(--vgt-red);">Full Machine Modus (Vollautonomie)</strong> zu aktivieren. 
+                In diesem Modus darf Aethel alle Systembefehle, Dateizugriffe und GUI-Interaktionen <strong style="color: #fff;">ohne vorherige Rückfrage oder Bestätigung</strong> direkt auf deinem PC ausführen.
+            </p>
+            
+            <div style="background: rgba(255, 0, 79, 0.05); border: 1px solid rgba(255,0,79,0.2); border-radius: 4px; padding: 12px; font-size: 10px; color: var(--vgt-red); font-family: var(--font-mono); line-height: 1.4;">
+                <strong>RISIKOHINWEIS:</strong><br>
+                Die KI kann selbstständig Programme starten, Dateien manipulieren, das Internet nutzen und Steuerungseingaben simulieren. Missbrauch, Fehler oder unvorhergesehene Handlungen des Modells können zu Datenverlust oder Systeminstabilitäten führen.
+            </div>
+            
+            <div style="display: flex; gap: 10px; font-family: var(--font-mono); margin-top: 10px;">
+                <button id="full-machine-btn-confirm" class="cyber-button" style="flex: 1; font-size: 9px; padding: 10px; background: rgba(255,0,79,0.15); border: 1px solid var(--vgt-red); color: var(--vgt-red); font-weight: bold; cursor: pointer; border-radius: 4px;">
+                    AKZEPTIEREN & AKTIVIEREN
+                </button>
+                <button id="full-machine-btn-cancel" class="cyber-button" style="flex: 1; font-size: 9px; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; cursor: pointer; border-radius: 4px;">
+                    ABBRECHEN
+                </button>
             </div>
         </div>
     </div>
 
-    <script type="module" src="app.js"></script>
+    <!-- New Chat Mount Modal -->
+    <div id="new-chat-mount-modal" class="modal-overlay hidden" style="z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center;">
+        <div class="glass-card" style="max-width: 480px; width: 90%; padding: 25px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--vgt-cyan); background: rgba(8, 8, 18, 0.95); box-shadow: 0 0 30px rgba(0,240,255,0.15); border-radius: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px; color: var(--vgt-cyan); font-family: var(--font-mono);">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <h3 style="margin: 0; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 800; color: var(--vgt-cyan);">📁 Ordner für Aethel freigeben</h3>
+            </div>
+            
+            <p style="font-size: 11px; line-height: 1.5; color: var(--vgt-text-dim); margin: 0; font-family: var(--font-mono);">
+                Wähle ein Projekt- oder Arbeitsverzeichnis auf deinem PC aus, auf das Aethel zugreifen und Modifikationen vornehmen darf. Du kannst diesen Schritt auch überspringen.
+            </p>
+
+            <div style="display: flex; gap: 8px; font-family: var(--font-mono);">
+                <input type="text" id="new-chat-mount-input" placeholder="Wähle einen Pfad..." 
+                    style="flex-grow: 1; background: rgba(0,0,0,0.6); border: 1px solid var(--vgt-border); border-radius: 4px; color: #fff; padding: 10px; font-size: 11px; outline: none;">
+                <button id="new-chat-btn-browse" class="cyber-button" style="width: auto; padding: 0 15px; font-size: 10px; background: rgba(0,240,255,0.08); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan);">DURCHSUCHEN</button>
+            </div>
+
+            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px; font-family: var(--font-mono);">
+                <button id="new-chat-btn-skip" class="cyber-button" style="width: auto; padding: 10px 20px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff;">ÜBERSPRINGEN</button>
+                <button id="new-chat-btn-confirm" class="cyber-button" style="width: auto; padding: 10px 24px; font-size: 10px; background: rgba(0,240,255,0.12); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan);">FREIGEBEN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Startup Warning Modal -->
+    <div id="startup-warning-modal" class="modal-overlay" style="z-index: 20000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(3,2,6,0.95); display: flex; justify-content: center; align-items: center;">
+        <div class="glass-card" style="max-width: 520px; padding: 30px; display: flex; flex-direction: column; gap: 20px; border: 1.5px solid var(--vgt-orange); background: rgba(14, 5, 2, 0.98); box-shadow: 0 0 40px rgba(255,123,0,0.25); border-radius: 12px; font-family: var(--font-mono);">
+            <div style="display: flex; align-items: center; gap: 12px; color: var(--vgt-orange);">
+                <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></svg>
+                <h3 style="margin: 0; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 800; color: var(--vgt-orange);">⚠️ ALPHA RUNTIME DISCLOSURE</h3>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 14px; font-size: 11px; line-height: 1.5; color: var(--vgt-text-dim);">
+                <div>
+                    <strong style="color: #fff; text-transform: uppercase;">[DE] WICHTIGER HINWEIS:</strong><br>
+                    Dies ist eine experimentelle Alpha-Version von <strong style="color: var(--vgt-cyan);">VGT AETHEL</strong>, entwickelt von <strong style="color: var(--vgt-purple);">VisionGaiaTechnology</strong>. 
+                    Die Nutzung der Software erfolgt vollständig auf eigene Verantwortung. Aethel besitzt weitreichende Berechtigungen (Shell-Befehle, Dateisystem-Zugriff, Tastatur- & Maus-Simulation). Unerwartete Aktionen oder Fehlfunktionen können Datenverlust oder Systeminstabilitäten verursachen.
+                </div>
+                
+                <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+                    <strong style="color: #fff; text-transform: uppercase;">[EN] IMPORTANT NOTICE:</strong><br>
+                    This is an experimental Alpha release of <strong style="color: var(--vgt-cyan);">VGT AETHEL</strong>, developed by <strong style="color: var(--vgt-purple);">VisionGaiaTechnology</strong>. 
+                    Use of this software is entirely at your own risk. Aethel holds low-level host capabilities (terminal execution, filesystem write, GUI simulation). Unintended model behaviors or bugs may result in data loss or host instability.
+                </div>
+            </div>
+            
+            <button id="startup-warning-btn-accept" class="cyber-button" style="font-size: 10px; padding: 14px; background: rgba(255,123,0,0.15); border: 1px solid var(--vgt-orange); color: var(--vgt-orange); font-weight: bold; cursor: pointer; border-radius: 4px; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 10px; height: auto;">
+                I UNDERSTAND & AGREE // VERSTANDEN & BESTÄTIGEN
+            </button>
+        </div>
+    </div>
+
+    <!-- Donation Modal -->
+    <div id="donation-modal" class="modal-overlay hidden" style="z-index: 20000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center;">
+        <div class="glass-card" style="max-width: 520px; width: 90%; padding: 25px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--vgt-purple); background: rgba(8, 5, 18, 0.96); box-shadow: 0 0 35px rgba(157,78,221,0.2); border-radius: 10px; font-family: var(--font-mono);">
+            <div style="display: flex; align-items: center; gap: 10px; color: var(--vgt-purple);">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                <h3 style="margin: 0; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 800;">❤️ Aethel Unterstützen</h3>
+            </div>
+            
+            <p style="font-size: 11px; line-height: 1.5; color: var(--vgt-text-dim); margin: 0;">
+                Wenn dir VGT Aethel gefällt und du die Weiterentwicklung dieses autonomen Agentensystems unterstützen möchtest, freuen wir uns über eine Spende:
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 5px;">
+                <!-- PayPal -->
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 4px; display: flex; flex-direction: column; gap: 4px;">
+                    <div style="font-size: 9px; color: var(--vgt-cyan); font-weight: bold; letter-spacing: 0.05em;">PAYPAL</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                        <a href="https://paypal.me/dergoldenelotus" target="_blank" style="color: #fff; text-decoration: underline;">paypal.me/dergoldenelotus</a>
+                        <button onclick="navigator.clipboard.writeText('paypal.me/dergoldenelotus'); alert('PayPal-Link kopiert!');" class="cyber-button" style="width: auto; padding: 2px 8px; font-size: 8px; background: rgba(0,240,255,0.05); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan);">KOPIEREN</button>
+                    </div>
+                </div>
+
+                <!-- Bitcoin -->
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 4px; display: flex; flex-direction: column; gap: 4px;">
+                    <div style="font-size: 9px; color: #ff9f1c; font-weight: bold; letter-spacing: 0.05em;">BITCOIN (BTC)</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px;">
+                        <span style="color: #fff; word-break: break-all; max-width: 320px;">bc1q3ue5gq822tddmkdrek79adlkm36fatat3lz0dm</span>
+                        <button onclick="navigator.clipboard.writeText('bc1q3ue5gq822tddmkdrek79adlkm36fatat3lz0dm'); alert('Bitcoin-Adresse kopiert!');" class="cyber-button" style="width: auto; padding: 2px 8px; font-size: 8px; background: rgba(255,159,28,0.05); border: 1px solid #ff9f1c; color: #ff9f1c; margin-left: 10px;">KOPIEREN</button>
+                    </div>
+                </div>
+
+                <!-- ETH / USDT -->
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 4px; display: flex; flex-direction: column; gap: 4px;">
+                    <div style="font-size: 9px; color: var(--vgt-purple); font-weight: bold; letter-spacing: 0.05em;">ETH / USDT (ERC-20)</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px;">
+                        <span style="color: #fff; word-break: break-all; max-width: 320px;">0xD37DEfb09e07bD775EaaE9ccDaFE3a5b2348Fe85</span>
+                        <button onclick="navigator.clipboard.writeText('0xD37DEfb09e07bD775EaaE9ccDaFE3a5b2348Fe85'); alert('Ethereum-Adresse kopiert!');" class="cyber-button" style="width: auto; padding: 2px 8px; font-size: 8px; background: rgba(157,78,221,0.05); border: 1px solid var(--vgt-purple); color: var(--vgt-purple); margin-left: 10px;">KOPIEREN</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="display: flex; justify-content: flex-end; font-family: var(--font-mono); margin-top: 5px;">
+                <button id="donation-btn-close" class="cyber-button" style="width: auto; padding: 10px 24px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff;">SCHLIESSEN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Animated Splash Screen -->
+    <style>
+        @keyframes text-glow {
+            0%, 100% { text-shadow: 0 0 10px rgba(0,240,255,0.4); opacity: 0.8; }
+            50% { text-shadow: 0 0 25px rgba(0,240,255,0.8); opacity: 1; }
+        }
+        @keyframes loading-bar {
+            0% { width: 0%; }
+            20% { width: 15%; }
+            50% { width: 60%; }
+            80% { width: 90%; }
+            100% { width: 100%; }
+        }
+        @keyframes dot-blink {
+            0% { opacity: .2; }
+            20% { opacity: 1; }
+            100% { opacity: .2; }
+        }
+        .thinking-loader-dots span {
+            animation: dot-blink 1.4s infinite both;
+        }
+        .thinking-loader-dots span:nth-child(2) {
+            animation-delay: .2s;
+        }
+        .thinking-loader-dots span:nth-child(3) {
+            animation-delay: .4s;
+        }
+    </style>
+    <div id="startup-splash-screen" style="z-index: 30000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #030206; display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: var(--font-mono); transition: opacity 0.8s ease;">
+        <div style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px;">
+            <div style="font-size: 24px; font-weight: 900; letter-spacing: 0.3em; color: var(--vgt-cyan); text-shadow: 0 0 20px rgba(0,240,255,0.6); animation: text-glow 2s infinite ease-in-out;">
+                VGT AETHEL
+            </div>
+            <div style="font-size: 9px; letter-spacing: 0.2em; color: var(--vgt-text-dim);">
+                NEURAL CO-OPERATING CORE SYSTEM
+            </div>
+            <div style="width: 200px; height: 2px; background: rgba(255,255,255,0.05); border-radius: 1px; overflow: hidden; margin-top: 10px; border: 1px solid rgba(0, 240, 255, 0.1);">
+                <div style="width: 0%; height: 100%; background: var(--vgt-cyan); box-shadow: 0 0 10px var(--vgt-cyan); animation: loading-bar 2.8s forwards ease-in-out;"></div>
+            </div>
+            <div id="splash-status-text" style="font-size: 8px; color: var(--vgt-cyan); letter-spacing: 0.1em; animation: animate-pulse 1.5s infinite;">
+                BOOTING CORE KERNEL...
+            </div>
+        </div>
+    </div>
 </body>
 </html>

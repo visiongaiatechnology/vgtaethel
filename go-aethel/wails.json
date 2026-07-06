@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "AETHEL",
+  "outputfilename": "AETHEL",
+  "frontend": {
+    "dir": "frontend",
+    "install": "",
+    "build": "",
+    "dev": { "watcher": "" },
+    "devServer": ""
+  },
+  "author": { "name": "VGT", "email": "" },
+  "info": {
+    "companyName": "VGT",
+    "productName": "VGT AETHEL",
+    "productVersion": "0.5.0",
+    "copyright": "2026 VGT",
+    "comments": "AETHEL - Lokaler souveraener KI-Assistent"
+  }
+}

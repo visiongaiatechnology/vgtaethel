@@ -33,6 +33,10 @@ export function switchMode(mode) {
     } else if (mode === "core") {
         fetchKernelLogs();
         refreshVoiceHealthHUD();
+    } else if (mode === "settings") {
+        import('./settings.js').then(m => m.loadSettingsStatus());
+    } else if (mode === "archive") {
+        import('./chat.js').then(m => m.loadSessionsList());
     }
 }
 window.switchMode = switchMode;
@@ -70,19 +74,34 @@ export async function loadModels() {
     const elModelDropdown = document.getElementById("model-dropdown");
     try {
         const data = await api.getModels();
-        if (elModelDropdown) {
+        if (elModelDropdown && data.models && data.models.length > 0) {
             elModelDropdown.innerHTML = "";
+
+            const modelIds = data.models.map(m => m.id);
+            // If saved currentModel is not in list, default to first model
+            if (!modelIds.includes(state.currentModel)) {
+                state.currentModel = data.models[0].id;
+            }
+
             data.models.forEach(model => {
                 const opt = document.createElement("option");
                 opt.value = model.id;
-                opt.textContent = `${model.name} (${model.provider.toUpperCase()})`;
+                const providerTag = model.provider === "DeepSeek" ? "🧠 DEEPSEEK" : model.provider.toUpperCase();
+                opt.textContent = `${model.name} (${providerTag})`;
                 if (model.id === state.currentModel) {
                     opt.selected = true;
                 }
                 elModelDropdown.appendChild(opt);
             });
+
+            // Remove old listeners by cloning the node
+            const fresh = elModelDropdown.cloneNode(true);
+            elModelDropdown.parentNode.replaceChild(fresh, elModelDropdown);
             
-            elModelDropdown.addEventListener("change", (e) => {
+            // Sync model state with dropdown selection on startup
+            state.currentModel = fresh.value;
+            
+            fresh.addEventListener("change", (e) => {
                 state.currentModel = e.target.value;
             });
         }
@@ -113,6 +132,18 @@ export async function loadVoices() {
         
         if (elVoiceDropdown) {
             elVoiceDropdown.innerHTML = "";
+            
+            // Prevent selected voice from resetting on startup if Edge online voices are still loading
+            const hasVoice = data.some(v => v.id === state.currentVoice);
+            if (!hasVoice && state.currentVoice && state.currentVoice !== "onyx") {
+                const opt = document.createElement("option");
+                opt.value = state.currentVoice;
+                let displayName = state.currentVoice.replace("browser:", "").replace("Microsoft ", "").replace("Google ", "") + " (Lade...)";
+                opt.textContent = displayName;
+                opt.selected = true;
+                elVoiceDropdown.appendChild(opt);
+            }
+            
             data.forEach(v => {
                 const opt = document.createElement("option");
                 opt.value = v.id;
@@ -123,7 +154,10 @@ export async function loadVoices() {
                 elVoiceDropdown.appendChild(opt);
             });
             
-            elVoiceDropdown.addEventListener("change", (e) => {
+            // Remove old change listener and bind new one
+            const fresh = elVoiceDropdown.cloneNode(true);
+            elVoiceDropdown.parentNode.replaceChild(fresh, elVoiceDropdown);
+            fresh.addEventListener("change", (e) => {
                 state.currentVoice = e.target.value;
                 localStorage.setItem("aethel_voice", state.currentVoice);
             });
@@ -135,13 +169,19 @@ export async function loadVoices() {
 
 export async function handleSetupSubmit() {
     const elApiKey = document.getElementById("api-key");
+    const elDeepSeekKey = document.getElementById("deepseek-api-key");
     const elOpenAiApiKey = document.getElementById("openai-api-key");
     const elBtnInitiate = document.getElementById("btn-initiate");
 
-    const key = elApiKey.value.trim();
+    const key = elApiKey ? elApiKey.value.trim() : "";
+    const deepseekKey = elDeepSeekKey ? elDeepSeekKey.value.trim() : "";
     const openaiKey = elOpenAiApiKey ? elOpenAiApiKey.value.trim() : "";
-    if (!key) {
-        showSetupError("Uplink-Key darf nicht leer sein.");
+
+    // At least one AI key required
+    const hasGroq = key.startsWith('gsk_');
+    const hasDeepSeek = deepseekKey.startsWith('sk-');
+    if (!hasGroq && !hasDeepSeek) {
+        showSetupError("Mindestens einen Key eingeben: Groq (gsk_...) oder DeepSeek (sk-...).");
         return;
     }
 
@@ -149,7 +189,7 @@ export async function handleSetupSubmit() {
     elBtnInitiate.querySelector("span").textContent = "BOOTING CORE...";
 
     try {
-        const data = await api.submitSetup(key, openaiKey);
+        const data = await api.submitSetup(key, openaiKey, deepseekKey);
 
         if (data.status === "success") {
             document.getElementById("setup-error").classList.add("hidden");

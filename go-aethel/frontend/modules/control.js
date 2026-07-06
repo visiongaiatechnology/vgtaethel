@@ -30,17 +30,32 @@ export function startViewportRefresh() {
     }, 800);
 }
 
+let isFetchingViewport = false;
+
 function refreshViewportImage() {
+    if (isFetchingViewport) return;
+
     const img = document.getElementById("browser-screenshot");
     const placeholder = document.getElementById("browser-placeholder");
     if (!img) return;
 
+    isFetchingViewport = true;
+    
+    // Safety timeout in case load fails completely without error event
+    const timeoutId = setTimeout(() => {
+        isFetchingViewport = false;
+    }, 5000);
+
     img.src = `${state.API_BASE}/v1/viewport/screenshot?t=${Date.now()}`;
     img.onload = () => {
+        clearTimeout(timeoutId);
+        isFetchingViewport = false;
         img.classList.remove("hidden");
         if (placeholder) placeholder.classList.add("hidden");
     };
     img.onerror = (e) => {
+        clearTimeout(timeoutId);
+        isFetchingViewport = false;
         console.warn("Failed to load viewport screenshot", e);
     };
 }

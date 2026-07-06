@@ -16,14 +16,20 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/options"
+	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 //go:embed frontend/*
 var frontendFS embed.FS
 
 const (
-	groqURL    = "https://api.groq.com/openai/v1/chat/completions"
-	configFile = "./vgt_workspace/aethel_config.json"
+	groqURL      = "https://api.groq.com/openai/v1/chat/completions"
+	deepseekURL  = "https://api.deepseek.com/chat/completions"
+	configFile   = "./vgt_workspace/aethel_config.json"
 )
 
 type Activity struct {
@@ -36,7 +42,42 @@ type Activity struct {
 var (
 	kernelLogs   []Activity
 	kernelLogsMu sync.RWMutex
+
+	// Global variables for conjoined file changes and checklist tracking
+	currentChecklist   []map[string]interface{}
+	currentChecklistMu sync.RWMutex
+
+	currentSessionChanges   []FileChange
+	currentSessionChangesMu sync.Mutex
 )
+
+type FileChange struct {
+	Path    string `json:"path"`
+	File    string `json:"file"`
+	Added   int    `json:"added"`
+	Removed int    `json:"removed"`
+}
+
+func recordFileChange(path string, added, removed int) {
+	currentSessionChangesMu.Lock()
+	defer currentSessionChangesMu.Unlock()
+
+	for i, change := range currentSessionChanges {
+		if change.Path == path {
+			currentSessionChanges[i].Added += added
+			currentSessionChanges[i].Removed += removed
+			return
+		}
+	}
+
+	currentSessionChanges = append(currentSessionChanges, FileChange{
+		Path:    path,
+		File:    filepath.Base(path),
+		Added:   added,
+		Removed: removed,
+	})
+}
+
 
 func LogKernelActivity(op, target, status string) {
 	kernelLogsMu.Lock()
@@ -62,36 +103,40 @@ func LogKernelActivity(op, target, status string) {
 }
 
 type Config struct {
-	APIKey       string   `json:"api_key"`
-	OpenAIAPIKey string   `json:"openai_api_key,omitempty"`
-	MountedDirs  []string `json:"mounted_dirs,omitempty"`
+	APIKey        string   `json:"api_key"`
+	OpenAIAPIKey  string   `json:"openai_api_key,omitempty"`
+	DeepSeekAPIKey string  `json:"deepseek_api_key,omitempty"`
+	MountedDirs   []string `json:"mounted_dirs,omitempty"`
 }
 
 type AppState struct {
-	mu           sync.RWMutex
-	apiKey       string
-	openaiAPIKey string
-	mountedDirs  []string
-	guard        *SecurityGuard
-	leases       *LeaseManager
-	audit        *AuditLogger
-	policy       *PolicyEngine
-	skills       *SkillRegistry
-	memory       *LocalMemoryStore
-	voice        *VoiceRegistry
-	vault        *SecretVault
-	tasks        *TaskEngine
+	mu              sync.RWMutex
+	apiKey          string
+	openaiAPIKey    string
+	deepseekAPIKey  string
+	mountedDirs     []string
+	guard           *SecurityGuard
+	leases          *LeaseManager
+	audit           *AuditLogger
+	policy          *PolicyEngine
+	skills          *SkillRegistry
+	memory          *LocalMemoryStore
+	voice           *VoiceRegistry
+	vault           *SecretVault
+	tasks           *TaskEngine
 }
 
 var state *AppState
 
-func loadConfig() (string, string, []string) {
+func loadConfig() (string, string, string, []string) {
 	// 1. Env Variables
 	key := os.Getenv("GROQ_API_KEY")
 	oKey := os.Getenv("OPENAI_API_KEY")
 	var mountedDirs []string
 
 	// 2. Local config file
+	dsKey := os.Getenv("DEEPSEEK_API_KEY")
+
 	data, err := os.ReadFile(configFile)
 	if err == nil {
 		var cfg Config
@@ -102,22 +147,26 @@ func loadConfig() (string, string, []string) {
 			if oKey == "" {
 				oKey = cfg.OpenAIAPIKey
 			}
+			if dsKey == "" {
+				dsKey = cfg.DeepSeekAPIKey
+			}
 			mountedDirs = cfg.MountedDirs
 		}
 	}
 	if mountedDirs == nil {
 		mountedDirs = []string{}
 	}
-	return key, oKey, mountedDirs
+	return key, oKey, dsKey, mountedDirs
 }
 
-func (s *AppState) saveConfig(key, oKey string) error {
+func (s *AppState) saveConfig(key, oKey, dsKey string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.apiKey = key
 	s.openaiAPIKey = oKey
-	cfg := Config{APIKey: key, OpenAIAPIKey: oKey, MountedDirs: s.mountedDirs}
+	s.deepseekAPIKey = dsKey
+	cfg := Config{APIKey: key, OpenAIAPIKey: oKey, DeepSeekAPIKey: dsKey, MountedDirs: s.mountedDirs}
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return err
@@ -145,7 +194,7 @@ func (s *AppState) AddMountedDir(dir string) error {
 	s.mountedDirs = append(s.mountedDirs, absDir)
 
 	// Save to config file
-	cfg := Config{APIKey: s.apiKey, OpenAIAPIKey: s.openaiAPIKey, MountedDirs: s.mountedDirs}
+	cfg := Config{APIKey: s.apiKey, OpenAIAPIKey: s.openaiAPIKey, DeepSeekAPIKey: s.deepseekAPIKey, MountedDirs: s.mountedDirs}
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return err
@@ -175,108 +224,61 @@ func (s *AppState) getOpenAIKey() string {
 	return s.openaiAPIKey
 }
 
+func (s *AppState) getDeepSeekKey() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.deepseekAPIKey
+}
+
 func (s *AppState) isConfigured() bool {
-	key := s.getAPIKey()
-	return key != "" && strings.HasPrefix(key, "gsk_")
+	// Configured if Groq key OR DeepSeek key is present
+	groqKey := s.getAPIKey()
+	dsKey := s.getDeepSeekKey()
+	return (groqKey != "" && strings.HasPrefix(groqKey, "gsk_")) || (dsKey != "" && strings.HasPrefix(dsKey, "sk-"))
 }
 
 func main() {
-	log.Println("🛡️ VGT AETHEL :: INITIALISIERUNG (GO CORTEX)...")
+	log.Println("🛡️ VGT AETHEL :: INITIALISIERUNG (WAILS DESKTOP)...")
 
-	// Init State
-	memoryStore := NewLocalMemoryStore()
-	registry := NewSkillRegistry()
-	registry.Register(&ExecuteCommandSkill{})
-	registry.Register(&ReadFileSkill{})
-	registry.Register(&WriteFileSkill{})
-	registry.Register(&MemorySaveSkill{Store: memoryStore})
-	registry.Register(&MemoryRecallSkill{Store: memoryStore})
-	registry.Register(&WebBrowserSkill{})
-	registry.Register(&GUIControlSkill{})
-	registry.Register(&ListDirSkill{})
-	registry.Register(&MountFolderSkill{})
-	registry.Register(&ExternalAgentHandoffSkill{})
+	app := NewApp()
 
-
-	gKey, oKey, mDirs := loadConfig()
-
-	guard := NewSecurityGuard()
-	leases := NewLeaseManager("./vgt_workspace/active_leases.json")
-	audit := NewAuditLogger("./vgt_workspace/security_audit.json")
-	policy := NewPolicyEngine(guard, leases, audit)
-
-	voiceRegistry := NewVoiceRegistry()
-	voiceRegistry.LoadLocalVoices()
-
-	vault, err := NewSecretVault("./vgt_workspace/secret_vault.enc", "./vgt_workspace/vault.key")
-	if err != nil {
-		log.Fatalf("Failed to initialize secret vault: %v", err)
-	}
-
-	taskEngine := NewTaskEngine("./vgt_workspace/tasks.json")
-	_ = taskEngine.Load()
-
-	state = &AppState{
-		apiKey:       gKey,
-		openaiAPIKey: oKey,
-		mountedDirs:  mDirs,
-		guard:        guard,
-		leases:       leases,
-		audit:        audit,
-		policy:       policy,
-		skills:       registry,
-		memory:       memoryStore,
-		voice:        voiceRegistry,
-		vault:        vault,
-		tasks:        taskEngine,
-	}
-
-	state.tasks.Start()
-
-
-	// 1. Static Web UI (Embedded)
+	// Embed the frontend. Wails' AssetServer serves it on the Wails virtual host.
+	// API routes (/v1/*, /health) are NOT files → Wails calls Handler → APIHandler → APIRouter.
+	// Everything on the same host = same-origin = no CORS, no navigation, no PowerShell windows.
 	sub, err := fs.Sub(frontendFS, "frontend")
 	if err != nil {
 		log.Fatalf("Failed to load embedded frontend: %v", err)
 	}
-	http.Handle("/", http.FileServer(http.FS(sub)))
 
-	// 2. Core API Routing
-	http.HandleFunc("/health", handleHealth)
-	http.HandleFunc("/v1/setup", handleSetup)
-	http.HandleFunc("/v1/models", handleModels)
-	http.HandleFunc("/v1/chat", handleChat)
-	http.HandleFunc("/v1/tools/execute", handleToolExecute)
-	http.HandleFunc("/browser/screenshot.png", handleBrowserScreenshot)
-	http.HandleFunc("/v1/audio/speech", handleAudioSpeech)
-	http.HandleFunc("/v1/audio/voices", handleAudioVoices)
-	http.HandleFunc("/v1/audio/transcribe", handleAudioTranscribe)
-	http.HandleFunc("/v1/kernel/logs", handleKernelLogs)
-	http.HandleFunc("/v1/chat/history", handleChatHistory)
-	http.HandleFunc("/v1/chat/sessions", handleChatSessions)
-	http.HandleFunc("/v1/chat/sessions/load", handleChatSessionsLoad)
-	http.HandleFunc("/v1/chat/sessions/save", handleChatSessionsSave)
-	http.HandleFunc("/v1/chat/sessions/delete", handleChatSessionsDelete)
-	http.HandleFunc("/v1/kernel/tasks/", handleKernelTasksPath)
-	http.HandleFunc("/v1/security/leases", handleSecurityLeases)
-	http.HandleFunc("/v1/security/audit", handleSecurityAudit)
-	http.HandleFunc("/v1/security/status", handleSecurityStatus)
-	http.HandleFunc("/v1/memory", handleMemory)
-	http.HandleFunc("/v1/memory/search", handleMemorySearch)
-	http.HandleFunc("/v1/audio/health", handleAudioHealth)
-	http.HandleFunc("/v1/audio/test", handleAudioTest)
-	http.HandleFunc("/v1/viewport/screenshot", handleViewportScreenshot)
-	http.HandleFunc("/v1/viewport/status", handleViewportStatus)
-	http.HandleFunc("/v1/secrets", handleSecrets)
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "3000"
-	}
-
-	log.Printf("🌐 VGT CORE ONLINE: http://localhost:%s\n", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+	err = wails.Run(&options.App{
+		Title:             "VGT AETHEL",
+		Width:             1440,
+		Height:            900,
+		MinWidth:          1024,
+		MinHeight:         700,
+		DisableResize:     false,
+		StartHidden:       false,
+		HideWindowOnClose: true,
+		BackgroundColour:  &options.RGBA{R: 8, G: 8, B: 18, A: 255},
+		AssetServer: &assetserver.Options{
+			Assets:  sub,
+			Handler: APIHandler, // fallback for paths not found in embedded FS
+		},
+		OnStartup:     app.startup,
+		OnDomReady:    app.domReady,
+		OnBeforeClose: app.beforeClose,
+		OnShutdown:    app.shutdown,
+		Bind: []interface{}{
+			app,
+		},
+		Windows: &windows.Options{
+			WebviewIsTransparent: false,
+			WindowIsTranslucent:  false,
+			DisableWindowIcon:    false,
+		},
+	})
+	if err != nil {
+		log.Fatalf("Wails failed: %v", err)
 	}
 }
 
@@ -295,11 +297,17 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 		oReady = "true"
 	}
 
+	dsReady := "false"
+	if state.getDeepSeekKey() != "" {
+		dsReady = "true"
+	}
+
 	json.NewEncoder(w).Encode(map[string]string{
-		"status":       status,
-		"mode":         "STREAMING",
-		"core":         "GO-CORTEX",
-		"openai_ready": oReady,
+		"status":         status,
+		"mode":           "STREAMING",
+		"core":           "GO-CORTEX",
+		"openai_ready":   oReady,
+		"deepseek_ready": dsReady,
 	})
 }
 
@@ -313,16 +321,20 @@ func handleSetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		APIKey       string `json:"api_key"`
-		OpenAIAPIKey string `json:"openai_api_key"`
+		APIKey         string `json:"api_key"`
+		OpenAIAPIKey   string `json:"openai_api_key"`
+		DeepSeekAPIKey string `json:"deepseek_api_key"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Invalid JSON payload"})
 		return
 	}
 
-	if !strings.HasPrefix(req.APIKey, "gsk_") {
-		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Ungültiges Groq API-Key Format. Muss mit 'gsk_' beginnen."})
+	// At least one AI key must be present
+	hasGroq := strings.HasPrefix(req.APIKey, "gsk_")
+	hasDeepSeek := strings.HasPrefix(req.DeepSeekAPIKey, "sk-")
+	if !hasGroq && !hasDeepSeek {
+		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Mindestens ein gültiger Key erforderlich: Groq (gsk_...) oder DeepSeek (sk-...)." })
 		return
 	}
 
@@ -332,12 +344,107 @@ func handleSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := state.saveConfig(req.APIKey, req.OpenAIAPIKey); err != nil {
+	if err := state.saveConfig(req.APIKey, req.OpenAIAPIKey, req.DeepSeekAPIKey); err != nil {
 		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": err.Error()})
 		return
 	}
 
 	json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Core configured successfully."})
+}
+
+// Handler: GET /v1/settings — returns current config status (keys masked)
+func handleSettings(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	groqKey := state.getAPIKey()
+	openaiKey := state.getOpenAIKey()
+	dsKey := state.getDeepSeekKey()
+
+	groqConfigured := groqKey != "" && strings.HasPrefix(groqKey, "gsk_")
+	openaiConfigured := openaiKey != ""
+	dsConfigured := dsKey != "" && strings.HasPrefix(dsKey, "sk-")
+
+	groqPreview := ""
+	if groqConfigured && len(groqKey) > 8 {
+		groqPreview = groqKey[:8] + "****"
+	}
+	openaiPreview := ""
+	if openaiConfigured && len(openaiKey) > 5 {
+		openaiPreview = openaiKey[:5] + "****"
+	}
+	dsPreview := ""
+	if dsConfigured && len(dsKey) > 5 {
+		dsPreview = dsKey[:5] + "****"
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"groq_configured":      groqConfigured,
+		"openai_configured":    openaiConfigured,
+		"deepseek_configured":  dsConfigured,
+		"groq_key_preview":     groqPreview,
+		"openai_key_preview":   openaiPreview,
+		"deepseek_key_preview": dsPreview,
+		"mounted_dirs":         state.GetMountedDirs(),
+	})
+}
+
+// Handler: POST /v1/settings/reset — clears all API keys and forces SETUP_REQUIRED
+func handleSettingsReset(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := state.saveConfig("", "", ""); err != nil {
+		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": err.Error()})
+		return
+	}
+
+	// Also delete the config file entirely so it's a clean slate
+	_ = os.Remove(configFile)
+
+	json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Config reset. Setup required."})
+}
+
+// getLocalOllamaModels queries the local Ollama API to retrieve installed models.
+func getLocalOllamaModels() []map[string]interface{} {
+	client := &http.Client{
+		Timeout: 300 * time.Millisecond, // fast timeout to prevent hanging if Ollama is not running
+	}
+	resp, err := client.Get("http://localhost:11434/api/tags")
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Models []struct {
+			Name string `json:"name"`
+		} `json:"models"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil
+	}
+
+	var list []map[string]interface{}
+	for _, m := range result.Models {
+		list = append(list, map[string]interface{}{
+			"id":             "ollama/" + m.Name,
+			"name":           m.Name,
+			"provider":       "Ollama",
+			"tier":           "Local",
+			"cost_input_1m":  0.0,
+			"cost_output_1m": 0.0,
+		})
+	}
+	return list
 }
 
 // Handler: /v1/models
@@ -346,6 +453,24 @@ func handleModels(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	models := []map[string]interface{}{
+		// --- DeepSeek ---
+		{
+			"id":             "deepseek/deepseek-v4-flash",
+			"name":           "DeepSeek V4 Flash (Thinking)",
+			"provider":       "DeepSeek",
+			"tier":           "Diamond",
+			"cost_input_1m":  0.14,
+			"cost_output_1m": 0.28,
+		},
+		{
+			"id":             "deepseek/deepseek-v4-pro",
+			"name":           "DeepSeek V4 Pro (Thinking)",
+			"provider":       "DeepSeek",
+			"tier":           "Diamond",
+			"cost_input_1m":  0.435,
+			"cost_output_1m": 0.87,
+		},
+		// --- Groq ---
 		{
 			"id":             "openai/gpt-oss-120b",
 			"name":           "GPT OSS 120B (Logic Core)",
@@ -380,6 +505,20 @@ func handleModels(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
+	// Merge Ollama local models dynamically
+	if ollamaModels := getLocalOllamaModels(); len(ollamaModels) > 0 {
+		models = append(models, ollamaModels...)
+	} else {
+		models = append(models, map[string]interface{}{
+			"id":             "ollama/local-fallback",
+			"name":           "Kein lokales Ollama gefunden (Offline/Nicht gestartet)",
+			"provider":       "Ollama",
+			"tier":           "Local",
+			"cost_input_1m":  0.0,
+			"cost_output_1m": 0.0,
+		})
+	}
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"models": models,
 	})
@@ -389,6 +528,107 @@ func handleBrowserScreenshot(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	http.ServeFile(w, r, "./vgt_workspace/browser_screenshot.png")
+}
+
+// sanitizeMessagesForAPI ensures that the message sequence is valid for LLM APIs.
+// Specifically, it strips tool_calls from assistant messages if the corresponding
+// tool responses are missing (which can happen on network drops), and strips orphan tool responses.
+func sanitizeMessagesForAPI(messages []map[string]interface{}) []map[string]interface{} {
+	// 1. Gather all tool response IDs that exist in the history
+	activeToolResponses := make(map[string]bool)
+	for _, msg := range messages {
+		if msg["role"] == "tool" {
+			if id, ok := msg["tool_call_id"].(string); ok {
+				activeToolResponses[id] = true
+			}
+		}
+	}
+
+	// 2. Filter tool_calls in assistant messages and skip orphan tool messages
+	var cleanMessages []map[string]interface{}
+	for _, msg := range messages {
+		if msg["role"] == "assistant" {
+			if tcs, ok := msg["tool_calls"]; ok {
+				if tcSlice, ok := tcs.([]interface{}); ok {
+					var validTCs []interface{}
+					for _, tc := range tcSlice {
+						if tcMap, ok := tc.(map[string]interface{}); ok {
+							if id, ok := tcMap["id"].(string); ok {
+								if activeToolResponses[id] {
+									validTCs = append(validTCs, tc)
+								}
+							}
+						}
+					}
+					if len(validTCs) > 0 {
+						msg["tool_calls"] = validTCs
+					} else {
+						delete(msg, "tool_calls")
+					}
+				}
+			}
+
+			// If both content and tool_calls are missing/empty, set a fallback content
+			content, _ := msg["content"].(string)
+			_, hasToolCalls := msg["tool_calls"]
+			if strings.TrimSpace(content) == "" && !hasToolCalls {
+				msg["content"] = "Aktion ausgeführt."
+			}
+		}
+
+		if msg["role"] == "tool" {
+			if id, ok := msg["tool_call_id"].(string); ok {
+				// Verify if a corresponding assistant tool_call exists in the list
+				hasMatchingCall := false
+				for _, otherMsg := range messages {
+					if otherMsg["role"] == "assistant" {
+						if otherTCs, ok := otherMsg["tool_calls"].([]interface{}); ok {
+							for _, tc := range otherTCs {
+								if tcMap, ok := tc.(map[string]interface{}); ok {
+									if otherId, ok := tcMap["id"].(string); ok && otherId == id {
+										hasMatchingCall = true
+										break
+									}
+								}
+							}
+						}
+					}
+				}
+				if !hasMatchingCall {
+					continue // Skip orphan tool response
+				}
+			}
+		}
+
+		cleanMessages = append(cleanMessages, msg)
+	}
+
+	return cleanMessages
+}
+
+// stripToolsFromMessages removes all tool messages and tool calls from history
+// to support retrying requests on models that do not support tools at all.
+func stripToolsFromMessages(messages []map[string]interface{}) []map[string]interface{} {
+	var clean []map[string]interface{}
+	for _, msg := range messages {
+		if msg["role"] == "tool" {
+			continue // remove tool responses
+		}
+		// clone msg
+		copyMsg := make(map[string]interface{})
+		for k, v := range msg {
+			if k != "tool_calls" {
+				copyMsg[k] = v
+			}
+		}
+		// ensure content is not empty
+		content, _ := copyMsg["content"].(string)
+		if strings.TrimSpace(content) == "" {
+			copyMsg["content"] = "Aktion ausgeführt."
+		}
+		clean = append(clean, copyMsg)
+	}
+	return clean
 }
 
 // Handler: /v1/chat (SSE Stream to browser)
@@ -412,10 +652,7 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	apiKey := state.getAPIKey()
-	if apiKey == "" {
-		fmt.Fprintf(w, "data: [SYSTEM ERROR]: API Key not configured.\n\n")
-		return
-	}
+	dsKey := state.getDeepSeekKey()
 
 	var req ChatRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -423,10 +660,52 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Prepare payload for Groq
-	groqMessages := []map[string]interface{}{}
+	// Reset conjoined file changes for this turn
+	currentSessionChangesMu.Lock()
+	currentSessionChanges = []FileChange{}
+	currentSessionChangesMu.Unlock()
+
+	// --- Determine provider from model ID prefix ---
+	isOllama := strings.HasPrefix(req.ModelID, "ollama/")
+	isDeepSeek := strings.HasPrefix(req.ModelID, "deepseek/")
+
+	if isDeepSeek && dsKey == "" {
+		fmt.Fprintf(w, "data: [SYSTEM ERROR]: DeepSeek API Key nicht konfiguriert. Bitte in den Settings eingeben.\n\n")
+		return
+	}
+	if !isDeepSeek && !isOllama && apiKey == "" {
+		fmt.Fprintf(w, "data: [SYSTEM ERROR]: Groq API Key nicht konfiguriert.\n\n")
+		return
+	}
+
+	// Strip provider prefix for the actual API call
+	actualModelID := req.ModelID
+	if isDeepSeek {
+		actualModelID = strings.TrimPrefix(req.ModelID, "deepseek/")
+	} else if isOllama {
+		actualModelID = strings.TrimPrefix(req.ModelID, "ollama/")
+		if actualModelID == "local-fallback" {
+			fmt.Fprintf(w, "data: [SYSTEM ERROR]: Kein lokales Ollama gefunden. Bitte vergewissere dich, dass Ollama gestartet ist und Modelle installiert sind.\n\n")
+			return
+		}
+	} else {
+		// Map mock model IDs to real Groq model IDs
+		switch actualModelID {
+		case "openai/gpt-oss-120b":
+			actualModelID = "llama-3.3-70b-versatile"
+		case "openai/gpt-oss-20b":
+			actualModelID = "llama-3.1-8b-instant"
+		case "qwen/qwen3.6-27b":
+			actualModelID = "qwen/qwen3.6-27b"
+		case "meta-llama/llama-4-scout-17b-16e-instruct":
+			actualModelID = "llama-3.3-70b-versatile"
+		}
+	}
+
+	// Build messages
+	messages := []map[string]interface{}{}
 	if req.SystemPrompt != "" {
-		groqMessages = append(groqMessages, map[string]interface{}{
+		messages = append(messages, map[string]interface{}{
 			"role":    "system",
 			"content": req.SystemPrompt,
 		})
@@ -434,16 +713,49 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 	for _, m := range req.Messages {
 		var mapped map[string]interface{}
 		if err := json.Unmarshal(m, &mapped); err == nil {
-			groqMessages = append(groqMessages, mapped)
+			// Remove custom properties not supported by non-DeepSeek LLM APIs in the messages array
+			if !isDeepSeek {
+				delete(mapped, "reasoning_content")
+			}
+			messages = append(messages, mapped)
+		}
+	}
+
+	// Clean up message sequence to satisfy API schemas (no orphan tool calls/responses)
+	messages = sanitizeMessagesForAPI(messages)
+
+	// For Ollama, we also prepend the system prompt to the first user message.
+	// We keep the system role message as well, just in case the model's template uses it.
+	if isOllama && req.SystemPrompt != "" {
+		firstUserIndex := -1
+		for i, m := range messages {
+			if m["role"] == "user" {
+				firstUserIndex = i
+				break
+			}
+		}
+		if firstUserIndex != -1 {
+			if origContent, ok := messages[firstUserIndex]["content"].(string); ok {
+				if !strings.HasPrefix(origContent, "SYSTEM PROTOCOL:") {
+					messages[firstUserIndex]["content"] = fmt.Sprintf("SYSTEM PROTOCOL:\n%s\n\nOPERATOR INPUT:\n%s", req.SystemPrompt, origContent)
+				}
+			}
 		}
 	}
 
 	payload := map[string]interface{}{
-		"model":          req.ModelID,
-		"messages":       groqMessages,
-		"temperature":    req.Temperature,
+		"model":          actualModelID,
+		"messages":       messages,
 		"stream":         true,
 		"stream_options": map[string]interface{}{"include_usage": true},
+	}
+
+	// DeepSeek: enable thinking mode, no temperature (unsupported in thinking mode)
+	if isDeepSeek {
+		payload["thinking"] = map[string]interface{}{"type": "enabled"}
+		payload["reasoning_effort"] = "max"
+	} else {
+		payload["temperature"] = req.Temperature
 	}
 
 	if req.UseTools {
@@ -457,28 +769,124 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send HTTP Request to Groq
-	groqReq, err := http.NewRequest(http.MethodPost, groqURL, bytes.NewBuffer(jsonBytes))
-	if err != nil {
-		fmt.Fprintf(w, "data: [SYSTEM ERROR]: Creation failed: %v\n\n", err)
-		return
+	// Select endpoint + key
+	targetURL := groqURL
+	targetKey := apiKey
+	if isDeepSeek {
+		targetURL = deepseekURL
+		targetKey = dsKey
+	} else if isOllama {
+		targetURL = "http://localhost:11434/v1/chat/completions"
+		targetKey = "ollama"
 	}
-	groqReq.Header.Set("Authorization", "Bearer "+apiKey)
-	groqReq.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	resp, err := client.Do(groqReq)
-	if err != nil {
-		fmt.Fprintf(w, "data: [SYSTEM ERROR]: Connection failed: %v\n\n", err)
+	httpClient := &http.Client{
+		Timeout: 960 * time.Second,
+	}
+
+	var resp *http.Response
+	var lastErr error
+	maxRetries := 3
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		// Recreate body buffer as Do() consumes it
+		apiReq, err := http.NewRequest(http.MethodPost, targetURL, bytes.NewBuffer(jsonBytes))
+		if err != nil {
+			fmt.Fprintf(w, "data: [SYSTEM ERROR]: Request creation failed: %v\n\n", err)
+			return
+		}
+		apiReq.Header.Set("Authorization", "Bearer "+targetKey)
+		apiReq.Header.Set("Content-Type", "application/json")
+
+		resp, err = httpClient.Do(apiReq)
+		if err == nil {
+			break
+		}
+
+		lastErr = err
+		log.Printf("[RETRY] Connection failed (attempt %d/%d): %v", attempt, maxRetries, err)
+
+		if attempt < maxRetries {
+			// Notify UI that a retry is happening
+			fmt.Fprintf(w, "data: [SYSTEM WARNING]: Connection dropped. Retrying (Attempt %d/%d)... \n\n", attempt+1, maxRetries)
+			if flusher, ok := w.(http.Flusher); ok {
+				flusher.Flush()
+			}
+			time.Sleep(time.Duration(attempt) * 800 * time.Millisecond)
+		}
+	}
+
+	if lastErr != nil {
+		fmt.Fprintf(w, "data: [SYSTEM ERROR]: Connection failed after %d attempts: %v\n\n", maxRetries, lastErr)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		fmt.Fprintf(w, "data: [GROQ API ERROR %d]: %s\n\n", resp.StatusCode, string(bodyBytes))
+		bodyStr := string(bodyBytes)
+
+		// Automatic tool fallback for local models or endpoints that don't support tools
+		bodyLower := strings.ToLower(bodyStr)
+		isToolError := strings.Contains(bodyLower, "does not support tools") ||
+			strings.Contains(bodyLower, "tool_choice") ||
+			strings.Contains(bodyLower, "does not support function") ||
+			strings.Contains(bodyLower, "tools are not supported") ||
+			strings.Contains(bodyLower, "tool calling") ||
+			strings.Contains(bodyLower, "unsupported parameter") ||
+			strings.Contains(bodyLower, "unknown parameter") ||
+			strings.Contains(bodyLower, "unsupported field") ||
+			strings.Contains(bodyLower, "invalid parameter") ||
+			strings.Contains(bodyLower, "not support") ||
+			resp.StatusCode == http.StatusBadRequest
+
+		if isToolError && req.UseTools {
+			log.Printf("[TOOL FALLBACK] Model %s does not support tools. Retrying without tools.", actualModelID)
+			fmt.Fprintf(w, "data: [SYSTEM WARNING]: Core-Modell '%s' unterstützt keine Tools. Führe Anfrage ohne Tools aus... \n\n", actualModelID)
+			if flusher, ok := w.(http.Flusher); ok {
+				flusher.Flush()
+			}
+			
+			// Remove tools from payload and strip tool messages from history
+			delete(payload, "tools")
+			delete(payload, "tool_choice")
+			payload["messages"] = stripToolsFromMessages(messages)
+			
+			// Re-marshal and retry request
+			retryBytes, err := json.Marshal(payload)
+			if err == nil {
+				retryReq, err := http.NewRequest(http.MethodPost, targetURL, bytes.NewBuffer(retryBytes))
+				if err == nil {
+					retryReq.Header.Set("Authorization", "Bearer "+targetKey)
+					retryReq.Header.Set("Content-Type", "application/json")
+					
+					retryResp, err := httpClient.Do(retryReq)
+					if err == nil && retryResp.StatusCode == http.StatusOK {
+						resp = retryResp
+						defer resp.Body.Close()
+						goto processStream // jump to streaming loop
+					}
+					if err == nil {
+						bodyBytes, _ = io.ReadAll(retryResp.Body)
+						bodyStr = string(bodyBytes)
+						resp = retryResp
+						defer resp.Body.Close()
+					}
+				}
+			}
+		}
+
+		provider := "GROQ"
+		if isDeepSeek {
+			provider = "DEEPSEEK"
+		} else if isOllama {
+			provider = "OLLAMA"
+		}
+		fmt.Fprintf(w, "data: [%s API ERROR %d]: %s\n\n", provider, resp.StatusCode, bodyStr)
 		return
 	}
+
+processStream:
 
 	// Read stream chunks
 	buffer := make([]byte, 4096)
@@ -492,7 +900,6 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 			streamBuf.WriteString(string(buffer[:n]))
 			lines := strings.Split(streamBuf.String(), "\n")
 
-			// Keep last line in buffer if incomplete
 			if len(lines) > 0 {
 				streamBuf.Reset()
 				streamBuf.WriteString(lines[len(lines)-1])
@@ -511,7 +918,6 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 				if strings.HasPrefix(line, "data: ") {
 					jsonStr := strings.TrimPrefix(line, "data: ")
 
-					// Structs to parse stream frame
 					type DeltaCall struct {
 						Index    int    `json:"index"`
 						ID       string `json:"id,omitempty"`
@@ -524,15 +930,17 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 					type StreamChunk struct {
 						Choices []struct {
 							Delta struct {
-								Content   string      `json:"content,omitempty"`
-								ToolCalls []DeltaCall `json:"tool_calls,omitempty"`
+								Content          string      `json:"content,omitempty"`
+								ReasoningContent string      `json:"reasoning_content,omitempty"`
+								ToolCalls        []DeltaCall `json:"tool_calls,omitempty"`
 							} `json:"delta"`
 							FinishReason string `json:"finish_reason,omitempty"`
 						} `json:"choices"`
 						Usage *struct {
-							PromptTokens     int `json:"prompt_tokens"`
-							CompletionTokens int `json:"completion_tokens"`
-							TotalTokens      int `json:"total_tokens"`
+							PromptTokens         int `json:"prompt_tokens"`
+							CompletionTokens     int `json:"completion_tokens"`
+							TotalTokens          int `json:"total_tokens"`
+							PromptCacheHitTokens int `json:"prompt_cache_hit_tokens"`
 						} `json:"usage,omitempty"`
 					}
 
@@ -549,8 +957,22 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 						if len(chunk.Choices) > 0 {
 							choice := chunk.Choices[0]
 
+							// DeepSeek thinking/reasoning stream
+							if choice.Delta.ReasoningContent != "" {
+								reasoning := choice.Delta.ReasoningContent
+								reasoning = strings.ReplaceAll(reasoning, "\n", "[VGT_NL]")
+								reasoning = strings.ReplaceAll(reasoning, "\r", "")
+								fmt.Fprintf(w, "data: [[THINKING]]:%s\n\n", reasoning)
+								if ok {
+									flusher.Flush()
+								}
+							}
+
 							if choice.Delta.Content != "" {
-								fmt.Fprintf(w, "data: %s\n\n", choice.Delta.Content)
+								content := choice.Delta.Content
+								content = strings.ReplaceAll(content, "\n", "[VGT_NL]")
+								content = strings.ReplaceAll(content, "\r", "")
+								fmt.Fprintf(w, "data: %s\n\n", content)
 								if ok {
 									flusher.Flush()
 								}
@@ -584,6 +1006,17 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
+
+	// Flush conjoined file changes at the end of the stream
+	currentSessionChangesMu.Lock()
+	if len(currentSessionChanges) > 0 {
+		changesJSON, _ := json.Marshal(currentSessionChanges)
+		fmt.Fprintf(w, "data: [[FILE_CHANGES]]:%s\n\n", string(changesJSON))
+		if ok {
+			flusher.Flush()
+		}
+	}
+	currentSessionChangesMu.Unlock()
 }
 // Handler: /v1/tools/execute
 type ToolExecRequest struct {
@@ -659,9 +1092,21 @@ func handleToolExecute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	currentChecklistMu.RLock()
+	checklistCopy := make([]map[string]interface{}, len(currentChecklist))
+	copy(checklistCopy, currentChecklist)
+	currentChecklistMu.RUnlock()
+
+	currentSessionChangesMu.Lock()
+	changesCopy := make([]FileChange, len(currentSessionChanges))
+	copy(changesCopy, currentSessionChanges)
+	currentSessionChangesMu.Unlock()
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": "success",
-		"result": result,
+		"status":       "success",
+		"result":       result,
+		"checklist":    checklistCopy,
+		"file_changes": changesCopy,
 	})
 }
 
@@ -1449,4 +1894,34 @@ func getPowerShellPath() string {
 		return path
 	}
 	return "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+}
+
+// Handler: /v1/chat/checklist
+func handleChecklist(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	if r.Method == http.MethodGet {
+		currentChecklistMu.RLock()
+		defer currentChecklistMu.RUnlock()
+		if currentChecklist == nil {
+			json.NewEncoder(w).Encode([]interface{}{})
+		} else {
+			json.NewEncoder(w).Encode(currentChecklist)
+		}
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var req []map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		currentChecklistMu.Lock()
+		currentChecklist = req
+		currentChecklistMu.Unlock()
+		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+		return
+	}
 }

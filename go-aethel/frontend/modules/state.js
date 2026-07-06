@@ -2,6 +2,7 @@ export const state = {
     API_BASE: window.location.origin,
     currentModel: "openai/gpt-oss-120b",
     isVoiceMuted: false,
+    isFullAutonomy: false,
     messageHistory: [],
     activeToolIndex: null,
     currentAssistantMsgIndex: null,
@@ -44,6 +45,7 @@ OPERATIONAL DIRECTIVES:
    - Frage nicht "Soll ich das speichern?". TU ES.
    - Frage nicht "Soll ich die Datei lesen?". TU ES.
    - Das System (User UI) fängt kritische Aktionen ab. Deine Aufgabe ist die Initiative.
+   - Wenn du eine komplexe Aufgabe in mehreren Schritten ausführst (z. B. eine Aufgabenliste/Checkliste abarbeitest), hänge IMMER ganz am Ende deines Antworttexts die Zeichenkette [[CONTINUE]] an. Dadurch weiß das System, dass du nach der Tool-Ausführung autonom weitermachen willst, ohne auf ein neues Kommando des Operators zu warten. Hänge [[CONTINUE]] NICHT an, wenn du fertig bist.
 5. PC CONTROL & VISIBLE ACTIONS:
    - Wenn der Operator verlangt, eine Website SICHTBAR auf seinem PC zu öffnen (z.B. "öffne YouTube", "öffne Google"), oder eine App zu starten (z.B. Notepad, Explorer, Spotify), verwende NICHT das headless Tool 'web_browser'.
    - Verwende stattdessen 'sys_exec_cmd' mit command: "cmd.exe", args: ["/c", "start", "<URL_oder_App>"], und setze 'background': true, damit die App/Website asynchron gestartet wird und die Go-Konsole nicht blockiert.
