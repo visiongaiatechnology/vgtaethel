@@ -536,12 +536,11 @@ h2 {
 
 /* Sidebar Model Registry */
 .sidebar {
-    padding: 16px;
+    padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 24px;
     overflow-y: auto;
-    max-height: calc(92vh - 110px);
 }
 
 .sidebar h3 {
@@ -1354,75 +1353,20 @@ h2 {
     background: rgba(0, 240, 255, 0.08);
     color: var(--vgt-cyan);
     border-bottom: 1px solid rgba(0, 240, 255, 0.25);
-    border-right: 1px solid rgba(0, 240, 255, 0.15);
     padding: 8px 12px;
     text-align: left;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-}
-
-.cyber-table th:last-child {
-    border-right: none;
 }
 
 .cyber-table td {
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    border-right: 1px solid rgba(255, 255, 255, 0.04);
     padding: 8px 12px;
     color: #e2e8f0;
 }
 
-.cyber-table td:last-child {
-    border-right: none;
-}
-
 .cyber-table tr:hover {
-    background: rgba(0, 240, 255, 0.03);
-}
-
-/* Tabellen-Styling für Markdown-generierte Tabellen (marked.js) */
-.msg-body table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 12px 0;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    border: 1px solid var(--vgt-border);
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-.msg-body th {
-    background: rgba(0, 240, 255, 0.08);
-    color: var(--vgt-cyan);
-    border-bottom: 1px solid rgba(0, 240, 255, 0.25);
-    border-right: 1px solid rgba(0, 240, 255, 0.15);
-    padding: 6px 10px;
-    text-align: left;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-size: 9px;
-}
-
-.msg-body th:last-child {
-    border-right: none;
-}
-
-.msg-body td {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    border-right: 1px solid rgba(255, 255, 255, 0.04);
-    padding: 6px 10px;
-    color: #e2e8f0;
-}
-
-.msg-body td:last-child {
-    border-right: none;
-}
-
-.msg-body tr:hover {
     background: rgba(0, 240, 255, 0.03);
 }
 
@@ -1536,35 +1480,5 @@ h2 {
 }
 .cyber-select:hover, .cyber-select:focus {
     border-color: var(--vgt-cyan) !important;
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
-}
-
-/* --- Collapsible Message Styles (CSS-based read-more mask) --- */
-.msg-collapsible {
-    position: relative;
-    width: 100%;
-}
-.msg-collapsible.collapsed .msg-content {
-    max-height: 220px;
-    overflow: hidden;
-    position: relative;
-}
-.msg-collapsible.collapsed .msg-fade-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 70px;
-    background: linear-gradient(to bottom, rgba(8, 8, 18, 0) 0%, rgba(8, 8, 18, 0.95) 100%);
-    pointer-events: none;
-}
-.msg-collapsible:not(.collapsed) .msg-fade-overlay {
-    display: none;
-}
-.msg-toggle-btn {
-    transition: all 0.2s ease-in-out;
-}
-.msg-toggle-btn:hover {
-    background: rgba(0, 240, 255, 0.15) !important;
     box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
 }

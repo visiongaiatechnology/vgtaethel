@@ -9,7 +9,6 @@ import { setupMemoryUIEvents, updateMemoryCount } from './modules/memory.js';
 import { setupSecretsUIEvents } from './modules/secrets.js';
 import { setupControlUIEvents } from './modules/control.js';
 import { setupTasksUIEvents, fetchKernelTasks } from './modules/tasks.js';
-import { setupSettingsUIEvents } from './modules/settings.js';
 
 // Initialize Application
 async function init() {
@@ -22,8 +21,6 @@ async function init() {
         security: document.getElementById("view-security"),
         memory: document.getElementById("view-memory"),
         tasks: document.getElementById("view-tasks"),
-        settings: document.getElementById("view-settings"),
-        archive: document.getElementById("view-archive"),
     };
 
     // Map navigation buttons
@@ -35,8 +32,6 @@ async function init() {
         security: document.getElementById("nav-btn-security"),
         memory: document.getElementById("nav-btn-memory"),
         tasks: document.getElementById("nav-btn-tasks"),
-        settings: document.getElementById("nav-btn-settings"),
-        archive: document.getElementById("nav-btn-archive"),
     };
 
     setupViewNavigation();
@@ -46,7 +41,6 @@ async function init() {
     setupSecretsUIEvents();
     setupTasksUIEvents();
     setupControlUIEvents();
-    setupSettingsUIEvents();
 
     await checkSystemStatus();
     initWakeWordListener();
@@ -69,21 +63,6 @@ async function init() {
         }
         fetchKernelTasks();
     }, 3000);
-
-    // Fade out splash screen after 3 seconds
-    const splash = document.getElementById("startup-splash-screen");
-    const splashStatus = document.getElementById("splash-status-text");
-    if (splash) {
-        if (splashStatus) {
-            setTimeout(() => splashStatus.textContent = "INITIALIZING CORE LEASES...", 800);
-            setTimeout(() => splashStatus.textContent = "VERIFYING SECURITY SHIELD...", 1600);
-            setTimeout(() => splashStatus.textContent = "SYSTEM BOOT READY", 2400);
-        }
-        setTimeout(() => {
-            splash.style.opacity = "0";
-            setTimeout(() => splash.remove(), 800);
-        }, 3000);
-    }
 }
 
 // Setup Tab Switching Navigation
@@ -143,74 +122,7 @@ function setupEventListeners() {
 
     if (elBtnNewChat) {
         elBtnNewChat.addEventListener("click", () => {
-            const modal = document.getElementById("new-chat-mount-modal");
-            const input = document.getElementById("new-chat-mount-input");
-            if (modal) {
-                if (input) input.value = "";
-                modal.classList.remove("hidden");
-            } else {
-                startNewSession();
-            }
-        });
-    }
-
-    // Wire mount popup events
-    const newChatBtnBrowse = document.getElementById("new-chat-btn-browse");
-    const newChatBtnSkip = document.getElementById("new-chat-btn-skip");
-    const newChatBtnConfirm = document.getElementById("new-chat-btn-confirm");
-    const newChatMountModal = document.getElementById("new-chat-mount-modal");
-    const newChatMountInput = document.getElementById("new-chat-mount-input");
-
-    if (newChatBtnBrowse) {
-        newChatBtnBrowse.addEventListener("click", async () => {
-            if (window.go && window.go.main && window.go.main.App && window.go.main.App.SelectDirectory) {
-                const dir = await window.go.main.App.SelectDirectory();
-                if (dir && newChatMountInput) {
-                    newChatMountInput.value = dir;
-                }
-            }
-        });
-    }
-
-    if (newChatBtnSkip) {
-        newChatBtnSkip.addEventListener("click", () => {
-            if (newChatMountModal) newChatMountModal.classList.add("hidden");
             startNewSession();
-        });
-    }
-
-    if (newChatBtnConfirm) {
-        newChatBtnConfirm.addEventListener("click", async () => {
-            if (newChatMountModal) newChatMountModal.classList.add("hidden");
-            const path = newChatMountInput ? newChatMountInput.value.trim() : "";
-            startNewSession();
-            if (path) {
-                try {
-                    const res = await fetch(`${state.API_BASE}/v1/tools/execute`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            name: "fs_mount_folder",
-                            args: { path: path },
-                            override_security: true
-                        })
-                    });
-                    const data = await res.json();
-                    if (data.status === "success") {
-                        const elChatOutput = document.getElementById("chat-output");
-                        if (elChatOutput) {
-                            elChatOutput.insertAdjacentHTML('beforeend', `
-                                <div class="system-message font-mono" style="color: var(--vgt-cyan); border-color: var(--vgt-cyan); background: rgba(0, 240, 255, 0.05); margin-top: 10px;">
-                                    <p>[ORDNER FREIGEGEBEN]</p>
-                                    <p>Verzeichnis '${path}' wurde erfolgreich gemountet und für Aethel freigegeben.</p>
-                                </div>
-                            `);
-                        }
-                    }
-                } catch (e) {
-                    console.error("Failed to mount folder on new session", e);
-                }
-            }
         });
     }
 
@@ -364,75 +276,6 @@ function setupEventListeners() {
     if (btnHandoffClose && handoffModal) {
         btnHandoffClose.addEventListener("click", () => {
             handoffModal.classList.add("hidden");
-        });
-    }
-
-    // Wiring for FULL MACHINE Mode (Vollautonomie)
-    const elFullMachineRow = document.getElementById("sidebar-full-machine-row");
-    const elFullMachineStatus = document.getElementById("full-machine-status");
-    const elFullMachineModal = document.getElementById("full-machine-modal");
-    const btnFullMachineConfirm = document.getElementById("full-machine-btn-confirm");
-    const btnFullMachineCancel = document.getElementById("full-machine-btn-cancel");
-
-    if (elFullMachineRow) {
-        elFullMachineRow.addEventListener("click", () => {
-            if (!state.isFullAutonomy) {
-                // Open warning modal
-                if (elFullMachineModal) elFullMachineModal.classList.remove("hidden");
-            } else {
-                // Disable immediately
-                state.isFullAutonomy = false;
-                if (elFullMachineStatus) {
-                    elFullMachineStatus.textContent = "DISABLED";
-                    elFullMachineStatus.style.color = "var(--vgt-red)";
-                }
-                import('./modules/voice.js').then(m => m.speak("Vollautonomer Modus deaktiviert. Sicherheitsüberwachung aktiv."));
-            }
-        });
-    }
-
-    if (btnFullMachineConfirm) {
-        btnFullMachineConfirm.addEventListener("click", () => {
-            state.isFullAutonomy = true;
-            if (elFullMachineStatus) {
-                elFullMachineStatus.textContent = "ENABLED";
-                elFullMachineStatus.style.color = "var(--vgt-green)";
-            }
-            if (elFullMachineModal) elFullMachineModal.classList.add("hidden");
-            import('./modules/voice.js').then(m => m.speak("Vollautonomer Modus aktiv. Der Kernel unterliegt direkter KI-Initiative."));
-        });
-    }
-
-    if (btnFullMachineCancel) {
-        btnFullMachineCancel.addEventListener("click", () => {
-            if (elFullMachineModal) elFullMachineModal.classList.add("hidden");
-        });
-    }
-
-    // Startup Warning Modal wiring
-    const btnWarningAccept = document.getElementById("startup-warning-btn-accept");
-    const warningModal = document.getElementById("startup-warning-modal");
-    if (btnWarningAccept && warningModal) {
-        btnWarningAccept.addEventListener("click", () => {
-            warningModal.classList.add("hidden");
-            import('./modules/voice.js').then(m => m.speak("Core initialisiert. Willkommen bei Äthel."));
-        });
-    }
-
-    // Wire donation modal
-    const btnDonation = document.getElementById("btn-donation");
-    const modalDonation = document.getElementById("donation-modal");
-    const btnDonationClose = document.getElementById("donation-btn-close");
-
-    if (btnDonation && modalDonation) {
-        btnDonation.addEventListener("click", () => {
-            modalDonation.classList.remove("hidden");
-        });
-    }
-
-    if (btnDonationClose && modalDonation) {
-        btnDonationClose.addEventListener("click", () => {
-            modalDonation.classList.add("hidden");
         });
     }
 }

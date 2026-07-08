@@ -5,14 +5,13 @@ export async function checkSystemStatus() {
     return res.json();
 }
 
-export async function submitSetup(key, openaiKey, deepseekKey = '') {
+export async function submitSetup(key, openaiKey) {
     const res = await fetch(`${state.API_BASE}/v1/setup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-            api_key: key || '',
-            openai_api_key: openaiKey || '',
-            deepseek_api_key: deepseekKey || ''
+            api_key: key,
+            openai_api_key: openaiKey
         })
     });
     return res.json();
@@ -93,18 +92,6 @@ export async function runTaskManual(id) {
 
 export async function pauseTaskManual(id) {
     const res = await fetch(`${state.API_BASE}/v1/kernel/tasks/${id}/pause`, {
-        method: 'POST'
-    });
-    return res.json();
-}
-
-export async function getSettings() {
-    const res = await fetch(`${state.API_BASE}/v1/settings`);
-    return res.json();
-}
-
-export async function resetSettings() {
-    const res = await fetch(`${state.API_BASE}/v1/settings/reset`, {
         method: 'POST'
     });
     return res.json();

@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 3, 0, 20;
+  --background-end-rgb: 0, 0, 0;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      rgb(var(--background-start-rgb)),
+      rgb(var(--background-end-rgb))
+    );
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif; /* Oder eine Monospace Font für Terminal Look */
+  overflow-x: hidden;
+}
+
+/* VGT UTILITIES - SUPREME GLASS */
+@layer utilities {
+  .vgt-glass {
+    @apply bg-vgt-glass backdrop-blur-md border border-vgt-border shadow-2xl;
+  }
+  
+  .vgt-glass-hover {
+    @apply hover:bg-white/5 transition-all duration-300 hover:border-vgt-cyan/30;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+  }
+}
+
+/* SUBTLE GRID BACKGROUND */
+.bg-grid-pattern {
+  background-size: 40px 40px;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+}

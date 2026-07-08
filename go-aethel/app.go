@@ -44,9 +44,6 @@ func (a *App) startup(ctx context.Context) {
 	registry.Register(&ExecuteCommandSkill{})
 	registry.Register(&ReadFileSkill{})
 	registry.Register(&WriteFileSkill{})
-	registry.Register(&ReplaceFileContentSkill{})
-	registry.Register(&SetChecklistSkill{})
-	registry.Register(&UpdateChecklistSkill{})
 	registry.Register(&MemorySaveSkill{Store: memoryStore})
 	registry.Register(&MemoryRecallSkill{Store: memoryStore})
 	registry.Register(&WebBrowserSkill{})
@@ -55,7 +52,7 @@ func (a *App) startup(ctx context.Context) {
 	registry.Register(&MountFolderSkill{})
 	registry.Register(&ExternalAgentHandoffSkill{})
 
-	gKey, oKey, dsKey, mDirs := loadConfig()
+	gKey, oKey, mDirs := loadConfig()
 
 	guard := NewSecurityGuard()
 	leases := NewLeaseManager("./vgt_workspace/active_leases.json")
@@ -63,7 +60,7 @@ func (a *App) startup(ctx context.Context) {
 	policy := NewPolicyEngine(guard, leases, audit)
 
 	voiceRegistry := NewVoiceRegistry()
-	go voiceRegistry.LoadLocalVoices()
+	voiceRegistry.LoadLocalVoices()
 
 	vault, err := NewSecretVault("./vgt_workspace/secret_vault.enc", "./vgt_workspace/vault.key")
 	if err != nil {
@@ -74,19 +71,18 @@ func (a *App) startup(ctx context.Context) {
 	_ = taskEngine.Load()
 
 	state = &AppState{
-		apiKey:          gKey,
-		openaiAPIKey:    oKey,
-		deepseekAPIKey:  dsKey,
-		mountedDirs:     mDirs,
-		guard:           guard,
-		leases:          leases,
-		audit:           audit,
-		policy:          policy,
-		skills:          registry,
-		memory:          memoryStore,
-		voice:           voiceRegistry,
-		vault:           vault,
-		tasks:           taskEngine,
+		apiKey:       gKey,
+		openaiAPIKey: oKey,
+		mountedDirs:  mDirs,
+		guard:        guard,
+		leases:       leases,
+		audit:        audit,
+		policy:       policy,
+		skills:       registry,
+		memory:       memoryStore,
+		voice:        voiceRegistry,
+		vault:        vault,
+		tasks:        taskEngine,
 	}
 
 	state.tasks.Start()
@@ -97,7 +93,6 @@ func (a *App) startup(ctx context.Context) {
 	APIRouter.HandleFunc("/v1/setup", handleSetup)
 	APIRouter.HandleFunc("/v1/models", handleModels)
 	APIRouter.HandleFunc("/v1/chat", handleChat)
-	APIRouter.HandleFunc("/v1/chat/checklist", handleChecklist)
 	APIRouter.HandleFunc("/v1/tools/execute", handleToolExecute)
 	APIRouter.HandleFunc("/browser/screenshot.png", handleBrowserScreenshot)
 	APIRouter.HandleFunc("/v1/audio/speech", handleAudioSpeech)
@@ -120,8 +115,6 @@ func (a *App) startup(ctx context.Context) {
 	APIRouter.HandleFunc("/v1/viewport/screenshot", handleViewportScreenshot)
 	APIRouter.HandleFunc("/v1/viewport/status", handleViewportStatus)
 	APIRouter.HandleFunc("/v1/secrets", handleSecrets)
-	APIRouter.HandleFunc("/v1/settings", handleSettings)
-	APIRouter.HandleFunc("/v1/settings/reset", handleSettingsReset)
 
 	log.Println("✅ VGT AETHEL :: API-ROUTER BEREIT")
 }
@@ -150,18 +143,6 @@ func (a *App) HideToTray() {
 // ShowWindow brings AETHEL back from tray
 func (a *App) ShowWindow() {
 	runtime.Show(a.ctx)
-}
-
-// SelectDirectory opens a native directory picker dialog and returns the selected path
-func (a *App) SelectDirectory() string {
-	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Projektverzeichnis für Aethel freigeben",
-	})
-	if err != nil {
-		log.Printf("Failed to open directory dialog: %v", err)
-		return ""
-	}
-	return dir
 }
 
 // GetVersion returns the current version string
