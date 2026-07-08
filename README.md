@@ -13,7 +13,7 @@
 ### Sovereign Intelligence Framework
 
 [![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)](#)
-[![Version](https://img.shields.io/badge/Version-v0.5.0--alpha-orange?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/Version-v0.6.0-orange?style=for-the-badge)](#)
 [![Status](https://img.shields.io/badge/Status-ALPHA-red?style=for-the-badge)](#)
 [![Go](https://img.shields.io/badge/Go-1.21-00ADD8?style=for-the-badge&logo=go)](https://golang.org)
 [![Platform](https://img.shields.io/badge/Platform-Windows_10%2F11_x64-0078D4?style=for-the-badge&logo=windows)](#)
@@ -370,7 +370,62 @@ go build -o aethel.exe .
 
 ---
 
-## 🚧 Known Limitations (v0.5.0-alpha)
+## 📋 Changelog
+
+### v0.6.0 — Security Hardening & Feature Expansion
+
+> Focused release: symlink-resistant path jail, shell injection blocker, blockchain audit validation, frontend XSS protection, API cost tracker, custom persona system.
+
+#### 🔐 Security Notes
+
+- **Path Jail (`skills.go`):** Switched from simple prefix checks to `filepath.Rel` combined with `filepath.EvalSymlinks` — the only reliable method under Windows to block path traversal via symbolic links.
+- **Shell Blocker (`skills.go`):** Regex filter `[;&|><` + "`" + `$]|$$|\r|\n` reliably blocks shell injection attempts before commands reach a shell context (PowerShell/sh).
+- **Blockchain Validation (`guard.go`):** The `ValidateChain()` function performs a complete cryptographic verification (SHA-256) of the entire audit log chain.
+- **XSS Protection (`chat.js`):** `DOMParser`-based local HTML sanitization combined with parameter escaping in `jsArg()` reliably prevents malicious code injection via LLM Markdown responses into the UI.
+
+---
+
+#### 📊 v0.5.0-alpha vs. v0.6.0 — Feature Comparison
+
+| Feature / Module | v0.5.0-alpha | v0.6.0 | Status |
+|---|---|---|---|
+| **Codebase Cleanup** | Contained unused Rust code remnants (`Cargo.toml`, `crates/vgt-*` subdirectories) | Pure Go/Wails project. All legacy artifacts removed from root directory and GitHub mirror | 🧹 Cleaned |
+| **API Models & Pricing** | Outdated model registry with stale price calculations | Updated frontier model registry (GPT-5.5, GPT-5.4, Gemini 3.5/3.1, Claude 4.5/4.6, DeepSeek v4). Prices per 1M tokens incl. cache-hit discounts | 🧠 Updated |
+| **API Cost Tracker** | No cost overview or tracking | Real-time API cost tracker. Logs all prompts to `api_costs.json`, displays daily (TODAY) and monthly (MONTH) costs live in header HUD | 💸 New |
+| **Custom Personas (Gems)** | Behavior only controllable via fixed system prompt | Custom Personas System. Create custom Aethels with dedicated system prompts, configurable system-wide or per role in the agent team | 🤖 New |
+| **UI Architecture & Tabs** | 9 tabs only. Personas were provisionally squeezed into a small card in the settings tab (with layout errors) | 10 tabs (incl. Persona Registry). Dedicated, clear tab in two-column layout (form & list) with flex-optimized, readable buttons | 🎨 Optimized |
+| **Path Jail Security** | Unsafe directory prefix check (vulnerable to traversal via symlinks and sibling-jails) | Hard path jail via `filepath.Rel` and symlink resolution via `filepath.EvalSymlinks` | 🛡️ Hardened |
+| **Shell Injection Protection** | No input validation for metacharacters before shell execution | Active Shell Metacharacter Blocker via regexp in `skills.go`. Interpreter blacklist tightened | 🛡️ Hardened |
+| **Audit Log Validation** | No blockchain integrity verification in running code | Tamper-evident audit log with active integrity check via `ValidateChain()` | 🛡️ Hardened |
+| **Frontend XSS Protection** | Unsanitized HTML injections possible in chat history and agent logs | Sanitized HTML Engine in frontend. Markdown, reasoning logs, tool arguments and IDs are filtered before display | 🛡️ Hardened |
+| **Unit Tests** | Outdated, partially broken bash check scripts | Native Go test suite (`verify_security_test.go`) automatically verifies jails, leases, ID conventions and tamper resistance | 🧪 New |
+
+---
+
+#### 📝 Detailed Changelog
+
+##### 1. Security & Hardening (Backend)
+
+- **Symlink-Resistant Jail:** `skills.go` now resolves all symlinks before checking absolute file paths. Breakout attempts via symlinks pointing to directories outside the jail are blocked.
+- **Secure File Permissions:** All sensitive JSON databases (`aethel_config.json`, `active_leases.json`, `security_audit.json`) are created on Linux/macOS with restrictive file permissions `0600` (owner: read/write) and directory permissions `0700`.
+- **Header Hardening & CORS:** Security headers `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and `X-Frame-Options: DENY` are now globally set in `main.go`. Wildcard CORS (`Access-Control-Allow-Origin: *`) removed to prevent unauthorized browser-based access.
+- **Session-ID Whitelisting:** Session IDs are strictly validated via regex `^session_[A-Za-z0-9_-]{1,80}$`. Path traversal via manipulated session IDs is impossible.
+- **Upload Limits:** Request bodies capped at 16 MB in the API handler to prevent memory exhaustion (DoS attacks).
+
+##### 2. UI/UX & Layout Optimizations (Frontend)
+
+- **Tab: Persona Registry:** Persona management moved to a dedicated navigation view.
+- **Symmetric Buttons:** The `SAVE` and `NEW / CLEAR` buttons in the persona form now share exactly 50/50 width, eliminating the display errors (squashed buttons) of the previous version.
+- **Optgroup Model Structure:** The model selector groups available AIs clearly by provider (OpenAI, Gemini, Claude, DeepSeek, Groq, Ollama).
+
+##### 3. New Features
+
+- **Ledger-Based API Cost Tracker:** Automatic recording of all token transactions. Cumulative daily and monthly costs visible in the header HUD in real time.
+- **Custom Personas (Aethel Gems):** User-defined prompts can be set system-wide in the sidebar dropdown or per role in the agent team (Orchestrator, Builder, Reviewer, etc.).
+
+---
+
+## 🚧 Known Limitations (v0.6.0)
 
 > This is an alpha release for local operator use only. Not suitable for production environments.
 
@@ -438,6 +493,6 @@ Commercial deployment without publishing connected server infrastructure code re
 
 [![VGT](https://img.shields.io/badge/VisionGaia-Technology-cyan?style=for-the-badge)](https://visiongaiatechnology.de)
 
-*VGT AETHEL v0.5.0-alpha — Sovereign AI Kernel // Go Pure Stdlib // Guard Kernel // Blockchain Audit Log // AES-256-GCM Vault // Permission Leases // Live Operator Viewport // Task Engine // Voice STT/TTS // Nexus Memory // Zero External Dependencies // Windows x64*
+*VGT AETHEL v0.6.0 — Sovereign AI Kernel // Go Pure Stdlib // Guard Kernel // Blockchain Audit Log // AES-256-GCM Vault // Permission Leases // Live Operator Viewport // Task Engine // Voice STT/TTS // Nexus Memory // Zero External Dependencies // Windows x64*
 
 </div>
