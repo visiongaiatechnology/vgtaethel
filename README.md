@@ -12,11 +12,11 @@
 # VGT AETHEL
 ### Sovereign Intelligence Framework
 
-[![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)](#)
+[![License](https://img.shields.io/badge/License-AGPLv3-blue?style=for-the-badge)](https://www.gnu.org/licenses/agpl-3.0)
 [![Version](https://img.shields.io/badge/Version-v0.6.0-orange?style=for-the-badge)](#)
 [![Status](https://img.shields.io/badge/Status-ALPHA-red?style=for-the-badge)](#)
 [![Go](https://img.shields.io/badge/Go-1.21-00ADD8?style=for-the-badge&logo=go)](https://golang.org)
-[![Platform](https://img.shields.io/badge/Platform-Windows_10%2F11_x64-0078D4?style=for-the-badge&logo=windows)](#)
+[![Platform](https://img.shields.io/badge/Platform-Windows_%7C_macOS_%7C_Linux-0078D4?style=for-the-badge)](#)
 [![Dependencies](https://img.shields.io/badge/Dependencies-Zero_(pure_stdlib)-brightgreen?style=for-the-badge)](#)
 [![Vault](https://img.shields.io/badge/Vault-AES--256--GCM-gold?style=for-the-badge)](#)
 [![Audit](https://img.shields.io/badge/Audit_Log-Blockchain--chained-purple?style=for-the-badge)](#)
@@ -356,7 +356,7 @@ go build -o aethel.exe .
 |---|---|
 | **Language** | Go 1.21 |
 | **External Dependencies** | Zero — pure stdlib |
-| **Platform** | Windows 10/11 x64 |
+| **Platform** | Windows 10/11 x64 · macOS · Linux x64 |
 | **Runtime Port** | `localhost:3000` |
 | **Backend Size** | ~4,249 lines Go |
 | **Frontend Size** | ~92.5 KB (10 modules, vanilla JS) |
@@ -432,7 +432,7 @@ go build -o aethel.exe .
 - No automatic update system
 - Single-operator only — no multi-user support
 - Groq API key required for Whisper STT (offline fallback: Windows SAPI)
-- GUI control is Windows-only (GDI+ / PowerShell)
+- GUI control currently uses GDI+ / PowerShell on Windows; macOS and Linux use platform-native fallbacks
 - No HTTPS (localhost only — TLS optionally upgradeable)
 
 ---
@@ -446,7 +446,7 @@ go build -o aethel.exe .
 | Plugin system for skills | 🔜 Planned |
 | Automatic self-update | 🔜 Planned |
 | Web dashboard (externally accessible, auth) | 🔜 Planned |
-| Cross-platform support (Linux, macOS) | 🔜 Planned |
+| Cross-platform support (Windows, macOS, Linux) | ✅ Done |
 | HTTPS / TLS out of the box | 🔜 Planned |
 
 ---
@@ -481,9 +481,9 @@ AETHEL is a free R&D project. Every contribution flows directly into development
 
 ## 📄 License
 
-Proprietary · © 2026 VisionGaia Technology · Cologne, Germany
+AGPLv3 · © 2026 VisionGaia Technology · Cologne, Germany
 
-Commercial deployment without publishing connected server infrastructure code requires a commercial exception license. Enterprise deployments, TIER-0 audits (VGT SafetySys™) and commercial licenses: [visiongaiatechnology.de](https://visiongaiatechnology.de)
+VGT AETHEL is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. Any derivative work or network-deployed modification must be published under the same license. Enterprise deployments, TIER-0 audits (VGT SafetySys™) and commercial exception licenses: [visiongaiatechnology.de](https://visiongaiatechnology.de)
 
 ---
 
@@ -493,6 +493,6 @@ Commercial deployment without publishing connected server infrastructure code re
 
 [![VGT](https://img.shields.io/badge/VisionGaia-Technology-cyan?style=for-the-badge)](https://visiongaiatechnology.de)
 
-*VGT AETHEL v0.6.0 — Sovereign AI Kernel // Go Pure Stdlib // Guard Kernel // Blockchain Audit Log // AES-256-GCM Vault // Permission Leases // Live Operator Viewport // Task Engine // Voice STT/TTS // Nexus Memory // Zero External Dependencies // Windows x64*
+*VGT AETHEL v0.6.0 — Sovereign AI Kernel // Go Pure Stdlib // Guard Kernel // Blockchain Audit Log // AES-256-GCM Vault // Permission Leases // Live Operator Viewport // Task Engine // Voice STT/TTS // Nexus Memory // Zero External Dependencies // Windows · macOS · Linux*
 
 </div>
