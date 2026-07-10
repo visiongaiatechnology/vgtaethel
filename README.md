@@ -63,7 +63,7 @@ Conventional AI Agents:
   Cloud-dependent TTS             → sends voice data externally
 
 VGT AETHEL:
-  Go Cortex (pure stdlib)         → zero external attack surface
+  Go Cortex (pure stdlib)         → zero external attack surface (subject to change)
   Wails native desktop app        → embedded frontend, no browser required
   Guard Kernel (policy engine)    → every tool call risk-scored before execution
   Operator gate                   → Moderate/High/Critical requires human confirmation
