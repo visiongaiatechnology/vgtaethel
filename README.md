@@ -13,16 +13,19 @@
 ### Sovereign Intelligence Framework
 
 [![License](https://img.shields.io/badge/License-AGPLv3-blue?style=for-the-badge)](https://www.gnu.org/licenses/agpl-3.0)
-[![Version](https://img.shields.io/badge/Version-v0.6.0-orange?style=for-the-badge)](#)
-[![Status](https://img.shields.io/badge/Status-ALPHA-red?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/Version-v1.0.0--beta.1-orange?style=for-the-badge)](#)
+[![Status](https://img.shields.io/badge/Status-BETA-yellow?style=for-the-badge)](#)
 [![Go](https://img.shields.io/badge/Go-1.21-00ADD8?style=for-the-badge&logo=go)](https://golang.org)
-[![Platform](https://img.shields.io/badge/Platform-Windows_%7C_macOS_%7C_Linux-0078D4?style=for-the-badge)](#)
+[![Framework](https://img.shields.io/badge/Framework-Wails_Desktop-00ADD8?style=for-the-badge)](#)
+[![Platform](https://img.shields.io/badge/Platform-Windows_10%2F11_x64-0078D4?style=for-the-badge&logo=windows)](#)
 [![Dependencies](https://img.shields.io/badge/Dependencies-Zero_(pure_stdlib)-brightgreen?style=for-the-badge)](#)
 [![Vault](https://img.shields.io/badge/Vault-AES--256--GCM-gold?style=for-the-badge)](#)
+[![KeyStore](https://img.shields.io/badge/KeyStore-Windows_DPAPI-purple?style=for-the-badge)](#)
+[![TTS](https://img.shields.io/badge/TTS-Sherpa--ONNX_(Offline)-brightgreen?style=for-the-badge)](#-sherpa-onnx-integration-guide)
 [![Audit](https://img.shields.io/badge/Audit_Log-Blockchain--chained-purple?style=for-the-badge)](#)
 [![VGT](https://img.shields.io/badge/VGT-VisionGaiaTechnology-cyan?style=for-the-badge)](https://visiongaiatechnology.de)
 
-**SOVEREIGN AI KERNEL · ZERO EXTERNAL DEPENDENCIES · OPERATOR-GATED EXECUTION**
+**SOVEREIGN AI KERNEL · NATIVE DESKTOP APP · OPERATOR-GATED EXECUTION · OFFLINE TTS**
 
 <img width="50%" alt="VGT AETHEL Neural Interface" src="https://github.com/user-attachments/assets/509b3a60-ea7f-44a8-8c11-bc61bbbcc188" />
 
@@ -30,7 +33,7 @@
 
 ---
 
-## ⚠️ ALPHA SOFTWARE — EXPERIMENTAL R&D
+## ⚠️ BETA SOFTWARE — EXPERIMENTAL R&D
 
 VGT AETHEL is a **Proof of Concept (PoC)** and active research project at VisionGaia Technology. It is **not** a certified or production-ready product.
 
@@ -42,12 +45,14 @@ Found a vulnerability or have an improvement? **Open an issue or contact us.**
 
 ---
 
-<img width="1920" height="1009" alt="image" src="https://github.com/user-attachments/assets/7a026e26-f8e0-40bb-84c8-008c92b61513" />
+<img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/5bbcd1a1-930e-4570-aa59-776180f12ccb" />
 
+
+---
 
 ## 🔍 What is VGT AETHEL?
 
-AETHEL is not a chatbot. It is a **local sovereign AI kernel** — personal assistant, code agent, computer-control agent, voice assistant, task orchestrator and security kernel in one system.
+AETHEL is not a chatbot. It is a **local sovereign AI kernel** — personal assistant, code agent, computer-control agent, voice assistant, task orchestrator and security kernel in one native desktop application.
 
 ```
 Conventional AI Agents:
@@ -55,17 +60,25 @@ Conventional AI Agents:
   No governance layer             → AI executes what it wants
   No audit trail                  → nothing is logged
   No operator gate                → changes applied silently
+  Cloud-dependent TTS             → sends voice data externally
 
 VGT AETHEL:
   Go Cortex (pure stdlib)         → zero external attack surface
+  Wails native desktop app        → embedded frontend, no browser required
   Guard Kernel (policy engine)    → every tool call risk-scored before execution
   Operator gate                   → Moderate/High/Critical requires human confirmation
   Blockchain audit log            → every action chained and tamper-evident
-  AES-256-GCM vault               → secrets never in plaintext
-  Voice approval                  → operator can confirm via voice
+  Windows DPAPI key store         → master key bound to OS user, not plaintext on disk
+  AES-256-GCM sealed stores       → all local state encrypted at rest
+  Sherpa-ONNX TTS                 → fully offline voice output, no cloud dependency
+  Capability-based agent profiles → hard permission boundaries per role
+  File snapshot & restore         → automatic rollback before destructive operations
 ```
 
 AETHEL implements a **strict separation of intelligence, execution and communication** — the governance layer that most AI agent runtimes are missing.
+
+<img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/9f36524d-4c74-4bfb-8eb3-ea3a375eba45" />
+
 
 ---
 
@@ -73,44 +86,58 @@ AETHEL implements a **strict separation of intelligence, execution and communica
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                        OPERATOR (UI)                          │
-│           ES6 Frontend — Vanilla HTML / CSS / JS             │
-│   Chat Terminal · Live Operator · Security · Tasks · Memory   │
+│                   OPERATOR (WAILS DESKTOP)                    │
+│        ES6 Frontend — 16 Modules — Embedded via go:embed     │
+│  Chat · Run Center · Agent Builder · Personal Mode · Voice   │
+│  Security · Tasks · Personas · Memory · Diagnostics          │
 ├──────────────────────────────────────────────────────────────┤
 │                    REST API v1 (HTTP/JSON)                    │
 ├──────────────────────────────────────────────────────────────┤
-│                    GO CORTEX (Backend)                        │
+│              GO CORTEX — MODULAR (~77 source files)           │
 │                                                              │
-│  ┌─────────────┬───────────────┬──────────────┬───────────┐ │
-│  │ Chat Engine │  Skills Layer │ Guard Kernel │  Voice    │ │
-│  │ (Streaming) │  (Tool Exec)  │ (Policy +    │  Engine   │ │
-│  │             │               │  Audit Log)  │  STT/TTS  │ │
-│  └─────────────┴───────────────┴──────────────┴───────────┘ │
+│  ┌──────────────┬──────────────┬─────────────┬────────────┐ │
+│  │  Chat Engine │ Skills Layer │ Guard Kernel│  Voice     │ │
+│  │  (Streaming) │ (Modular)    │ (Policy +   │  Engine    │ │
+│  │              │ skills_gui   │  Audit Log) │  Sherpa    │ │
+│  │              │ skills_fs    │             │  SAPI5     │ │
+│  │              │ skills_browser│            │  Whisper   │ │
+│  └──────────────┴──────────────┴─────────────┴────────────┘ │
 │                                                              │
-│  main.go · skills.go · guard.go · voice.go                   │
-│  secret.go · task_engine.go                                  │
+│  ┌──────────────┬──────────────┬─────────────┬────────────┐ │
+│  │  Run Engine  │ Sealed Store │ Key Store   │ File       │ │
+│  │  (Persistent │ (AES-256-GCM │ (DPAPI)     │ Snapshots  │ │
+│  │   State      │  at rest)    │             │ & Restore  │ │
+│  │   Machine)   │              │             │            │ │
+│  └──────────────┴──────────────┴─────────────┴────────────┘ │
 ├──────────────────────────────────────────────────────────────┤
 │                    NEXUS MEMORY STORE                         │
-│          ./vgt_workspace  (Sled DB / JSON persistence)       │
+│         ./vgt_workspace  (Sealed JSON / Sled DB)             │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### Codebase Overview
+<img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/711672e6-59ef-4956-9a6a-7eeade41962f" />
 
-| File | Lines | Size | Function |
-|---|---|---|---|
-| `main.go` | 1,452 | 39.9 KB | HTTP server, routing, state management |
-| `skills.go` | 1,201 | 36.9 KB | Tool skills, GUI control, screenshot engine |
-| `guard.go` | 581 | 15.9 KB | Policy engine, lease manager, audit logger |
-| `voice.go` | 403 | 11.9 KB | STT (Whisper/Groq), TTS (Edge/SAPI) |
-| `task_engine.go` | 386 | 9.4 KB | Background scheduler, autonomous tasks |
-| `secret.go` | 226 | 4.7 KB | AES-256-GCM secrets vault |
-| `verify_security_test.go` | — | 5.7 KB | Security unit tests |
-| **Frontend (10 modules)** | — | 92.5 KB | Modular ES6 UI |
-
-**Total backend:** ~4,249 lines of Go · **Total frontend:** 10 JS modules
 
 ---
+
+## 📊 v0.6.0 → v1.0.0-beta.1 — What Changed
+
+| Criterion | v0.6.0 Alpha | v1.0.0-beta.1 | Status |
+|---|---|---|---|
+| **Platform Format** | Go CLI + local webserver (localhost:3000) | Native Wails Desktop App | 🚀 Upgrade |
+| **Key Store** | Plaintext `vault.key` on disk | Windows DPAPI (`config.key.dpapi`) — bound to OS user | 🔒 Hardened |
+| **Local Databases** | Plaintext JSON in workspace | Encrypted sealed files (`AETHEL-SEAL-v1:`) | 🔒 Hardened |
+| **Code Structure** | Monolithic (few large files) | Highly modular (~77 Go source files) | 🧹 Refactored |
+| **Agent Runs** | Temporary web sessions | Persistent, pausable, budgeted runs with state machine | ✨ New |
+| **TTS** | Cloud-dependent (Edge TTS) | Fully offline (Sherpa-ONNX / SAPI5 fallback) | 🎙️ Upgrade |
+| **File Safety** | Path jail check only | Active snapshot & restore engine | 🛡️ Hardened |
+| **Platform Focus** | Windows / macOS / Linux | Official focus: Windows 10/11 x64 | 🎯 Focused |
+| **Frontend Modules** | 10 JS modules | 16 JS modules | ✨ Expanded |
+
+---
+
+<img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/c225fff9-bfa4-47a5-9d42-775956af4add" />
+
 
 ## 🛡️ Guard Kernel — Security Policy Engine
 
@@ -144,21 +171,81 @@ Operators can grant temporary, scoped permission unlocks:
 
 - Time-bound via `ExpiresAt` timestamp
 - Scope: app filter, action filter, forbidden targets
-- Persisted in `./vgt_workspace/active_leases.json`
+- Persisted in sealed store (`active_leases`)
 - Revoked automatically on expiry
 
 ### Blockchain Audit Log
 
-Every action is chained:
+Every action is chained and tamper-evident:
 
 ```
-Entry N:  action + SHA-256(Entry N-1)
+Entry N:   action + SHA-256(Entry N-1)
 Entry N+1: action + SHA-256(Entry N)
 ```
 
-Tamper detection runs at every server start. Stored in `./vgt_workspace/security_audit.json`.
+`ValidateChain()` performs complete cryptographic verification of the entire log on every server start.
 
 ---
+
+<img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/5bbad35d-3035-4fc1-b8f7-f3bbe3e416ca" />
+
+
+
+## 🔐 Security Architecture (Beta v1)
+
+### Windows DPAPI Key Store
+
+In v0.6.0, the AES vault master key was stored as plaintext `vault.key` on disk. Beta v1 replaces this entirely:
+
+- Master key is encrypted using **Windows Data Protection API (DPAPI)** via `key_store_windows.go`
+- The key (`config.key.dpapi`) is cryptographically bound to the logged-in Windows user
+- An automated one-time migration removes old plaintext keys
+
+### Sealed Local Stores
+
+All local state — configuration, tasks, agent runs — is stored encrypted:
+
+```
+Storage prefix:  AETHEL-SEAL-v1:
+Encryption:      AES-256-GCM
+Implementation:  sealed_store.go
+```
+
+Nothing in `./vgt_workspace` is readable plaintext.
+
+### Capability-Based Agent Profiles
+
+Four hard, data-driven agent profiles with predefined permission boundaries — not just prompt-level restrictions:
+
+| Profile | Permissions |
+|---|---|
+| **Researcher** | Read-only filesystem and browser access. No write rights. |
+| **Developer** | Write rights, `sys_exec` — strictly scoped |
+| **Browser Operator** | Media and visible web control only |
+| **Personal Assistant** | Personalized mode — no system write rights |
+
+### File Snapshot & Restore (`file_snapshots.go`)
+
+Before any file modification, AETHEL automatically creates an encrypted in-memory snapshot (up to 5 MB). On error, the previous state can be restored with a single confirmation.
+
+### Durable Agent Runs (`run_engine.go`)
+
+Agent runs are now a persistent state machine:
+
+```
+queued → running → waiting_approval → completed
+                ↓                   ↓
+              paused             failed
+```
+
+- Each run has a unique ID and full trace log
+- Budget limit: configurable max token cost (USD) per run
+- Crash recovery: in-flight runs auto-pause on restart and can be explicitly resumed
+
+---
+
+<img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/8a217a5f-6792-499a-b37c-3c8727b52116" />
+
 
 ## 🔧 Skills & Tool Capabilities
 
@@ -173,7 +260,7 @@ Tamper detection runs at every server start. Stored in `./vgt_workspace/security
 | `gui_control / press` | Key combination | 🔴 High |
 | `fs_read_file` | Read file | 🟢 Low (autonomous) |
 | `fs_list_dir` | List directory | 🟢 Low (autonomous) |
-| `fs_write_file` | Write file | 🟡 Moderate |
+| `fs_write_file` | Write file (with auto-snapshot) | 🟡 Moderate |
 | `fs_mount_folder` | Mount folder | 🟡 Moderate |
 | `sys_exec_cmd` | Execute system command | 🔴 High |
 | `web_browser` | Open browser | 🟡 Moderate |
@@ -186,19 +273,19 @@ Tamper detection runs at every server start. Stored in `./vgt_workspace/security
 
 ## 🎙️ Voice System
 
+### Text-to-Speech (TTS)
+
+| Provider | Quality | Mode | Requirement |
+|---|---|---|---|
+| **Sherpa-ONNX** (primary) | High (neural ONNX) | Fully offline | CGO + DLLs + model files |
+| **Windows SAPI5** (fallback) | Standard | Local / offline | None |
+
 ### Speech-to-Text (STT)
 
 | Provider | Model | Mode |
 |---|---|---|
 | **Groq Whisper** (primary) | `whisper-large-v3-turbo` | Cloud (API key required) |
 | **Windows SAPI** (fallback) | Native | Local / offline |
-
-### Text-to-Speech (TTS)
-
-| Provider | Quality | Mode |
-|---|---|---|
-| **Edge TTS** (primary) | High (neural) | Local (no API key) |
-| **Windows SAPI** (fallback) | Standard | Local / offline |
 
 ### Voice Approval Commands
 
@@ -208,13 +295,95 @@ Tamper detection runs at every server start. Stored in `./vgt_workspace/security
 | ❌ Reject | *"nein", "nee", "stop", "block", "ablehnen"* |
 | 🔐 High-Risk Approve | *"bestätige", "confirm"* (explicit) |
 
-Fuzzy matching active — operator does not need exact phrasing.
+---
+
+## 🔊 Sherpa-ONNX Integration Guide
+
+AETHEL uses Sherpa-ONNX for fully local, privacy-compliant text-to-speech output with no internet connection required. Follow these four steps to enable it.
+
+### Step 1 — Configure CGO and Go Bindings
+
+Sherpa-ONNX uses native C++ libraries. A GCC compiler is required — on Windows, [w64devkit](https://github.com/skeeto/w64devkit) is recommended.
+
+```bash
+# Enable CGO
+set CGO_ENABLED=1
+
+# Install Go bindings
+go get github.com/k2-fsa/sherpa-onnx-go/sherpa_onnx
+go mod tidy
+```
+
+### Step 2 — Place Native DLLs (Windows)
+
+The compiled C++ libraries must be placed next to `aethel.exe` at runtime.
+
+Download all `.dll` files from the official repository:
+**→ [Sherpa-ONNX Go Windows Native Libs (GNU)](https://github.com/k2-fsa/sherpa-onnx-go-windows/tree/master/lib/x86_64-pc-windows-gnu)**
+
+Copy **all DLLs** (not just the API DLL) into your build root directory:
+
+```
+aethel.exe
+onnxruntime.dll
+sherpa-onnx-c-api.dll
+sherpa-onnx-core-c-api.dll
+piper_phonemize_c_api.dll
+espeak-ng_c_api.dll
+kaldi-native-fbank-core.dll
+```
+
+### Step 3 — Download TTS Models
+
+AETHEL does not download models at runtime for security reasons. Place models manually under `./vgt_workspace/models/sherpa/`.
+
+**Recommended models:**
+
+| Model | Language | Size | Download |
+|---|---|---|---|
+| **KittenTTS** | English | ~30 MB | [kitten-nano-en-v0_1-fp16.tar.bz2](https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kitten-nano-en-v0_1-fp16.tar.bz2) |
+| **Kokoro v1.0** | Multilingual | ~80 MB | [kokoro-multi-lang-v1_0.tar.bz2](https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-multi-lang-v1_0.tar.bz2) |
+
+**Required directory structure:**
+
+```
+go-aethel/
+├── aethel.exe
+├── onnxruntime.dll
+├── sherpa-onnx-c-api.dll
+│   ... (all further DLLs)
+└── vgt_workspace/
+    └── models/
+        └── sherpa/
+            ├── kitten-nano-en-v0_1-fp16/
+            │   ├── model.fp16.onnx      ← filename must be preserved exactly
+            │   ├── voices.bin
+            │   ├── tokens.txt
+            │   └── espeak-ng-data/
+            └── kokoro-multi-lang-v1_0/
+                ├── model.onnx
+                ├── voices.bin
+                ├── tokens.txt
+                └── espeak-ng-data/
+```
+
+### Step 4 — Compile with CGO
+
+Always build with CGO enabled:
+
+```bash
+set CGO_ENABLED=1
+go build -ldflags="-s -w" -o aethel.exe .
+```
+
+> **Without CGO (`CGO_ENABLED=0`):** The stub module `voice_sherpa_stub.go` is compiled automatically. The application builds and runs, but local audio output will return an error at runtime. SAPI5 fallback remains active.
 
 ---
 
-## 🖥️ Live Operator (Viewport Control)
+<img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/454c0eb7-2878-4fab-ba0b-160b0671ca40" />
 
-Real-time desktop visibility for the operator during AI execution.
+
+## 🖥️ Live Operator (Viewport Control)
 
 | Feature | Detail |
 |---|---|
@@ -223,7 +392,7 @@ Real-time desktop visibility for the operator during AI execution.
 | **Multi-Monitor** | Cursor-follows: always the monitor with the mouse cursor |
 | **Refresh Rate** | 800ms polling interval |
 | **Caching** | In-memory cache, 800ms TTL (`sync.Mutex`) |
-| **Conflict Protection** | Mutex prevents parallel PowerShell processes |
+| **Evidence Screenshots** | Before/after visual proof of GUI actions in Run Center |
 | **Error Fallback** | Last valid image used on transient capture failure |
 
 ---
@@ -235,7 +404,7 @@ Real-time desktop visibility for the operator during AI execution.
 | **Scheduler** | Background goroutine, tick every 5 seconds |
 | **Task Types** | `once`, `recurring` (cron-style) |
 | **Status Values** | `pending`, `running`, `completed`, `failed`, `cancelled` |
-| **Persistence** | `./vgt_workspace/tasks.json` |
+| **Persistence** | Sealed encrypted store |
 | **Security Integration** | All tasks pass through the full policy engine |
 | **Max Execution Time** | Configurable per task |
 
@@ -246,10 +415,10 @@ Real-time desktop visibility for the operator during AI execution.
 | Feature | Detail |
 |---|---|
 | **Encryption** | AES-256-GCM (authenticated encryption) |
-| **Key Derivation** | Randomly generated 256-bit key |
-| **Storage** | `./vgt_workspace/secret_vault.enc` + `vault.key` |
+| **Key Storage** | Windows DPAPI — bound to OS user (`config.key.dpapi`) |
+| **Data Storage** | `AETHEL-SEAL-v1:` sealed store (encrypted at rest) |
 | **API** | REST CRUD via `/v1/secrets` |
-| **Git Protection** | `.gitignore` blocks commit of `.enc` / `.key` files |
+| **Git Protection** | `.gitignore` blocks commit of `.dpapi` / `.enc` / `.key` files |
 
 ---
 
@@ -278,9 +447,9 @@ Real-time desktop visibility for the operator during AI execution.
 
 | Method | Endpoint | Function |
 |---|---|---|
-| `POST` | `/v1/audio/speech` | Text-to-speech synthesis |
+| `POST` | `/v1/audio/speech` | TTS synthesis (Sherpa-ONNX / SAPI5) |
 | `GET` | `/v1/audio/voices` | Available voices |
-| `POST` | `/v1/audio/transcribe` | Speech-to-text (Whisper) |
+| `POST` | `/v1/audio/transcribe` | STT (Whisper / SAPI) |
 | `GET` | `/v1/audio/health` | Audio stack health |
 | `POST` | `/v1/audio/test` | TTS connection test |
 
@@ -291,6 +460,16 @@ Real-time desktop visibility for the operator during AI execution.
 | `GET/POST` | `/v1/security/leases` | Manage permission leases |
 | `GET` | `/v1/security/audit` | Blockchain audit log |
 | `GET` | `/v1/security/status` | Security status |
+
+### Agent Runs
+
+| Method | Endpoint | Function |
+|---|---|---|
+| `POST` | `/v1/runs` | Create new agent run |
+| `GET` | `/v1/runs/:id` | Get run state + trace |
+| `POST` | `/v1/runs/:id/pause` | Pause run |
+| `POST` | `/v1/runs/:id/resume` | Resume paused run |
+| `POST` | `/v1/runs/:id/approve` | Approve pending tool call |
 
 ### Viewport & Memory
 
@@ -305,12 +484,13 @@ Real-time desktop visibility for the operator during AI execution.
 
 | Method | Endpoint | Function |
 |---|---|---|
-| `GET/POST/DELETE` | `/v1/secrets` | AES-256-GCM vault |
+| `GET/POST/DELETE` | `/v1/secrets` | AES-256-GCM sealed vault |
 | `GET/POST` | `/v1/setup` | First-run configuration |
+| `GET` | `/v1/diagnostics` | Privacy-safe system report |
 
 ---
 
-## 🖥️ Frontend Modules
+## 🖥️ Frontend Modules (16 Modules)
 
 | Module | Size | Responsibility |
 |---|---|---|
@@ -325,6 +505,11 @@ Real-time desktop visibility for the operator during AI execution.
 | `memory.js` | 5.2 KB | Nexus memory UI, search |
 | `secrets.js` | 3.8 KB | Vault UI, key management |
 | `ui.js` | 6.7 KB | Navigation, panels, animations, themes |
+| `agent_builder.js` | — | Agent team configuration |
+| `personal_mode.js` | — | Persona, humor/initiative sliders, journal |
+| `approval_dialog.js` | — | Tool call approval dialogs |
+| `run_center.js` | — | Run state machine UI, trace logs, evidence screenshots |
+| `diagnostics.js` | — | Privacy-safe system report export |
 
 ---
 
@@ -335,18 +520,16 @@ Real-time desktop visibility for the operator during AI execution.
 cp .env.example .env
 # Set GROQ_API_KEY=gsk_your_key
 
-# 2. Build and run
-go build -o aethel.exe .
+# 2. Build (CGO required for Sherpa-ONNX TTS)
+set CGO_ENABLED=1
+go build -ldflags="-s -w" -o aethel.exe .
+
+# 3. Run
 ./aethel.exe
+# Wails desktop window opens automatically
 ```
 
-| Endpoint | URL |
-|---|---|
-| Interface | `http://localhost:3000` |
-| API Gateway | `http://localhost:3000/v1` |
-| Health Check | `http://localhost:3000/health` |
-
-**Persistence:** All memory, tasks, leases and audit log stored in `./vgt_workspace/`.
+> Without CGO, build with `CGO_ENABLED=0` — Sherpa-ONNX is replaced by stub, SAPI5 fallback active.
 
 ---
 
@@ -355,84 +538,89 @@ go build -o aethel.exe .
 | Metric | Value |
 |---|---|
 | **Language** | Go 1.21 |
-| **External Dependencies** | Zero — pure stdlib |
-| **Platform** | Windows 10/11 x64 · macOS · Linux x64 |
-| **Runtime Port** | `localhost:3000` |
-| **Backend Size** | ~4,249 lines Go |
-| **Frontend Size** | ~92.5 KB (10 modules, vanilla JS) |
+| **Framework** | Wails Desktop (WebView2 — embedded frontend) |
+| **External Dependencies** | Zero stdlib / CGO only for Sherpa-ONNX |
+| **Platform** | Windows 10/11 x64 (official) |
+| **Backend Source Files** | ~77 Go source files |
+| **Frontend Modules** | 16 JS modules (embedded via `go:embed`) |
 | **Vault Encryption** | AES-256-GCM |
-| **Audit Log** | SHA-256 blockchain-chained |
+| **Key Storage** | Windows DPAPI (`config.key.dpapi`) |
+| **Local State** | `AETHEL-SEAL-v1:` sealed encrypted stores |
+| **Audit Log** | SHA-256 blockchain-chained + `ValidateChain()` |
+| **TTS Primary** | Sherpa-ONNX (offline ONNX neural models) |
+| **TTS Fallback** | Windows SAPI5 (local, no API key) |
 | **STT Primary** | Groq Whisper `whisper-large-v3-turbo` |
-| **TTS Primary** | Edge TTS (neural, local, no API key) |
-| **Screenshot Engine** | GDI+ via PowerShell, JPEG 70% |
-| **Memory Persistence** | `./vgt_workspace` (JSON + Sled DB) |
-| **License** | Proprietary |
+| **Memory Persistence** | `./vgt_workspace` (sealed JSON / Sled DB) |
+| **License** | AGPLv3 |
 
 ---
 
 ## 📋 Changelog
 
-### v0.6.0 — Security Hardening & Feature Expansion
+### v1.0.0-beta.1 — Native Desktop, DPAPI, Sealed Stores, Sherpa-ONNX *(Current)*
 
-> Focused release: symlink-resistant path jail, shell injection blocker, blockchain audit validation, frontend XSS protection, API cost tracker, custom persona system.
+#### Architecture & Framework
 
-#### 🔐 Security Notes
+- **Wails Desktop (WebView2):** migrated from Go CLI + localhost:3000 webserver to a true native Windows desktop application. The frontend is compiled directly into the binary via `go:embed`. No browser required.
+- **Full Backend Modularization:** monolithic `skills.go` (~1,200 lines) and `main.go` (~1,450 lines) decomposed into ~77 dedicated source files. Skills split into functional modules: `skills_gui.go`, `skills_fs.go`, `skills_browser.go` and more.
+- **Frontend Expansion:** 10 → 16 JS modules with dedicated files for `agent_builder.js`, `personal_mode.js`, `approval_dialog.js`, `run_center.js` and `diagnostics.js`.
 
-- **Path Jail (`skills.go`):** Switched from simple prefix checks to `filepath.Rel` combined with `filepath.EvalSymlinks` — the only reliable method under Windows to block path traversal via symbolic links.
-- **Shell Blocker (`skills.go`):** Regex filter `[;&|><` + "`" + `$]|$$|\r|\n` reliably blocks shell injection attempts before commands reach a shell context (PowerShell/sh).
-- **Blockchain Validation (`guard.go`):** The `ValidateChain()` function performs a complete cryptographic verification (SHA-256) of the entire audit log chain.
-- **XSS Protection (`chat.js`):** `DOMParser`-based local HTML sanitization combined with parameter escaping in `jsArg()` reliably prevents malicious code injection via LLM Markdown responses into the UI.
+#### Security Hardening
 
----
+- **Windows DPAPI Key Store (`key_store_windows.go`):** master key for AES vault is now cryptographically bound to the logged-in Windows user via DPAPI. Plaintext `vault.key` is gone. Automated one-time migration removes old keys.
+- **Sealed Local Stores (`sealed_store.go`):** all local state — config, tasks, agent runs — stored under `AETHEL-SEAL-v1:` prefix with AES-256-GCM encryption. Nothing readable as plaintext in `./vgt_workspace`.
+- **Symlink-Resistant Path Jail:** switched from simple prefix check to `filepath.Rel` + `filepath.EvalSymlinks` — the only reliable method on Windows to block path traversal via symlinks.
+- **Shell Metacharacter Blocker:** regex filter `[;&|><` + "`" + `$]|$$|\r|\n` blocks shell injection before commands reach PowerShell/sh context.
+- **Blockchain Validation:** `ValidateChain()` performs complete SHA-256 cryptographic verification of the entire audit log chain on startup.
+- **Frontend XSS Protection:** `DOMParser`-based local HTML sanitization + `jsArg()` parameter escaping blocks malicious code injection via LLM Markdown responses.
+- **Secure File Permissions:** sensitive JSON databases created on Linux/macOS with `0600` (files) and `0700` (directories).
+- **Header Hardening & CORS:** `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY` set globally. Wildcard CORS (`*`) removed.
+- **Session-ID Whitelisting:** session IDs validated via `^session_[A-Za-z0-9_-]{1,80}$` — path traversal via manipulated IDs impossible.
+- **Upload Limits:** request bodies capped at 16 MB to prevent memory exhaustion.
 
-#### 📊 v0.5.0-alpha vs. v0.6.0 — Feature Comparison
+#### Agent Runs
 
-| Feature / Module | v0.5.0-alpha | v0.6.0 | Status |
-|---|---|---|---|
-| **Codebase Cleanup** | Contained unused Rust code remnants (`Cargo.toml`, `crates/vgt-*` subdirectories) | Pure Go/Wails project. All legacy artifacts removed from root directory and GitHub mirror | 🧹 Cleaned |
-| **API Models & Pricing** | Outdated model registry with stale price calculations | Updated frontier model registry (GPT-5.5, GPT-5.4, Gemini 3.5/3.1, Claude 4.5/4.6, DeepSeek v4). Prices per 1M tokens incl. cache-hit discounts | 🧠 Updated |
-| **API Cost Tracker** | No cost overview or tracking | Real-time API cost tracker. Logs all prompts to `api_costs.json`, displays daily (TODAY) and monthly (MONTH) costs live in header HUD | 💸 New |
-| **Custom Personas (Gems)** | Behavior only controllable via fixed system prompt | Custom Personas System. Create custom Aethels with dedicated system prompts, configurable system-wide or per role in the agent team | 🤖 New |
-| **UI Architecture & Tabs** | 9 tabs only. Personas were provisionally squeezed into a small card in the settings tab (with layout errors) | 10 tabs (incl. Persona Registry). Dedicated, clear tab in two-column layout (form & list) with flex-optimized, readable buttons | 🎨 Optimized |
-| **Path Jail Security** | Unsafe directory prefix check (vulnerable to traversal via symlinks and sibling-jails) | Hard path jail via `filepath.Rel` and symlink resolution via `filepath.EvalSymlinks` | 🛡️ Hardened |
-| **Shell Injection Protection** | No input validation for metacharacters before shell execution | Active Shell Metacharacter Blocker via regexp in `skills.go`. Interpreter blacklist tightened | 🛡️ Hardened |
-| **Audit Log Validation** | No blockchain integrity verification in running code | Tamper-evident audit log with active integrity check via `ValidateChain()` | 🛡️ Hardened |
-| **Frontend XSS Protection** | Unsanitized HTML injections possible in chat history and agent logs | Sanitized HTML Engine in frontend. Markdown, reasoning logs, tool arguments and IDs are filtered before display | 🛡️ Hardened |
-| **Unit Tests** | Outdated, partially broken bash check scripts | Native Go test suite (`verify_security_test.go`) automatically verifies jails, leases, ID conventions and tamper resistance | 🧪 New |
+- **Durable State Machine (`run_engine.go`):** persistent agent runs with unique IDs, lifecycle states (`queued → running → waiting_approval → completed / failed / paused`), configurable USD cost budget per run, and crash recovery (auto-pause + explicit resume).
+- **Capability-Based Profiles:** four hard permission profiles (Researcher / Developer / Browser Operator / Personal Assistant) — data-driven, not just prompt-level.
+- **File Snapshots (`file_snapshots.go`):** automatic encrypted snapshot (up to 5 MB) before any file modification. One-click restore on error.
 
----
+#### Voice & Audio
 
-#### 📝 Detailed Changelog
+- **Sherpa-ONNX TTS (`voice_sherpa_cgo.go`):** fully offline neural TTS via ONNX models — replaces cloud-dependent Edge TTS. CGO required; `voice_sherpa_stub.go` compiles without CGO (SAPI5 fallback active).
+- **SAPI5 Fallback:** Windows SAPI5 as local fallback if Sherpa-ONNX cannot initialize.
 
-##### 1. Security & Hardening (Backend)
+#### New Features
 
-- **Symlink-Resistant Jail:** `skills.go` now resolves all symlinks before checking absolute file paths. Breakout attempts via symlinks pointing to directories outside the jail are blocked.
-- **Secure File Permissions:** All sensitive JSON databases (`aethel_config.json`, `active_leases.json`, `security_audit.json`) are created on Linux/macOS with restrictive file permissions `0600` (owner: read/write) and directory permissions `0700`.
-- **Header Hardening & CORS:** Security headers `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and `X-Frame-Options: DENY` are now globally set in `main.go`. Wildcard CORS (`Access-Control-Allow-Origin: *`) removed to prevent unauthorized browser-based access.
-- **Session-ID Whitelisting:** Session IDs are strictly validated via regex `^session_[A-Za-z0-9_-]{1,80}$`. Path traversal via manipulated session IDs is impossible.
-- **Upload Limits:** Request bodies capped at 16 MB in the API handler to prevent memory exhaustion (DoS attacks).
-
-##### 2. UI/UX & Layout Optimizations (Frontend)
-
-- **Tab: Persona Registry:** Persona management moved to a dedicated navigation view.
-- **Symmetric Buttons:** The `SAVE` and `NEW / CLEAR` buttons in the persona form now share exactly 50/50 width, eliminating the display errors (squashed buttons) of the previous version.
-- **Optgroup Model Structure:** The model selector groups available AIs clearly by provider (OpenAI, Gemini, Claude, DeepSeek, Groq, Ollama).
-
-##### 3. New Features
-
-- **Ledger-Based API Cost Tracker:** Automatic recording of all token transactions. Cumulative daily and monthly costs visible in the header HUD in real time.
-- **Custom Personas (Aethel Gems):** User-defined prompts can be set system-wide in the sidebar dropdown or per role in the agent team (Orchestrator, Builder, Reviewer, etc.).
+- **Run Center:** real-time agent step monitoring with cost display, tool calls, trace logs and visual before/after evidence screenshots.
+- **Personal Mode:** dedicated interface for humor, honesty and initiative sliders; interests, goals, journal and memory entries.
+- **Ledger-Based API Cost Tracker:** all token transactions logged to `api_costs.json`. Daily (TODAY) and monthly (MONTH) costs shown live in header HUD.
+- **Custom Personas (Aethel Gems):** user-defined system prompts configurable system-wide or per agent role (Orchestrator, Builder, Reviewer, etc.).
+- **Provider Registry & Health Checks:** automatic availability validation of connected LLMs (OpenAI, Gemini, Anthropic, DeepSeek, Groq, Ollama) with dynamic error signaling in GUI header.
+- **Privacy-Safe Diagnostics (`diagnostics.go`):** export system/performance report with strict filtering of prompts, paths, tokens, passwords and tool parameters.
+- **Updated Model Registry:** GPT-5.5, GPT-5.4, Gemini 3.5/3.1, Claude 4.5/4.6, DeepSeek v4 with per-1M-token pricing including cache-hit discounts.
+- **Unit Test Suite (`verify_security_test.go`):** native Go tests for jails, leases, ID conventions and tamper resistance.
 
 ---
 
-## 🚧 Known Limitations (v0.6.0)
+### v0.6.0-alpha — Security Hardening & Feature Expansion *(archived)*
 
-> This is an alpha release for local operator use only. Not suitable for production environments.
+Path jail hardened via `filepath.Rel` + `filepath.EvalSymlinks`. Shell injection blocker added. Blockchain audit `ValidateChain()`. Frontend XSS protection. API cost tracker. Custom persona system. Model registry updated (GPT-5.5, Gemini 3.5, Claude 4.5, DeepSeek v4).
+
+---
+
+### v0.5.0-alpha — Foundation Release *(archived)*
+
+Go Cortex (pure stdlib). Guard Kernel. AES-256-GCM vault. Blockchain audit log. Voice STT/TTS. Task engine. Screenshot engine. Nexus memory.
+
+---
+
+## 🚧 Known Limitations (v1.0.0-beta.1)
 
 - No automatic update system
 - Single-operator only — no multi-user support
 - Groq API key required for Whisper STT (offline fallback: Windows SAPI)
-- GUI control currently uses GDI+ / PowerShell on Windows; macOS and Linux use platform-native fallbacks
+- Sherpa-ONNX requires CGO + GCC compiler + manual DLL and model setup (see integration guide)
+- Official platform focus: Windows 10/11 x64 (macOS/Linux builds possible without GUI control features)
 - No HTTPS (localhost only — TLS optionally upgradeable)
 
 ---
@@ -446,8 +634,14 @@ go build -o aethel.exe .
 | Plugin system for skills | 🔜 Planned |
 | Automatic self-update | 🔜 Planned |
 | Web dashboard (externally accessible, auth) | 🔜 Planned |
-| Cross-platform support (Windows, macOS, Linux) | ✅ Done |
+| Cross-platform support (Windows / macOS / Linux) | ✅ Partial (Windows focus) |
 | HTTPS / TLS out of the box | 🔜 Planned |
+| Wails Desktop native app | ✅ Done (beta.1) |
+| Windows DPAPI key store | ✅ Done (beta.1) |
+| Sealed local stores | ✅ Done (beta.1) |
+| Sherpa-ONNX offline TTS | ✅ Done (beta.1) |
+| Durable agent runs | ✅ Done (beta.1) |
+| Capability-based profiles | ✅ Done (beta.1) |
 
 ---
 
@@ -467,8 +661,6 @@ go build -o aethel.exe .
 
 ## 💙 Support the Mission
 
-AETHEL is a free R&D project. Every contribution flows directly into development.
-
 [![Donate](https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal)](https://paypal.me/dergoldenelotus)
 
 | Method | Address |
@@ -481,9 +673,11 @@ AETHEL is a free R&D project. Every contribution flows directly into development
 
 ## 📄 License
 
-AGPLv3 · © 2026 VisionGaia Technology · Cologne, Germany
+**AGPLv3 · © 2026 VisionGaia Technology · Cologne, Germany**
 
-VGT AETHEL is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. Any derivative work or network-deployed modification must be published under the same license. Enterprise deployments, TIER-0 audits (VGT SafetySys™) and commercial exception licenses: [visiongaiatechnology.de](https://visiongaiatechnology.de)
+VGT AETHEL is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. Any derivative work or network-deployed modification must be published under the same license.
+
+Enterprise deployments, TIER-0 audits (VGT SafetySys™) and commercial exception licenses: [visiongaiatechnology.de](https://visiongaiatechnology.de)
 
 ---
 
@@ -493,6 +687,6 @@ VGT AETHEL is free software: you can redistribute it and/or modify it under the 
 
 [![VGT](https://img.shields.io/badge/VisionGaia-Technology-cyan?style=for-the-badge)](https://visiongaiatechnology.de)
 
-*VGT AETHEL v0.6.0 — Sovereign AI Kernel // Go Pure Stdlib // Guard Kernel // Blockchain Audit Log // AES-256-GCM Vault // Permission Leases // Live Operator Viewport // Task Engine // Voice STT/TTS // Nexus Memory // Zero External Dependencies // Windows · macOS · Linux*
+*VGT AETHEL v1.0.0-beta.1 — Sovereign AI Kernel // Wails Native Desktop // Go Pure Stdlib // DPAPI Key Store // AES-256-GCM Sealed Stores // Guard Kernel // Blockchain Audit Log // Sherpa-ONNX Offline TTS // Durable Agent Runs // Capability Profiles // File Snapshots // 16-Module Frontend // AGPLv3 // Windows 10/11 x64*
 
 </div>
