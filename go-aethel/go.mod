@@ -2,7 +2,16 @@ module go-aethel
 
 go 1.22.0
 
-require github.com/wailsapp/wails/v2 v2.12.0
+require (
+	github.com/k2-fsa/sherpa-onnx-go v1.13.3
+	github.com/wailsapp/wails/v2 v2.12.0
+	golang.org/x/sys v0.30.0
+)
+
+// Falls sherpa-onnx-go nicht per go get auffindbar:
+// 1. Klone https://github.com/k2-fsa/sherpa-onnx
+// 2. Nutze replace:
+//    replace github.com/k2-fsa/sherpa-onnx-go => ../sherpa-onnx/go
 
 require (
 	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
@@ -12,6 +21,9 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/jchv/go-winloader v0.0.0-20210711035445-715c2860da7e // indirect
+	github.com/k2-fsa/sherpa-onnx-go-linux v1.13.3 // indirect
+	github.com/k2-fsa/sherpa-onnx-go-macos v1.13.3 // indirect
+	github.com/k2-fsa/sherpa-onnx-go-windows v1.13.3 // indirect
 	github.com/labstack/echo/v4 v4.13.3 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/leaanthony/go-ansi-parser v1.6.1 // indirect
@@ -31,6 +43,5 @@ require (
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 )

@@ -25,8 +25,11 @@ const (
 	CapGuiClick      Capability = "gui.click"
 	CapGuiType       Capability = "gui.type"
 	CapGuiPressKey   Capability = "gui.press_key"
+	CapMediaControl  Capability = "media.control"
 	CapBrowserOpen   Capability = "browser.open_url"
+	CapBrowserCtl    Capability = "browser.control"
 	CapBrowserRead   Capability = "browser.read_page"
+	CapScreenRead    Capability = "screen.read"
 	CapMemoryRead    Capability = "memory.read"
 	CapMemoryWrite   Capability = "memory.write"
 	CapSecretUse     Capability = "secret.use"
@@ -65,8 +68,8 @@ type PermissionLease struct {
 	ExpiresAt           time.Time  `json:"expires_at"`
 	RequiresVisibleMode bool       `json:"requires_visible_mode"`
 	Revocable           bool       `json:"revocable"`
-	ApprovedBy          string     `json:"approved_by"`      // e.g. "user"
-	ApprovalMethod      string     `json:"approval_method"`  // e.g. "ui", "voice"
+	ApprovedBy          string     `json:"approved_by"`     // e.g. "user"
+	ApprovalMethod      string     `json:"approval_method"` // e.g. "ui", "voice"
 }
 
 // LeaseManager manages active permission leases
@@ -122,8 +125,8 @@ func (lm *LeaseManager) saveToDisk() error {
 		return err
 	}
 
-	_ = os.MkdirAll(filepath.Dir(lm.cachePath), 0755)
-	return os.WriteFile(lm.cachePath, data, 0644)
+	_ = os.MkdirAll(filepath.Dir(lm.cachePath), 0700)
+	return os.WriteFile(lm.cachePath, data, 0600)
 }
 
 func (lm *LeaseManager) AddLease(l PermissionLease) error {
@@ -167,6 +170,16 @@ func (lm *LeaseManager) CheckLease(cap Capability, target string, action string)
 	now := time.Now()
 	for _, lease := range lm.leases {
 		if lease.Capability == cap && now.Before(lease.ExpiresAt) {
+			keyMatchedForbidden := false
+			for _, fk := range lease.Scope.ForbiddenKeys {
+				if fk != "" && strings.Contains(strings.ToLower(target), strings.ToLower(fk)) {
+					keyMatchedForbidden = true
+					break
+				}
+			}
+			if keyMatchedForbidden {
+				continue
+			}
 			// Check forbidden targets
 			targetMatchedForbidden := false
 			for _, ft := range lease.Scope.ForbiddenTargets {
@@ -331,9 +344,25 @@ func (al *AuditLogger) Log(actor, operation, target string, risk RiskLevel, leas
 		return "", err
 	}
 
-	_ = os.MkdirAll(filepath.Dir(al.filePath), 0755)
-	err = os.WriteFile(al.filePath, marshaled, 0644)
+	_ = os.MkdirAll(filepath.Dir(al.filePath), 0700)
+	err = os.WriteFile(al.filePath, marshaled, 0600)
 	return entry.Hash, err
+}
+
+func (al *AuditLogger) ValidateChain() error {
+	return al.LoadAndVerify()
+}
+
+func (al *AuditLogger) IsTampered() bool {
+	al.mu.Lock()
+	defer al.mu.Unlock()
+	return al.isTampered
+}
+
+func (al *AuditLogger) Status() (bool, string) {
+	al.mu.Lock()
+	defer al.mu.Unlock()
+	return al.isTampered, al.lastHash
 }
 
 func (al *AuditLogger) GetLogs() []AuditEntry {
@@ -396,6 +425,31 @@ func (sg *SecurityGuard) Scan(toolName string, args string) ThreatReport {
 		riskLevel = RiskHigh
 		riskScore = 70
 
+		var execArgs struct {
+			Command string   `json:"command"`
+			Args    []string `json:"args"`
+		}
+		if err := json.Unmarshal([]byte(args), &execArgs); err == nil {
+			cmd := strings.ToLower(strings.TrimSpace(execArgs.Command))
+			joinedArgs := strings.ToLower(strings.Join(execArgs.Args, " "))
+			switch cmd {
+			case "powershell", "powershell.exe", "pwsh", "cmd", "cmd.exe", "sh", "bash", "zsh":
+				threats = append(threats, fmt.Sprintf("SHELL_INTERPRETER_BLOCKED: %s", cmd))
+				riskScore = 100
+				riskLevel = RiskForbidden
+			}
+			if cmd == "rm" && strings.Contains(joinedArgs, "-rf") {
+				threats = append(threats, "DESTRUCTIVE_COMMAND_DETECTED: rm -rf")
+				riskScore = 100
+				riskLevel = RiskForbidden
+			}
+			if cmd == "dd" || cmd == "mkfs" || cmd == "format" || cmd == "shred" || cmd == "wipe" {
+				threats = append(threats, fmt.Sprintf("DESTRUCTIVE_COMMAND_DETECTED: %s", cmd))
+				riskScore = 100
+				riskLevel = RiskForbidden
+			}
+		}
+
 		if sg.reShellInjection.MatchString(args) {
 			match := sg.reShellInjection.FindString(args)
 			threats = append(threats, fmt.Sprintf("SHELL_INJECTION_DETECTED: Illegales Zeichen '%s'", match))
@@ -439,10 +493,20 @@ func (sg *SecurityGuard) Scan(toolName string, args string) ThreatReport {
 			riskLevel = RiskCritical
 		}
 
+	case "fs_restore_snapshot":
+		cap = CapFsWrite
+		riskLevel = RiskCritical
+		riskScore = 80
+
 	case "fs_mount_folder":
 		cap = CapFsMount
 		riskLevel = RiskModerate
 		riskScore = 50
+
+	case "code_cartography":
+		cap = CapFsWrite
+		riskLevel = RiskModerate
+		riskScore = 45
 
 	case "nexus_save":
 		cap = CapMemoryWrite
@@ -454,16 +518,50 @@ func (sg *SecurityGuard) Scan(toolName string, args string) ThreatReport {
 		riskLevel = RiskSafe
 		riskScore = 5
 
+	case "personal_memory_save":
+		cap = CapMemoryWrite
+		riskLevel = RiskSafe
+		riskScore = 5
+
+	case "personal_memory_recall":
+		cap = CapMemoryRead
+		riskLevel = RiskSafe
+		riskScore = 5
+
+	case "task_set_checklist":
+		cap = CapTaskCreate
+		riskLevel = RiskSafe
+		riskScore = 5
+
+	case "task_update_checklist":
+		cap = CapTaskCreate
+		riskLevel = RiskSafe
+		riskScore = 5
+
 	case "agent_handoff":
 		cap = CapCodexHandoff
 		riskLevel = RiskModerate
 		riskScore = 35
 
-
 	case "web_browser":
 		cap = CapBrowserOpen
 		riskLevel = RiskModerate
 		riskScore = 30
+
+	case "media_control":
+		cap = CapMediaControl
+		riskLevel = RiskLow
+		riskScore = 10
+
+	case "youtube_control":
+		cap = CapBrowserCtl
+		riskLevel = RiskLow
+		riskScore = 15
+
+	case "vision_context":
+		cap = CapScreenRead
+		riskLevel = RiskModerate
+		riskScore = 35
 
 	case "gui_control":
 		cap = CapGuiMoveMouse // Default
@@ -505,6 +603,34 @@ func (sg *SecurityGuard) Scan(toolName string, args string) ThreatReport {
 				}
 			}
 		}
+	case "gui_window_control":
+		cap = CapGuiMoveMouse
+		riskLevel = RiskLow
+		riskScore = 15
+
+		var winArgs struct {
+			Action string `json:"action"`
+		}
+		if err := json.Unmarshal([]byte(args), &winArgs); err == nil {
+			switch winArgs.Action {
+			case "list":
+				cap = CapGuiMoveMouse
+				riskLevel = RiskLow
+				riskScore = 10
+			case "focus":
+				cap = CapGuiClick
+				riskLevel = RiskModerate
+				riskScore = 30
+			case "move":
+				cap = CapGuiClick
+				riskLevel = RiskModerate
+				riskScore = 40
+			case "close":
+				cap = CapFsDelete
+				riskLevel = RiskHigh
+				riskScore = 75
+			}
+		}
 	}
 
 	if riskScore > 100 {
@@ -539,6 +665,13 @@ func NewPolicyEngine(guard *SecurityGuard, leases *LeaseManager, audit *AuditLog
 
 func (pe *PolicyEngine) Evaluate(toolName string, args string, hasOverride bool) (bool, string, ThreatReport) {
 	report := pe.guard.Scan(toolName, args)
+	if pe.audit.IsTampered() {
+		report.IsSafe = false
+		report.RiskLevel = RiskForbidden
+		report.RiskScore = 100
+		report.Threats = append(report.Threats, "AUDIT_CHAIN_TAMPERED: execution locked pending operator review.")
+		return false, "blocked", report
+	}
 
 	// Determine actor context
 	actor := "aethel"
@@ -564,11 +697,11 @@ func (pe *PolicyEngine) Evaluate(toolName string, args string, hasOverride bool)
 
 	// 4. USER OVERRIDE IN EFFECT (ONE-TIME APPROVAL)
 	if hasOverride {
-		// Verify if the override was allowed (Critical risks require explicit user decree)
+		// Critical scanner findings are never executable.  An approval is a grant of
+		// authority, not permission to bypass the command-injection boundary.
 		if report.RiskLevel == RiskCritical && len(report.Threats) > 0 {
-			// User has acknowledged the threat warning
-			_, _ = pe.audit.Log(actor, toolName, string(report.Capability), report.RiskLevel, "", "override", "Bedrohung explizit durch Operator ignoriert.", args)
-			return true, "", report
+			_, _ = pe.audit.Log(actor, toolName, string(report.Capability), report.RiskLevel, "", "blocked", "Kritischer Sicherheitsbefund ist nicht überschreibbar.", args)
+			return false, "blocked", report
 		}
 		// Low/Moderate/High risks overridden
 		_, _ = pe.audit.Log(actor, toolName, string(report.Capability), report.RiskLevel, "", "override", "Einmalige Freigabe durch Operator.", args)
