@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -19,14 +20,16 @@ import (
 type VoiceProfile struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
-	Type      string `json:"type"` // "premium" | "local" | "browser"
-	Gender    string `json:"gender"`
+	Type      string `json:"type"` // "sherpa" | "local_sapi5"
+	Gender    string `json:"gender,omitempty"`
 	Available bool   `json:"available"`
+	Offline   bool   `json:"offline"`
+	Language  string `json:"language,omitempty"`
 }
 
 // VoiceOutputProvider translates text to audio stream
 type VoiceOutputProvider interface {
-	Synthesize(text string, voice string) ([]byte, string, error) // Returns (audioBytes, contentType, error)
+	Synthesize(text string, voice string) ([]byte, string, error)
 	HealthCheck() bool
 }
 
@@ -36,66 +39,17 @@ type TranscriptionProvider interface {
 	HealthCheck() bool
 }
 
-// OpenAI TTS Provider
-type OpenAiTTSProvider struct {
-	mu sync.Mutex
-}
-
-func (o *OpenAiTTSProvider) Synthesize(text string, voice string) ([]byte, string, error) {
-	key := state.getOpenAIKey()
-	if key == "" {
-		return nil, "", fmt.Errorf("OpenAI key not configured")
-	}
-
-	payload := map[string]interface{}{
-		"model":           "tts-1",
-		"input":           text,
-		"voice":           voice,
-		"response_format": "mp3",
-	}
-
-	jsonBytes, err := json.Marshal(payload)
-	if err != nil {
-		return nil, "", err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, "https://api.openai.com/v1/audio/speech", bytes.NewBuffer(jsonBytes))
-	if err != nil {
-		return nil, "", err
-	}
-	req.Header.Set("Authorization", "Bearer "+key)
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{Timeout: 8 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, "", fmt.Errorf("OpenAI speech synthesis status %d: %s", resp.StatusCode, string(body))
-	}
-
-	audioBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, "", err
-	}
-
-	return audioBytes, "audio/mpeg", nil
-}
-
-func (o *OpenAiTTSProvider) HealthCheck() bool {
-	return state.getOpenAIKey() != ""
-}
-
-// Local Windows SAPI5 Speech Synthesizer Provider
+// Local Windows SAPI5 Speech Synthesizer Provider (OPTIONAL FALLBACK)
 type Sapi5TTSProvider struct {
-	mu sync.Mutex
+	mu      sync.Mutex
+	enabled bool
 }
 
 func (s *Sapi5TTSProvider) Synthesize(text string, voice string) ([]byte, string, error) {
+	if !s.enabled {
+		return nil, "", fmt.Errorf("SAPI5 is disabled")
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -106,24 +60,15 @@ func (s *Sapi5TTSProvider) Synthesize(text string, voice string) ([]byte, string
 	rate := "default"
 
 	switch voice {
-	case "onyx":
+	case "sapi5-male":
 		pitch = "-15%"
 		rate = "+10%"
-	case "nova":
+	case "sapi5-female":
 		pitch = "+15%"
 		rate = "+20%"
-	case "alloy":
+	case "sapi5-neutral":
 		pitch = "default"
 		rate = "+15%"
-	case "echo":
-		pitch = "-25%"
-		rate = "-10%"
-	case "fable":
-		pitch = "+5%"
-		rate = "+25%"
-	case "shimmer":
-		pitch = "+25%"
-		rate = "+5%"
 	}
 
 	escapedText := strings.ReplaceAll(text, "&", "&amp;")
@@ -138,20 +83,16 @@ func (s *Sapi5TTSProvider) Synthesize(text string, voice string) ([]byte, string
 		try {
 			Add-Type -AssemblyName System.Speech;
 			$synth = New-Object System.Speech.Synthesis.SpeechSynthesizer;
-			$voiceName = '%s';
 			
 			$targetGender = $null;
-			if ($voiceName -eq 'onyx' -or $voiceName -eq 'echo') {
+			if ('%[1]s' -eq 'sapi5-male') {
 				$targetGender = 'Male';
-			} elseif ($voiceName -eq 'nova' -or $voiceName -eq 'shimmer') {
+			} elseif ('%[1]s' -eq 'sapi5-female') {
 				$targetGender = 'Female';
 			}
 			
 			$selected = $null;
-			if ($voiceName) {
-				$selected = $synth.GetInstalledVoices() | Where-Object { $_.VoiceInfo.Name -eq $voiceName } | Select-Object -First 1;
-			}
-			if (-not $selected -and $targetGender) {
+			if ($targetGender) {
 				$selected = $synth.GetInstalledVoices() | Where-Object { 
 					$_.VoiceInfo.Culture.TwoLetterISOLanguageName -eq 'de' -and $_.VoiceInfo.Gender.ToString() -eq $targetGender 
 				} | Select-Object -First 1;
@@ -164,8 +105,8 @@ func (s *Sapi5TTSProvider) Synthesize(text string, voice string) ([]byte, string
 				$synth.SelectVoice($selected.VoiceInfo.Name);
 			}
 			
-			$synth.SetOutputToWaveFile('%s');
-			$synth.SpeakSsml('%s');
+			$synth.SetOutputToWaveFile('%[2]s');
+			$synth.SpeakSsml('%[3]s');
 		} catch {
 			Write-Error $_.Exception.Message;
 			exit 1;
@@ -175,6 +116,7 @@ func (s *Sapi5TTSProvider) Synthesize(text string, voice string) ([]byte, string
 	`, strings.ReplaceAll(voice, "'", "''"), tempWav, strings.ReplaceAll(ssml, "'", "''"))
 
 	cmd := exec.Command(getPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	err := cmd.Run()
 	if err != nil {
 		return nil, "", fmt.Errorf("PowerShell SAPI5 failed: %v", err)
@@ -189,18 +131,10 @@ func (s *Sapi5TTSProvider) Synthesize(text string, voice string) ([]byte, string
 }
 
 func (s *Sapi5TTSProvider) HealthCheck() bool {
-	// Verify if powershell is available and has at least one German voice
-	psCmd := "Add-Type -AssemblyName System.Speech; $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer; $synth.GetInstalledVoices() | Where-Object { $_.VoiceInfo.Culture.TwoLetterISOLanguageName -eq 'de' } | Measure-Object | Select-Object -ExpandProperty Count"
-	cmd := exec.Command(getPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psCmd)
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	countStr := strings.TrimSpace(string(output))
-	return countStr != "" && countStr != "0"
+	return s.enabled
 }
 
-// Groq Whisper Speech-To-Text Provider
+// Groq Whisper Speech-To-Text Provider (for Chat/Cloud LLM transcription)
 type GroqWhisperProvider struct{}
 
 func (g *GroqWhisperProvider) Transcribe(audioBytes []byte, filename string) (string, error) {
@@ -271,32 +205,49 @@ func (g *GroqWhisperProvider) HealthCheck() bool {
 }
 
 // VoiceRegistry coordinates speech interfaces and fallbacks
+// PRIMARY: Sherpa-ONNX lokal
+// FALLBACK: SAPI5 (deaktiviert by default)
+// STT: Groq Whisper (cloud)
 type VoiceRegistry struct {
-	mu           sync.RWMutex
-	openaiTTS    *OpenAiTTSProvider
-	sapi5TTS     *Sapi5TTSProvider
-	groqSTT      *GroqWhisperProvider
-	localVoices  []VoiceProfile
+	mu          sync.RWMutex
+	sherpa      *SherpaVoiceEngine
+	sapi5TTS    *Sapi5TTSProvider
+	groqSTT     *GroqWhisperProvider
+	sapi5Voices []VoiceProfile
 }
 
-func NewVoiceRegistry() *VoiceRegistry {
+// NewVoiceRegistry creates a voice registry with Sherpa as primary engine
+func NewVoiceRegistry(sherpa *SherpaVoiceEngine) *VoiceRegistry {
 	return &VoiceRegistry{
-		openaiTTS:   &OpenAiTTSProvider{},
-		sapi5TTS:    &Sapi5TTSProvider{},
+		sherpa:      sherpa,
+		sapi5TTS:    &Sapi5TTSProvider{enabled: false}, // disabled by default
 		groqSTT:     &GroqWhisperProvider{},
-		localVoices: make([]VoiceProfile, 0),
+		sapi5Voices: make([]VoiceProfile, 0),
 	}
 }
 
-func (vr *VoiceRegistry) LoadLocalVoices() {
+// EnableSAPI5 activates the legacy SAPI5 fallback for TTS
+func (vr *VoiceRegistry) EnableSAPI5() {
 	vr.mu.Lock()
 	defer vr.mu.Unlock()
+	vr.sapi5TTS.enabled = true
+	vr.scanLocalSAPI5Voices()
+}
 
+// DisableSAPI5 deactivates the SAPI5 fallback
+func (vr *VoiceRegistry) DisableSAPI5() {
+	vr.mu.Lock()
+	defer vr.mu.Unlock()
+	vr.sapi5TTS.enabled = false
+}
+
+// scanLocalSAPI5Voices queries Windows for installed SAPI5 voices
+func (vr *VoiceRegistry) scanLocalSAPI5Voices() {
 	var profiles []VoiceProfile
-	
-	// Query local SAPI5 voices
+
 	psCmd := "Add-Type -AssemblyName System.Speech; $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer; $synth.GetInstalledVoices() | Where-Object { $_.VoiceInfo.Culture.TwoLetterISOLanguageName -eq 'de' } | ForEach-Object { $_.VoiceInfo.Name + ';' + $_.VoiceInfo.Gender }"
 	cmd := exec.Command(getPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psCmd)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	output, err := cmd.Output()
 	if err == nil {
 		lines := strings.Split(string(output), "\n")
@@ -316,66 +267,77 @@ func (vr *VoiceRegistry) LoadLocalVoices() {
 					gender = "männlich"
 				}
 			}
-			displayName := fmt.Sprintf("%s (Lokal %s)", strings.TrimSuffix(name, " Desktop"), strings.ToUpper(gender[:1]))
+			displayName := fmt.Sprintf("%s (SAPI5 %s)", strings.TrimSuffix(name, " Desktop"), strings.ToUpper(gender[:1]))
 			profiles = append(profiles, VoiceProfile{
 				ID:        name,
 				Name:      displayName,
-				Type:      "local",
+				Type:      "local_sapi5",
 				Gender:    gender,
 				Available: true,
+				Offline:   true,
+				Language:  "de",
 			})
 		}
 	}
-	vr.localVoices = profiles
+	vr.sapi5Voices = profiles
 }
 
+// GetAvailableVoices returns all available voice profiles (Sherpa first, then SAPI5)
 func (vr *VoiceRegistry) GetAvailableVoices() []VoiceProfile {
 	vr.mu.RLock()
 	defer vr.mu.RUnlock()
 
 	var list []VoiceProfile
-	
-	// Premium voices
-	list = append(list, VoiceProfile{ID: "onyx", Name: "Aethel Onyx (Premium M)", Type: "premium", Gender: "männlich", Available: vr.openaiTTS.HealthCheck()})
-	list = append(list, VoiceProfile{ID: "nova", Name: "Aethel Nova (Premium W)", Type: "premium", Gender: "weiblich", Available: vr.openaiTTS.HealthCheck()})
-	list = append(list, VoiceProfile{ID: "alloy", Name: "Aethel Alloy (Premium N)", Type: "premium", Gender: "neutral", Available: vr.openaiTTS.HealthCheck()})
-	list = append(list, VoiceProfile{ID: "echo", Name: "Aethel Echo (Premium M)", Type: "premium", Gender: "männlich", Available: vr.openaiTTS.HealthCheck()})
-	list = append(list, VoiceProfile{ID: "fable", Name: "Aethel Fable (Premium N)", Type: "premium", Gender: "neutral", Available: vr.openaiTTS.HealthCheck()})
-	list = append(list, VoiceProfile{ID: "shimmer", Name: "Aethel Shimmer (Premium W)", Type: "premium", Gender: "weiblich", Available: vr.openaiTTS.HealthCheck()})
 
-	// Add scanned local SAPI5 voices
-	list = append(list, vr.localVoices...)
+	// Sherpa-ONNX primary voices
+	for _, v := range vr.sherpa.ListVoices() {
+		list = append(list, VoiceProfile{
+			ID:        v.ID,
+			Name:      fmt.Sprintf("%s (Sherpa %s)", v.Name, strings.ToUpper(v.Language)),
+			Type:      "sherpa",
+			Gender:    v.Gender,
+			Available: v.Configured,
+			Offline:   true,
+			Language:  v.Language,
+		})
+	}
+
+	// SAPI5 fallback voices
+	for _, v := range vr.sapi5Voices {
+		list = append(list, v)
+	}
+
 	return list
 }
 
+// SynthesizeWithFallback synthesizes speech using Sherpa primary, SAPI5 fallback
 func (vr *VoiceRegistry) SynthesizeWithFallback(text string, voice string) ([]byte, string, error) {
-	// 1. Identify voice class
-	isPremiumVoice := false
-	for _, v := range []string{"onyx", "nova", "alloy", "echo", "fable", "shimmer"} {
-		if voice == v {
-			isPremiumVoice = true
-			break
+	// Try Sherpa first (always)
+	vr.mu.RLock()
+	sherpaHealthy := vr.sherpa != nil
+	vr.mu.RUnlock()
+
+	if sherpaHealthy {
+		wavBytes, err := vr.sherpa.Synthesize(text, voice)
+		if err == nil {
+			return wavBytes, "audio/wav", nil
 		}
+		fmt.Printf("[VOICE] Sherpa synthesis failed (%v), versuche SAPI5...\n", err)
 	}
 
-	// 2. OpenAI Key Check for Premium Synthesis
-	if isPremiumVoice && vr.openaiTTS.HealthCheck() {
-		data, mime, err := vr.openaiTTS.Synthesize(text, voice)
+	// Fallback: SAPI5 (if enabled)
+	if vr.sapi5TTS.HealthCheck() {
+		data, mime, err := vr.sapi5TTS.Synthesize(text, voice)
 		if err == nil {
 			return data, mime, nil
 		}
-		fmt.Printf("[VOICE REGISTRY ALERT]: OpenAI TTS failed (%v). Falling back to SAPI5.\n", err)
+		fmt.Printf("[VOICE] SAPI5 synthesis failed: %v\n", err)
 	}
 
-	// 3. Fallback to Local SAPI5
-	data, mime, err := vr.sapi5TTS.Synthesize(text, voice)
-	if err == nil {
-		return data, mime, nil
-	}
-
-	return nil, "", fmt.Errorf("all backend TTS synthesizers failed: %v", err)
+	return nil, "", fmt.Errorf("all TTS backends failed (Sherpa primary, SAPI5 fallback)")
 }
 
+// Transcribe audio via Groq Whisper
 func (vr *VoiceRegistry) Transcribe(audioBytes []byte, filename string) (string, error) {
 	if !vr.groqSTT.HealthCheck() {
 		return "", fmt.Errorf("transcription provider unavailable (missing Groq credentials)")
@@ -383,21 +345,26 @@ func (vr *VoiceRegistry) Transcribe(audioBytes []byte, filename string) (string,
 	return vr.groqSTT.Transcribe(audioBytes, filename)
 }
 
+// GetHealthStatus returns comprehensive health status of all voice subsystems
 func (vr *VoiceRegistry) GetHealthStatus() map[string]interface{} {
-	openaiHealth := vr.openaiTTS.HealthCheck()
+	vr.mu.RLock()
+	defer vr.mu.RUnlock()
+
+	sherpaHealth := vr.sherpa.Health()
 	sapi5Health := vr.sapi5TTS.HealthCheck()
 	groqHealth := vr.groqSTT.HealthCheck()
 
 	status := "ONLINE"
-	if !openaiHealth && !sapi5Health {
-		status = "DEGRADED (Backend Offline, Client synthesis fallback active)"
+	if !sherpaHealth["configured"].(bool) && !sapi5Health {
+		status = "DEGRADED (Keine lokale TTS-Stimme konfiguriert)"
 	}
 
-	return map[string]interface{}{
-		"status":                 status,
-		"openai_tts_available":  openaiHealth,
-		"local_sapi5_available": sapi5Health,
-		"groq_whisper_available": groqHealth,
-		"local_voices_count":    len(vr.localVoices),
+	result := map[string]interface{}{
+		"status":                  status,
+		"sherpa_local":            sherpaHealth,
+		"local_sapi5_available":   sapi5Health,
+		"groq_whisper_available":  groqHealth,
 	}
+
+	return result
 }

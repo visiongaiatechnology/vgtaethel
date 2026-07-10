@@ -28,11 +28,19 @@ export function switchMode(mode) {
     } else if (mode === "memory") {
         fetchMemoriesList();
         import('./secrets.js').then(m => m.fetchSecretsList());
+    } else if (mode === "personal") {
+        import('./personal_mode.js').then(m => m.loadPersonalMode());
     } else if (mode === "tasks") {
         fetchTasksQueue();
     } else if (mode === "core") {
         fetchKernelLogs();
         refreshVoiceHealthHUD();
+    } else if (mode === "settings") {
+        import('./settings.js').then(m => m.loadSettingsStatus());
+    } else if (mode === "personas") {
+        import('./settings.js').then(m => m.loadCustomPersonasSettings());
+    } else if (mode === "archive") {
+        import('./chat.js').then(m => m.loadSessionsList());
     }
 }
 window.switchMode = switchMode;
@@ -48,6 +56,16 @@ export async function checkSystemStatus() {
         if (data.status === "SETUP_REQUIRED") {
             elWizard.classList.remove("hidden");
             elAppContainer.classList.add("hidden");
+            
+            // Check if Ollama is running and show/hide local AI button
+            const elBtnUseLocal = document.getElementById("btn-use-local");
+            if (elBtnUseLocal) {
+                if (data.ollama_ready === "true") {
+                    elBtnUseLocal.classList.remove("hidden");
+                } else {
+                    elBtnUseLocal.classList.add("hidden");
+                }
+            }
         } else {
             elWizard.classList.add("hidden");
             elAppContainer.classList.remove("hidden");
@@ -55,6 +73,11 @@ export async function checkSystemStatus() {
             if (elSphereStatus) {
                 elSphereStatus.textContent = state.hasOpenAI ? "AETHEL CORE // ONYX ACTIVE" : "AETHEL CORE // BROWSER VOICE ACTIVE";
             }
+            
+            // Auto OS detection integration
+            state.os = data.os || "windows";
+            updateSystemProtocolWithOS();
+
             await loadModels();
             await loadVoices();
             updateMemoryCount();
@@ -66,28 +89,107 @@ export async function checkSystemStatus() {
     }
 }
 
+export function updateSystemProtocolWithOS() {
+    const detectedOS = state.os || "windows";
+    const osUpper = detectedOS.toUpperCase();
+    
+    let osContext = `\n\nOPERATING SYSTEM CONTEXT:\n`;
+    osContext += `- Der Host-Computer läuft unter dem Betriebssystem: ${osUpper}\n`;
+    
+    if (detectedOS === "windows") {
+        osContext += `- Nutze Windows-spezifische Befehle (z.B. PowerShell-Cmdlets, cmd.exe, dir, Set-Location).\n`;
+        osContext += `- Wenn du PowerShell-Befehle oder Skripte über sys_exec_cmd ausführen willst, verwende 'powershell' als Befehl und das Skript/die Befehlskette als Argument (z.B. args: ["-NoProfile", "-NonInteractive", "-Command", "..."]).\n`;
+        osContext += `- Pfade nutzen Backslashes (\\).\n`;
+    } else if (detectedOS === "darwin") {
+        osContext += `- Der Host-Computer ist ein macOS (Darwin) System.\n`;
+        osContext += `- Nutze Unix/macOS-spezifische Befehle (bash/sh, ls, cd, open).\n`;
+        osContext += `- Pfade nutzen Vorwärts-Slashes (/).\n`;
+    } else {
+        osContext += `- Der Host-Computer ist ein Linux-System.\n`;
+        osContext += `- Nutze Linux-Befehle (bash/sh, ls, cd, xdotool).\n`;
+        osContext += `- Pfade nutzen Vorwärts-Slashes (/).\n`;
+    }
+    
+    if (!state.originalProtocol) {
+        state.originalProtocol = state.VGT_SYSTEM_PROTOCOL;
+    }
+    state.VGT_SYSTEM_PROTOCOL = state.originalProtocol + osContext;
+    console.log(`[OS DETECTED] System Protocol updated for OS: ${osUpper}`);
+}
+
 export async function loadModels() {
     const elModelDropdown = document.getElementById("model-dropdown");
     try {
         const data = await api.getModels();
-        if (elModelDropdown) {
+        if (elModelDropdown && data.models && data.models.length > 0) {
             elModelDropdown.innerHTML = "";
+
+            const modelIds = data.models.map(m => m.id);
+            if (!modelIds.includes(state.currentModel)) {
+                state.currentModel = data.models[0].id;
+            }
+
+            // Group models by provider
+            const groups = {};
             data.models.forEach(model => {
-                const opt = document.createElement("option");
-                opt.value = model.id;
-                opt.textContent = `${model.name} (${model.provider.toUpperCase()})`;
-                if (model.id === state.currentModel) {
-                    opt.selected = true;
+                const prov = model.provider || "Andere";
+                if (!groups[prov]) {
+                    groups[prov] = [];
                 }
-                elModelDropdown.appendChild(opt);
+                groups[prov].push(model);
             });
+
+            // Order of providers to show in dropdown
+            const providerOrder = ["DeepSeek", "Groq", "OpenAI", "Gemini", "Claude", "Ollama", "Andere"];
             
-            elModelDropdown.addEventListener("change", (e) => {
-                state.currentModel = e.target.value;
+            // Build groups map to render
+            providerOrder.forEach(provName => {
+                const modelsInGroup = groups[provName];
+                if (modelsInGroup && modelsInGroup.length > 0) {
+                    const groupEl = document.createElement("optgroup");
+                    groupEl.label = provName.toUpperCase();
+                    
+                    modelsInGroup.forEach(model => {
+                        const opt = document.createElement("option");
+                        opt.value = model.id;
+                        opt.textContent = model.name;
+                        if (model.id === state.currentModel) {
+                            opt.selected = true;
+                        }
+                        groupEl.appendChild(opt);
+                    });
+                    
+                    elModelDropdown.appendChild(groupEl);
+                }
             });
+
+            // Remove old listeners by cloning the node
+            const fresh = elModelDropdown.cloneNode(true);
+            elModelDropdown.parentNode.replaceChild(fresh, elModelDropdown);
+            
+            // Sync model state with dropdown selection on startup
+            state.currentModel = fresh.value;
+            updateLiveOperatorVisibility();
+            
+            fresh.addEventListener("change", (e) => {
+                state.currentModel = e.target.value;
+                updateLiveOperatorVisibility();
+                if (state.currentSessionId) {
+                    localStorage.setItem('model_' + state.currentSessionId, state.currentModel);
+                }
+            });
+
         }
     } catch (e) {
         console.error("Failed to load models", e);
+        if (elModelDropdown) {
+            elModelDropdown.replaceChildren();
+            const option = document.createElement("option");
+            option.textContent = "CORE NICHT ERREICHBAR";
+            option.disabled = true;
+            option.selected = true;
+            elModelDropdown.appendChild(option);
+        }
     }
 }
 
@@ -113,6 +215,18 @@ export async function loadVoices() {
         
         if (elVoiceDropdown) {
             elVoiceDropdown.innerHTML = "";
+            
+            // Prevent selected voice from resetting on startup if Edge online voices are still loading
+            const hasVoice = data.some(v => v.id === state.currentVoice);
+            if (!hasVoice && state.currentVoice && state.currentVoice !== "onyx") {
+                const opt = document.createElement("option");
+                opt.value = state.currentVoice;
+                let displayName = state.currentVoice.replace("browser:", "").replace("Microsoft ", "").replace("Google ", "") + " (Lade...)";
+                opt.textContent = displayName;
+                opt.selected = true;
+                elVoiceDropdown.appendChild(opt);
+            }
+            
             data.forEach(v => {
                 const opt = document.createElement("option");
                 opt.value = v.id;
@@ -123,25 +237,49 @@ export async function loadVoices() {
                 elVoiceDropdown.appendChild(opt);
             });
             
-            elVoiceDropdown.addEventListener("change", (e) => {
+            // Remove old change listener and bind new one
+            const fresh = elVoiceDropdown.cloneNode(true);
+            elVoiceDropdown.parentNode.replaceChild(fresh, elVoiceDropdown);
+            fresh.addEventListener("change", (e) => {
                 state.currentVoice = e.target.value;
                 localStorage.setItem("aethel_voice", state.currentVoice);
             });
         }
     } catch (e) {
         console.error("Failed to load voices", e);
+        if (elVoiceDropdown) {
+            elVoiceDropdown.replaceChildren();
+            const option = document.createElement("option");
+            option.textContent = "VOICE CORE NICHT ERREICHBAR";
+            option.disabled = true;
+            option.selected = true;
+            elVoiceDropdown.appendChild(option);
+        }
     }
 }
 
 export async function handleSetupSubmit() {
     const elApiKey = document.getElementById("api-key");
+    const elDeepSeekKey = document.getElementById("deepseek-api-key");
     const elOpenAiApiKey = document.getElementById("openai-api-key");
+    const elGeminiApiKey = document.getElementById("gemini-api-key");
+    const elClaudeApiKey = document.getElementById("claude-api-key");
     const elBtnInitiate = document.getElementById("btn-initiate");
 
-    const key = elApiKey.value.trim();
+    const key = elApiKey ? elApiKey.value.trim() : "";
+    const deepseekKey = elDeepSeekKey ? elDeepSeekKey.value.trim() : "";
     const openaiKey = elOpenAiApiKey ? elOpenAiApiKey.value.trim() : "";
-    if (!key) {
-        showSetupError("Uplink-Key darf nicht leer sein.");
+    const geminiKey = elGeminiApiKey ? elGeminiApiKey.value.trim() : "";
+    const claudeKey = elClaudeApiKey ? elClaudeApiKey.value.trim() : "";
+
+    // At least one AI key required
+    const hasGroq = key.startsWith('gsk_');
+    const hasDeepSeek = deepseekKey.startsWith('sk-');
+    const hasOpenAI = openaiKey.startsWith('sk-');
+    const hasGemini = geminiKey.startsWith('AIza');
+    const hasClaude = claudeKey.startsWith('sk-ant-');
+    if (!hasGroq && !hasDeepSeek && !hasOpenAI && !hasGemini && !hasClaude) {
+        showSetupError("Mindestens einen gültigen Key eingeben (Groq, DeepSeek, OpenAI, Gemini oder Claude).");
         return;
     }
 
@@ -149,7 +287,7 @@ export async function handleSetupSubmit() {
     elBtnInitiate.querySelector("span").textContent = "BOOTING CORE...";
 
     try {
-        const data = await api.submitSetup(key, openaiKey);
+        const data = await api.submitSetup(key, openaiKey, deepseekKey, geminiKey, claudeKey);
 
         if (data.status === "success") {
             document.getElementById("setup-error").classList.add("hidden");
@@ -176,3 +314,142 @@ export function showSetupError(msg) {
     elSetupErrorText.textContent = msg;
     elSetupError.classList.remove("hidden");
 }
+
+export function isVisionModel(modelId) {
+    if (!modelId) return false;
+    const id = modelId.toLowerCase();
+    return id.includes("scout") || 
+           id.includes("llama-4") || 
+           id.includes("qwen3.6") || 
+           id.includes("deepseek") || 
+           id.includes("vision") ||
+           id.includes("gpt-5") ||
+           id.includes("gemini-3") ||
+           id.includes("claude-sonnet") ||
+           id.includes("claude-opus") ||
+           id.includes("claude-fable");
+}
+
+export function updateLiveOperatorVisibility() {
+    const btn = document.getElementById("nav-btn-control");
+    if (!btn) return;
+
+    const isVision = isVisionModel(state.currentModel);
+    if (isVision) {
+        btn.style.display = "flex";
+    } else {
+        btn.style.display = "none";
+        // If we are currently in the Live Operator view and switch to a non-vision model,
+        // force jump back to the safe chat panel.
+        const controlView = document.getElementById("view-control");
+        if (controlView && !controlView.classList.contains("hidden")) {
+            switchMode("chat");
+        }
+    }
+}
+
+export async function handleLocalOnlySetup() {
+    const elBtnUseLocal = document.getElementById("btn-use-local");
+    const label = elBtnUseLocal ? elBtnUseLocal.querySelector("span") : null;
+    const oldText = label ? label.textContent : "";
+
+    if (elBtnUseLocal && label) {
+        elBtnUseLocal.disabled = true;
+        label.textContent = "BOOTING LOKAL...";
+    }
+    
+    try {
+        const data = await api.submitSetup("local", "", ""); // Submit setup with key: "local"
+        if (data.status === "success") {
+            const errBox = document.getElementById("setup-error");
+            if (errBox) errBox.classList.add("hidden");
+            setTimeout(async () => {
+                await checkSystemStatus();
+                if (elBtnUseLocal && label) {
+                    elBtnUseLocal.disabled = false;
+                    label.textContent = oldText;
+                }
+            }, 1200);
+        } else {
+            showSetupError(data.message);
+            if (elBtnUseLocal && label) {
+                elBtnUseLocal.disabled = false;
+                label.textContent = oldText;
+            }
+        }
+    } catch(e) {
+        console.error("Local setup request failed", e);
+        showSetupError("Keine Verbindung zum Core-Server.");
+        if (elBtnUseLocal && label) {
+            elBtnUseLocal.disabled = false;
+            label.textContent = oldText;
+        }
+    }
+}
+
+export async function refreshAPICosts() {
+    const elCostsToday = document.getElementById("hud-costs-today");
+    const elCostsMonth = document.getElementById("hud-costs-month");
+    if (!elCostsToday || !elCostsMonth) return;
+    try {
+        const data = await api.getAPICosts();
+        if (data) {
+            elCostsToday.textContent = `$${(data.today || 0).toFixed(4)}`;
+            elCostsMonth.textContent = `$${(data.month || 0).toFixed(4)}`;
+        }
+    } catch (e) {
+        console.error("Failed to refresh API costs", e);
+    }
+}
+
+export function getCombinedSystemPrompt() {
+    const activePersonaId = localStorage.getItem("aethel_active_persona") || "default";
+    let prompt = state.VGT_SYSTEM_PROTOCOL.trim();
+    if (activePersonaId !== "default" && window.customPersonasList) {
+        const p = window.customPersonasList.find(x => x.id === activePersonaId);
+        if (p) {
+            prompt = `SYSTEM IDENTITY: VGT AETHEL [CUSTOM PERSONA: ${p.name.toUpperCase()}]\nSTATUS: ONLINE\nMODE: SOVEREIGN\n\nCUSTOM PERSONA DIRECTIVES:\n${p.system_prompt}\n\n=========================================\n\n` + prompt;
+        }
+    }
+    return prompt;
+}
+
+export function refreshPersonasDropdowns() {
+    const sidebarDropdown = document.getElementById("persona-dropdown");
+    if (!sidebarDropdown) return;
+
+    const personas = window.customPersonasList || [];
+
+    let sidebarHtml = `<option value="default">Aethel Standard-Verhalten</option>`;
+    personas.forEach(p => {
+        sidebarHtml += `<option value="${p.id}">${p.name.toUpperCase()}</option>`;
+    });
+    sidebarDropdown.innerHTML = sidebarHtml;
+
+    const activePersonaId = localStorage.getItem("aethel_active_persona") || "default";
+    sidebarDropdown.value = activePersonaId;
+
+    document.querySelectorAll(".agent-role-persona-select").forEach(select => {
+        const role = select.id.replace("agent-persona-", "");
+        let selectHtml = `<option value="default">Standard-${role.toUpperCase()}</option>`;
+        personas.forEach(p => {
+            selectHtml += `<option value="${p.id}">${p.name.toUpperCase()}</option>`;
+        });
+        select.innerHTML = selectHtml;
+
+        const savedVal = localStorage.getItem(`aethel_agent_persona_${select.id}`) || "default";
+        select.value = savedVal;
+    });
+}
+
+window.refreshPersonasDropdowns = refreshPersonasDropdowns;
+
+// Bind selection listener immediately
+setTimeout(() => {
+    const el = document.getElementById("persona-dropdown");
+    if (el) {
+        el.addEventListener("change", (e) => {
+            localStorage.setItem("aethel_active_persona", e.target.value);
+        });
+    }
+}, 100);

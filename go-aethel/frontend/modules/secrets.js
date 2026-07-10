@@ -1,6 +1,19 @@
 import { state } from './state.js';
 import * as api from './api.js';
 
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function jsArg(value) {
+    return escapeHtml(JSON.stringify(String(value ?? "")));
+}
+
 export async function fetchSecretsList() {
     const container = document.getElementById("secrets-list-container");
     if (!container) return;
@@ -15,14 +28,19 @@ export async function fetchSecretsList() {
 
         container.innerHTML = secrets.map(s => {
             const dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString() : "unbekannt";
+            const safeID = escapeHtml(s.id);
+            const safeService = escapeHtml(s.service);
+            const safeType = escapeHtml(s.type);
+            const safeDate = escapeHtml(dateStr);
+            const idArg = jsArg(s.id);
             return `
                 <div class="glass-card" style="padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; background: rgba(157, 78, 221, 0.02); border-color: rgba(157, 78, 221, 0.15); margin-bottom: 6px;">
                     <div style="text-align: left; max-width: 80%;">
-                        <div style="font-size: 11px; font-weight: bold; color: var(--vgt-purple);">${s.id}</div>
-                        <div style="font-size: 8px; color: var(--vgt-text-dim); margin-top: 4px;">Service: ${s.service} | Typ: ${s.type} | Erstellt: ${dateStr}</div>
+                        <div style="font-size: 11px; font-weight: bold; color: var(--vgt-purple);">${safeID}</div>
+                        <div style="font-size: 8px; color: var(--vgt-text-dim); margin-top: 4px;">Service: ${safeService} | Typ: ${safeType} | Erstellt: ${safeDate}</div>
                         <div style="font-size: 8px; color: var(--vgt-green); margin-top: 2px;">🔒 ENCRYPTED IN LOCAL AES VAULT</div>
                     </div>
-                    <button class="cyber-button font-mono" onclick="deleteSecretItem('${s.id}')" style="width: auto; padding: 4px 10px; font-size: 8px; background: rgba(255, 0, 79, 0.1); border: 1px solid var(--vgt-red); color: var(--vgt-red);">LÖSCHEN</button>
+                    <button class="cyber-button font-mono" onclick="deleteSecretItem(${idArg})" style="width: auto; padding: 4px 10px; font-size: 8px; background: rgba(255, 0, 79, 0.1); border: 1px solid var(--vgt-red); color: var(--vgt-red);">LÖSCHEN</button>
                 </div>
             `;
         }).join("");

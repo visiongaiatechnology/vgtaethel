@@ -30,17 +30,32 @@ export function startViewportRefresh() {
     }, 800);
 }
 
+let isFetchingViewport = false;
+
 function refreshViewportImage() {
+    if (isFetchingViewport) return;
+
     const img = document.getElementById("browser-screenshot");
     const placeholder = document.getElementById("browser-placeholder");
     if (!img) return;
 
+    isFetchingViewport = true;
+    
+    // Safety timeout in case load fails completely without error event
+    const timeoutId = setTimeout(() => {
+        isFetchingViewport = false;
+    }, 5000);
+
     img.src = `${state.API_BASE}/v1/viewport/screenshot?t=${Date.now()}`;
     img.onload = () => {
+        clearTimeout(timeoutId);
+        isFetchingViewport = false;
         img.classList.remove("hidden");
         if (placeholder) placeholder.classList.add("hidden");
     };
     img.onerror = (e) => {
+        clearTimeout(timeoutId);
+        isFetchingViewport = false;
         console.warn("Failed to load viewport screenshot", e);
     };
 }
@@ -59,15 +74,24 @@ export function setupControlUIEvents() {
 
     if (btnPause) {
         btnPause.addEventListener("click", () => {
+            state.agentPaused = true;
+            state.activeInferenceController?.abort();
             speak("Ausführung pausiert.");
-            alert("Operator: Agenten-Ausführung pausiert.");
+            alert("Operator: Agenten-Ausführung pausiert. Laufende Inferenz wurde abgebrochen.");
         });
     }
 
     if (btnKill) {
         btnKill.addEventListener("click", () => {
+            state.agentPaused = true;
+            state.activeInferenceController?.abort();
+            state.pendingToolRequest = null;
+            state.pendingToolCallId = "";
+            state.pendingToolCallName = "";
+            state.agenticTurnCount = 0;
+            state.agenticStuckCount = 0;
             speak("Ausführung abgebrochen.");
-            alert("Operator: Agenten-Ausführung hart abgebrochen.");
+            alert("Operator: Agenten-Ausführung hart abgebrochen. Ausstehende Tool-Freigaben wurden verworfen.");
         });
     }
 
@@ -78,7 +102,7 @@ export function setupControlUIEvents() {
                 const leases = await res.json();
                 
                 for (let l of leases) {
-                    await fetch(`${state.API_BASE}/v1/security/leases?id=${l.lease_id}`, { method: 'DELETE' });
+                    await fetch(`${state.API_BASE}/v1/security/leases?id=${encodeURIComponent(l.lease_id)}`, { method: 'DELETE' });
                 }
                 speak("Alle Freigaben widerrufen.");
                 refreshSecurityHUD();

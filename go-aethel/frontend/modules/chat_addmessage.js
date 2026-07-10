@@ -2,12 +2,40 @@ export function formatMarkdown(text) {
     if (!text) return "";
     if (typeof window.marked !== 'undefined') {
         try {
-            return window.marked.parse(text);
+            return sanitizeHtml(window.marked.parse(text));
         } catch(e) {
             console.error("marked.parse error", e);
         }
     }
     return text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function sanitizeHtml(html) {
+    const doc = new DOMParser().parseFromString(`<div>${html}</div>`, "text/html");
+    const blockedTags = new Set(["script", "style", "iframe", "object", "embed", "link", "meta", "base", "form"]);
+    doc.body.querySelectorAll("*").forEach((node) => {
+        if (blockedTags.has(node.tagName.toLowerCase())) {
+            node.remove();
+            return;
+        }
+        [...node.attributes].forEach((attr) => {
+            const name = attr.name.toLowerCase();
+            const value = attr.value.trim().toLowerCase();
+            if (name.startsWith("on") || name === "srcdoc" || value.startsWith("javascript:") || value.startsWith("data:text/html")) {
+                node.removeAttribute(attr.name);
+            }
+        });
+    });
+    return doc.body.firstElementChild ? doc.body.firstElementChild.innerHTML : "";
 }
 
 export function addMessageToScreen(role, content, reasoning_content = null) {
@@ -28,7 +56,7 @@ export function addMessageToScreen(role, content, reasoning_content = null) {
                 <summary style="font-size: 10px; color: #00c8ff; cursor: pointer; font-family: var(--font-mono); outline: none; user-select: none;">
                     🧠 THOUGHT PROCESS (Click to expand)
                 </summary>
-                <div class="thinking-content" style="font-size: 11px; color: rgba(255,255,255,0.6); font-family: var(--font-mono); margin-top: 6px; white-space: pre-wrap; line-height: 1.4;">${reasoning_content}</div>
+                <div class="thinking-content" style="font-size: 11px; color: rgba(255,255,255,0.6); font-family: var(--font-mono); margin-top: 6px; white-space: pre-wrap; line-height: 1.4;">${escapeHtml(reasoning_content)}</div>
             </details>
         `;
     }

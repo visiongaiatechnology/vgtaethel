@@ -63,8 +63,13 @@ export function resetMicButton() {
             if (elSpeechIndicator) elSpeechIndicator.textContent = "Freisprech-Modus aktiv... Ausgabe aktiv...";
         } else {
             elBtnMic.className = "mic-button listening";
-            if (elSpeechIndicator) elSpeechIndicator.textContent = "Freisprech-Modus aktiv... Warte...";
-            updateVoiceSphereUI("CORE STANDBY", "voice-sphere");
+            if (state.isWakeSessionActive) {
+                if (elSpeechIndicator) elSpeechIndicator.textContent = "Whisper aktiv... Warte...";
+                updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
+            } else {
+                if (elSpeechIndicator) elSpeechIndicator.textContent = `Wake-Word aktiv: "${state.wakeWord || "Aethel"}"`;
+                updateVoiceSphereUI("WAKE STANDBY", "voice-sphere listening");
+            }
         }
     } else {
         elBtnMic.className = "mic-button";
@@ -78,8 +83,10 @@ export function handleAethelSpeechCompleted() {
     
     state.speechCooldownActive = true;
     
-    if (state.isVoiceCallActive) {
+    if (state.isVoiceCallActive && state.isWakeSessionActive) {
         updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
+    } else if (state.isVoiceCallActive) {
+        updateVoiceSphereUI("WAKE STANDBY", "voice-sphere listening");
     } else {
         updateVoiceSphereUI("CORE STANDBY", "voice-sphere");
     }
@@ -121,7 +128,7 @@ export function handlePendingToolResponse(text) {
         if (secureConfirmRoots.some(root => textClean.includes(root))) {
             const req = state.pendingToolRequest;
             state.pendingToolRequest = null;
-            executeApprovedTool(req.msgIndex, req.name, req.args, false);
+            executeApprovedTool(req.msgIndex, req.name, req.args, req.approvalToken || "");
             return true;
         }
         
@@ -135,7 +142,7 @@ export function handlePendingToolResponse(text) {
         if (approveRoots.some(root => textClean.includes(root))) {
             const req = state.pendingToolRequest;
             state.pendingToolRequest = null;
-            executeApprovedTool(req.msgIndex, req.name, req.args, false);
+            executeApprovedTool(req.msgIndex, req.name, req.args, req.approvalToken || "");
             return true;
         }
     }
@@ -143,7 +150,7 @@ export function handlePendingToolResponse(text) {
     return false;
 }
 
-export function speak(text) {
+export async function speak(text) {
     if (state.isVoiceMuted) return;
 
     stopSpeaking();
@@ -163,7 +170,10 @@ export function speak(text) {
         try { state.recognition.stop(); } catch(e) {}
     }
 
-    if (state.currentVoice.startsWith("browser:") || (!state.hasOpenAI && !state.currentVoice.includes("Lokal"))) {
+    const isBrowserVoice = state.currentVoice.startsWith("browser:");
+    const isPremiumVoice = ["onyx", "nova", "alloy", "echo", "fable", "shimmer"].includes(state.currentVoice);
+
+    if (isBrowserVoice || (isPremiumVoice && !state.hasOpenAI)) {
         if (!state.synth) {
             handleAethelSpeechCompleted();
             return;
@@ -177,7 +187,11 @@ export function speak(text) {
         let voice = browserVoices.find(v => v.name === targetVoiceName);
 
         if (!voice) {
-            voice = browserVoices.find(v => v.lang.startsWith("de"));
+            // Prioritize high-quality online neural voices over robotic offline ones
+            voice = browserVoices.find(v => v.lang.startsWith("de") && (v.name.toLowerCase().includes("online") || v.name.toLowerCase().includes("natural")));
+            if (!voice) {
+                voice = browserVoices.find(v => v.lang.startsWith("de"));
+            }
         }
 
         if (voice) {
@@ -200,47 +214,63 @@ export function speak(text) {
         updateVoiceSphereUI("CORE TRANSMITTING...", "voice-sphere speaking");
     }
 
+    // Use fetch() to probe the TTS endpoint before creating an Audio element.
+    // Audio.onerror does NOT reliably fire on HTTP 4xx/5xx responses — only on
+    // network failures. By fetching as a blob first, we get the status code and
+    // can fall back to browser TTS cleanly if Sherpa is not available.
     const audioUrl = `${state.API_BASE}/v1/audio/speech?text=${encodeURIComponent(cleanedText)}&voice=${encodeURIComponent(state.currentVoice)}&t=${Date.now()}`;
-    state.activeAudio = new Audio(audioUrl);
-    
-    state.activeAudio.onended = () => {
-        state.activeAudio = null;
-        handleAethelSpeechCompleted();
-    };
 
-    state.activeAudio.onerror = (e) => {
-        console.error("Audio playback error from Core TTS", e);
+    try {
+        const resp = await fetch(audioUrl);
+        if (!resp.ok) {
+            // Backend TTS unavailable (e.g. no Sherpa model installed → HTTP 500)
+            console.warn(`[Voice] TTS backend returned ${resp.status} — falling back to browser TTS`);
+            throw new Error(`TTS backend HTTP ${resp.status}`);
+        }
+        const blob = await resp.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        state.activeAudio = new Audio(blobUrl);
+
+        state.activeAudio.onended = () => {
+            URL.revokeObjectURL(blobUrl);
+            state.activeAudio = null;
+            handleAethelSpeechCompleted();
+        };
+
+        state.activeAudio.onerror = (e) => {
+            console.error("Audio playback error", e);
+            URL.revokeObjectURL(blobUrl);
+            state.activeAudio = null;
+            handleAethelSpeechCompleted();
+        };
+
+        state.activeAudio.play().catch(err => {
+            console.error("Playback .play() rejected:", err);
+            URL.revokeObjectURL(blobUrl);
+            state.activeAudio = null;
+            handleAethelSpeechCompleted();
+        });
+
+    } catch (err) {
+        // Sherpa unavailable or network error → browser TTS fallback
+        console.warn("[Voice] Falling back to browser TTS:", err.message);
         state.activeAudio = null;
-        
         if (state.synth) {
             const utterance = new SpeechSynthesisUtterance(cleanedText);
             utterance.lang = 'de-DE';
-            utterance.onend = () => {
-                handleAethelSpeechCompleted();
-            };
-            utterance.onerror = () => {
-                handleAethelSpeechCompleted();
-            };
+            const bVoices = state.synth.getVoices();
+            const deVoice = bVoices.find(v => v.lang.startsWith("de") && (v.name.toLowerCase().includes("online") || v.name.toLowerCase().includes("natural")))
+                         || bVoices.find(v => v.lang.startsWith("de"));
+            if (deVoice) utterance.voice = deVoice;
+            utterance.onend = () => handleAethelSpeechCompleted();
+            utterance.onerror = () => handleAethelSpeechCompleted();
             state.synth.speak(utterance);
         } else {
             handleAethelSpeechCompleted();
         }
-    };
-
-    state.activeAudio.play().catch(err => {
-        console.error("Playback failed, trying browser TTS fallback", err);
-        if (state.synth) {
-            const utterance = new SpeechSynthesisUtterance(cleanedText);
-            utterance.lang = 'de-DE';
-            utterance.onend = () => {
-                handleAethelSpeechCompleted();
-            };
-            state.synth.speak(utterance);
-        } else {
-            handleAethelSpeechCompleted();
-        }
-    });
+    }
 }
+
 
 export function setupSpeechRecognition() {
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -314,12 +344,19 @@ export function setupSpeechRecognition() {
             }
         }
         
-        const elUserInput = document.getElementById("user-input");
+        const isAgentActive = state.views.agent && !state.views.agent.classList.contains("hidden");
+        const inputId = isAgentActive ? "agent-user-input" : "user-input";
+        const elUserInput = document.getElementById(inputId);
         if (elUserInput) {
             elUserInput.value = result[0].transcript;
             if (elSpeechIndicator) elSpeechIndicator.textContent = `Erkannt: "${result[0].transcript}"`;
-            const { sendMessage } = await import('./chat.js');
-            sendMessage();
+            if (isAgentActive) {
+                const { sendOperatorFeedback } = await import('./agent_builder.js');
+                sendOperatorFeedback();
+            } else {
+                const { sendMessage } = await import('./chat.js');
+                sendMessage();
+            }
         }
     };
 
@@ -371,6 +408,8 @@ export async function refreshVoiceHealthHUD() {
 
     } catch(e) {
         console.error("Failed to load voice subsystem health logs", e);
+        const healthStatus = document.getElementById("voice-health-status");
+        if (healthStatus) { healthStatus.textContent = "CORE UNREACHABLE"; healthStatus.className = "red-text"; }
     }
 }
 
@@ -384,6 +423,125 @@ let silenceTimer = null;
 let lastSpeechTime = 0;
 const SPEAKING_THRESHOLD = 0.025;
 const SILENCE_DELAY = 1200;
+const WAKE_SESSION_MS = 45000;
+
+function normalizeWakeText(value) {
+    return String(value || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9äöüß ]/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function configuredWakeWords() {
+    const base = normalizeWakeText(state.wakeWord || "aethel");
+    const words = new Set([base, "aethel", "athel", "ethel", "äthel"]);
+    return [...words].filter(Boolean);
+}
+
+export function startWakeWordListener() {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const elSpeechIndicator = document.getElementById("speech-indicator");
+    if (!SpeechRec || state.isWakeWordArmed) return;
+
+    if (!state.wakeWordRecognizer) {
+        state.wakeWordRecognizer = new SpeechRec();
+        state.wakeWordRecognizer.continuous = false;
+        state.wakeWordRecognizer.lang = 'de-DE';
+        state.wakeWordRecognizer.interimResults = false;
+        state.wakeWordRecognizer.maxAlternatives = 1;
+
+        state.wakeWordRecognizer.onstart = () => {
+            state.isWakeWordArmed = true;
+            if (!state.isWakeSessionActive) {
+                updateVoiceSphereUI("WAKE STANDBY", "voice-sphere listening");
+                if (elSpeechIndicator) elSpeechIndicator.textContent = `Wake-Word aktiv: "${state.wakeWord || "Aethel"}"`;
+            }
+        };
+
+        state.wakeWordRecognizer.onresult = (event) => {
+            const result = event.results[event.results.length - 1];
+            const transcript = normalizeWakeText(result?.[0]?.transcript || "");
+            const matched = configuredWakeWords().some(word => transcript.includes(word));
+            if (matched && state.isVoiceCallActive && !state.isWakeSessionActive) {
+                activateWakeSession();
+            }
+        };
+
+        state.wakeWordRecognizer.onerror = (event) => {
+            if (event.error !== "no-speech" && event.error !== "aborted") {
+                console.warn("Wake recognition error", event.error);
+            }
+        };
+
+        state.wakeWordRecognizer.onend = () => {
+            state.isWakeWordArmed = false;
+            if (state.isVoiceCallActive && !state.isWakeSessionActive) {
+                setTimeout(() => {
+                    try { startWakeWordListener(); } catch(e) {}
+                }, 500);
+            }
+        };
+    }
+
+    try {
+        state.wakeWordRecognizer.start();
+    } catch(e) {
+        state.isWakeWordArmed = false;
+    }
+}
+
+export function stopWakeWordListener() {
+    state.isWakeWordArmed = false;
+    if (state.wakeWordRecognizer) {
+        try { state.wakeWordRecognizer.stop(); } catch(e) {}
+    }
+}
+
+export function endWakeSession() {
+    state.isWakeSessionActive = false;
+    if (state.wakeSessionTimer) {
+        clearTimeout(state.wakeSessionTimer);
+        state.wakeSessionTimer = null;
+    }
+    stopWhisperVad();
+    if (state.isVoiceCallActive) {
+        updateVoiceSphereUI("WAKE STANDBY", "voice-sphere listening");
+        startWakeWordListener();
+    } else {
+        updateVoiceSphereUI("CORE STANDBY", "voice-sphere");
+    }
+}
+
+export function extendWakeSession() {
+    if (!state.isWakeSessionActive) return;
+    if (state.wakeSessionTimer) clearTimeout(state.wakeSessionTimer);
+    state.wakeSessionTimer = setTimeout(() => {
+        if (!state.isAethelSpeaking && !state.pendingToolRequest) {
+            endWakeSession();
+        } else {
+            extendWakeSession();
+        }
+    }, WAKE_SESSION_MS);
+}
+
+export function activateWakeSession() {
+    if (!state.isVoiceCallActive || state.isWakeSessionActive) return;
+    stopWakeWordListener();
+    state.isWakeSessionActive = true;
+    updateVoiceSphereUI("AETHEL AKTIV", "voice-sphere processing");
+    const elSpeechIndicator = document.getElementById("speech-indicator");
+    if (elSpeechIndicator) elSpeechIndicator.textContent = "Wake-Word erkannt. Whisper wird aktiviert...";
+    speak("Ja, ich höre.");
+    setTimeout(() => {
+        if (state.isVoiceCallActive && state.isWakeSessionActive) {
+            startWhisperVad();
+            extendWakeSession();
+        }
+    }, 900);
+}
 
 export async function startWhisperVad() {
     if (audioContext) return;
@@ -391,63 +549,64 @@ export async function startWhisperVad() {
     try {
         mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         
-        vadRecorder = new MediaRecorder(mediaStream, { mimeType: 'audio/webm' });
-        vadChunks = [];
-        
-        vadRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) {
-                vadChunks.push(e.data);
-            }
-        };
-        
         const elSpeechIndicator = document.getElementById("speech-indicator");
 
-        vadRecorder.onstop = async () => {
-            const blob = new Blob(vadChunks, { type: 'audio/webm' });
-            vadChunks = [];
-            
-            if (blob.size < 1000) return; 
-            
-            try {
-                if (elSpeechIndicator) {
-                    elSpeechIndicator.textContent = "Analysiere Sprache mit Whisper...";
-                }
-                updateVoiceSphereUI("CORE PROCESSING...", "voice-sphere processing");
-                
-                const formData = new FormData();
-                formData.append("audio", blob, "speech.webm");
-                
-                const res = await fetch(`${state.API_BASE}/v1/audio/transcribe`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (res.status === 401) {
-                    if (elSpeechIndicator) elSpeechIndicator.textContent = "Whisper Fehler: Groq Key nicht gesetzt.";
-                    if (state.isVoiceCallActive) {
-                        updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
+        // Create a fresh MediaRecorder for each utterance — reusing the same
+        // instance after stop() is unreliable in Chromium/WebView2.
+        function createFreshRecorder() {
+            const rec = new MediaRecorder(mediaStream, { mimeType: 'audio/webm' });
+            let chunks = [];
+
+            rec.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) chunks.push(e.data);
+            };
+
+            rec.onstop = async () => {
+                const blob = new Blob(chunks, { type: 'audio/webm' });
+                chunks = [];
+
+                if (blob.size < 1000) return;
+
+                try {
+                    if (elSpeechIndicator) {
+                        elSpeechIndicator.textContent = "Analysiere Sprache mit Whisper...";
                     }
-                    return;
-                }
-                
-                const data = await res.json();
-                const transcript = (data.text || "").trim();
-                
-                if (transcript) {
-                    handleWhisperTranscript(transcript);
-                } else {
-                    if (state.isVoiceCallActive) {
-                        updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
+                    updateVoiceSphereUI("CORE PROCESSING...", "voice-sphere processing");
+
+                    const formData = new FormData();
+                    formData.append("audio", blob, "speech.webm");
+
+                    const res = await fetch(`${state.API_BASE}/v1/audio/transcribe`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (res.status === 401) {
+                        if (elSpeechIndicator) elSpeechIndicator.textContent = "Whisper Fehler: Groq Key nicht gesetzt.";
+                        if (state.isVoiceCallActive) updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
+                        return;
                     }
+
+                    const data = await res.json();
+                    const transcript = (data.text || "").trim();
+
+                    if (transcript) {
+                        handleWhisperTranscript(transcript);
+                    } else {
+                        if (state.isVoiceCallActive) updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
+                    }
+                } catch(e) {
+                    console.error("Whisper transcription failed", e);
+                    if (elSpeechIndicator) elSpeechIndicator.textContent = "Whisper Verbindung fehlgeschlagen.";
+                    if (state.isVoiceCallActive) updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
                 }
-            } catch(e) {
-                console.error("Whisper transcription failed", e);
-                if (elSpeechIndicator) elSpeechIndicator.textContent = "Whisper Verbindung fehlgeschlagen.";
-                if (state.isVoiceCallActive) {
-                    updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
-                }
-            }
-        };
+            };
+
+            return rec;
+        }
+
+        // Replace global vadRecorder with the factory approach
+        vadRecorder = createFreshRecorder();
         
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         audioContext = new AudioContextClass();
@@ -477,6 +636,9 @@ export async function startWhisperVad() {
                     try { vadRecorder.stop(); } catch(e) {}
                     isRecordingVad = false;
                     clearTimeout(silenceTimer);
+                    silenceTimer = null;
+                    // Prepare a fresh recorder for next utterance
+                    vadRecorder = createFreshRecorder();
                 }
                 requestAnimationFrame(checkVolume);
                 return;
@@ -485,10 +647,20 @@ export async function startWhisperVad() {
             if (rms > SPEAKING_THRESHOLD) {
                 lastSpeechTime = Date.now();
                 if (!isRecordingVad) {
-                    console.log("Speech detected, starting recording...");
+                    console.log("Speech detected, starting fresh recording...");
                     isRecordingVad = true;
-                    vadChunks = [];
-                    try { vadRecorder.start(250); } catch(e) {}
+                    // Always use a known-inactive recorder
+                    if (vadRecorder.state !== 'inactive') {
+                        vadRecorder = createFreshRecorder();
+                    }
+                    try { vadRecorder.start(250); } catch(e) {
+                        console.error("MediaRecorder start failed, retrying with fresh instance:", e);
+                        vadRecorder = createFreshRecorder();
+                        try { vadRecorder.start(250); } catch(e2) {
+                            console.error("MediaRecorder double-start failed:", e2);
+                            isRecordingVad = false;
+                        }
+                    }
                     updateVoiceSphereUI("CORE SPEAKING...", "voice-sphere listening active-speech");
                 }
                 
@@ -499,8 +671,11 @@ export async function startWhisperVad() {
                     silenceTimer = setTimeout(() => {
                         console.log("Silence duration met, stopping recorder...");
                         if (isRecordingVad) {
-                            try { vadRecorder.stop(); } catch(e) {}
+                            const oldRecorder = vadRecorder;
+                            // Prepare fresh recorder BEFORE stopping so next utterance is ready
+                            vadRecorder = createFreshRecorder();
                             isRecordingVad = false;
+                            try { oldRecorder.stop(); } catch(e) {}
                         }
                         silenceTimer = null;
                     }, SILENCE_DELAY);
@@ -514,9 +689,11 @@ export async function startWhisperVad() {
         
     } catch(e) {
         console.error("Failed to start Whisper VAD stream", e);
+        const elSpeechIndicator = document.getElementById("speech-indicator");
         if (elSpeechIndicator) elSpeechIndicator.textContent = "Mikrofon Zugriff für VAD verweigert.";
     }
 }
+
 
 export function stopWhisperVad() {
     if (audioContext) {
@@ -538,6 +715,7 @@ export function stopWhisperVad() {
 
 export async function handleWhisperTranscript(transcript) {
     if (!transcript) return;
+    extendWakeSession();
     const textLower = transcript.toLowerCase().trim();
     const textClean = textLower.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()!?]/g, "");
 
@@ -566,12 +744,19 @@ export async function handleWhisperTranscript(transcript) {
         }
     }
     
-    const elUserInput = document.getElementById("user-input");
+    const isAgentActive = state.views.agent && !state.views.agent.classList.contains("hidden");
+    const inputId = isAgentActive ? "agent-user-input" : "user-input";
+    const elUserInput = document.getElementById(inputId);
     const elSpeechIndicator = document.getElementById("speech-indicator");
     if (elUserInput) {
         elUserInput.value = transcript;
         if (elSpeechIndicator) elSpeechIndicator.textContent = `Erkannt: "${transcript}"`;
-        const { sendMessage } = await import('./chat.js');
-        sendMessage();
+        if (isAgentActive) {
+            const { sendOperatorFeedback } = await import('./agent_builder.js');
+            sendOperatorFeedback();
+        } else {
+            const { sendMessage } = await import('./chat.js');
+            sendMessage();
+        }
     }
 }

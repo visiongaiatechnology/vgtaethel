@@ -1,6 +1,19 @@
 import { state } from './state.js';
 import { speak } from './voice.js';
 
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function jsArg(value) {
+    return escapeHtml(JSON.stringify(String(value ?? "")));
+}
+
 export async function refreshSecurityHUD() {
     try {
         const res = await fetch(`${state.API_BASE}/v1/security/status`);
@@ -51,13 +64,16 @@ export async function fetchActiveLeasesList() {
 
         container.innerHTML = leases.map(l => {
             const expDate = new Date(l.expires_at).toLocaleTimeString();
+            const capability = escapeHtml(l.capability);
+            const leaseID = escapeHtml(l.lease_id);
+            const leaseArg = jsArg(l.lease_id);
             return `
                 <div class="glass-card" style="padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.01); border-color: rgba(157, 78, 221, 0.2); margin-bottom: 6px;">
                     <div style="text-align: left;">
-                        <div style="font-weight: bold; color: var(--vgt-purple);">${l.capability}</div>
-                        <div style="font-size: 8px; color: var(--vgt-text-dim); margin-top: 2px;">ID: ${l.lease_id} | Bis: ${expDate}</div>
+                        <div style="font-weight: bold; color: var(--vgt-purple);">${capability}</div>
+                        <div style="font-size: 8px; color: var(--vgt-text-dim); margin-top: 2px;">ID: ${leaseID} | Bis: ${escapeHtml(expDate)}</div>
                     </div>
-                    <button class="cyber-button font-mono" onclick="revokePermissionLease('${l.lease_id}')" style="width: auto; padding: 4px 10px; font-size: 8px; background: rgba(255, 0, 79, 0.1); border: 1px solid var(--vgt-red); color: var(--vgt-red);">WIDERRUFEN</button>
+                    <button class="cyber-button font-mono" onclick="revokePermissionLease(${leaseArg})" style="width: auto; padding: 4px 10px; font-size: 8px; background: rgba(255, 0, 79, 0.1); border: 1px solid var(--vgt-red); color: var(--vgt-red);">WIDERRUFEN</button>
                 </div>
             `;
         }).join("");
@@ -68,7 +84,7 @@ export async function fetchActiveLeasesList() {
 
 export async function revokePermissionLease(leaseID) {
     try {
-        const res = await fetch(`${state.API_BASE}/v1/security/leases?id=${leaseID}`, {
+        const res = await fetch(`${state.API_BASE}/v1/security/leases?id=${encodeURIComponent(leaseID)}`, {
             method: 'DELETE'
         });
         const data = await res.json();
@@ -112,19 +128,23 @@ export async function fetchSecurityAuditTrail() {
 
             const blockHash = entry.hash ? entry.hash.substring(0, 8) : "none";
             const prevHash = entry.prev_hash ? entry.prev_hash.substring(0, 8) : "none";
+            const operation = escapeHtml(entry.operation);
+            const target = escapeHtml(entry.target);
+            const risk = escapeHtml(entry.risk);
+            const decision = escapeHtml(String(entry.decision || "").toUpperCase());
 
             return `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
-                    <td style="padding: 6px 4px; color: var(--vgt-text-dim);">${dateStr} ${timeStr}</td>
+                    <td style="padding: 6px 4px; color: var(--vgt-text-dim);">${escapeHtml(dateStr)} ${escapeHtml(timeStr)}</td>
                     <td style="padding: 6px 4px; font-weight: bold;">
-                        <span class="log-op-badge" style="background: rgba(157, 78, 221, 0.1); color: var(--vgt-purple); border: 1px solid rgba(157, 78, 221, 0.2); padding: 2px 4px; border-radius: 3px; font-size: 8px;">${entry.operation}</span>
-                        <div style="font-size: 8px; color: var(--vgt-text-dim); margin-top: 2px;">Cap: ${entry.target}</div>
+                        <span class="log-op-badge" style="background: rgba(157, 78, 221, 0.1); color: var(--vgt-purple); border: 1px solid rgba(157, 78, 221, 0.2); padding: 2px 4px; border-radius: 3px; font-size: 8px;">${operation}</span>
+                        <div style="font-size: 8px; color: var(--vgt-text-dim); margin-top: 2px;">Cap: ${target}</div>
                     </td>
-                    <td style="padding: 6px 4px;" class="${riskClass}">${entry.risk}</td>
-                    <td style="padding: 6px 4px;" class="log-status ${decisionClass}">${entry.decision.toUpperCase()}</td>
+                    <td style="padding: 6px 4px;" class="${riskClass}">${risk}</td>
+                    <td style="padding: 6px 4px;" class="log-status ${decisionClass}">${decision}</td>
                     <td style="padding: 6px 4px; font-family: var(--font-mono); color: var(--vgt-cyan); font-size: 8px;">
-                        <span>Chain block: ${blockHash}</span>
-                        <div style="color: var(--vgt-text-dark);">Prev: ${prevHash}</div>
+                        <span>Chain block: ${escapeHtml(blockHash)}</span>
+                        <div style="color: var(--vgt-text-dark);">Prev: ${escapeHtml(prevHash)}</div>
                     </td>
                 </tr>
             `;
@@ -152,7 +172,7 @@ export async function addPermissionLease(capability, durationMinutes) {
     }
 }
 
-export function openPermissionGate(toolName, capability, riskLevel, riskScore, threats, args, msgIndex) {
+export function openPermissionGate(toolName, capability, riskLevel, riskScore, threats, args, msgId, approvalToken = "") {
     const modal = document.getElementById("permission-gate-modal");
     if (!modal) return;
 
@@ -165,7 +185,11 @@ export function openPermissionGate(toolName, capability, riskLevel, riskScore, t
     const threatList = document.getElementById("gate-threat-list");
     if (threats && threats.length > 0) {
         threatWarning.classList.remove("hidden");
-        threatList.innerHTML = threats.map(t => `<li>${t}</li>`).join("");
+        threatList.replaceChildren(...threats.map((t) => {
+            const li = document.createElement("li");
+            li.textContent = t;
+            return li;
+        }));
     } else {
         threatWarning.classList.add("hidden");
         threatList.innerHTML = "";
@@ -190,7 +214,7 @@ export function openPermissionGate(toolName, capability, riskLevel, riskScore, t
     activeOnce.addEventListener("click", async () => {
         modal.classList.add("hidden");
         const { executeApprovedTool } = await import('./chat.js');
-        executeApprovedTool(msgIndex, toolName, args, true);
+        executeApprovedTool(msgId, toolName, args, approvalToken);
     });
 
     active15m.addEventListener("click", async () => {
@@ -198,7 +222,7 @@ export function openPermissionGate(toolName, capability, riskLevel, riskScore, t
         const ok = await addPermissionLease(capability, 15);
         if (ok) {
             const { executeApprovedTool } = await import('./chat.js');
-            executeApprovedTool(msgIndex, toolName, args, false);
+            executeApprovedTool(msgId, toolName, args);
         } else {
             alert("Fehler beim Erstellen des 15m-Leases.");
         }
@@ -209,7 +233,7 @@ export function openPermissionGate(toolName, capability, riskLevel, riskScore, t
         const ok = await addPermissionLease(capability, 60);
         if (ok) {
             const { executeApprovedTool } = await import('./chat.js');
-            executeApprovedTool(msgIndex, toolName, args, false);
+            executeApprovedTool(msgId, toolName, args);
         } else {
             alert("Fehler beim Erstellen des 1h-Leases.");
         }
@@ -218,7 +242,7 @@ export function openPermissionGate(toolName, capability, riskLevel, riskScore, t
     activeReject.addEventListener("click", async () => {
         modal.classList.add("hidden");
         const { rejectTool } = await import('./chat.js');
-        rejectTool(msgIndex);
+        rejectTool(msgId);
     });
 
     modal.classList.remove("hidden");
@@ -243,13 +267,15 @@ export async function fetchKernelLogs() {
         }
         
         elKernelLogsTbody.innerHTML = logs.map(log => {
-            const opClass = log.op.replace(" ", "_");
+            const opClass = String(log.op || "").replace(/[^A-Za-z0-9_-]/g, "_");
+            const target = escapeHtml(log.target);
+            const status = escapeHtml(log.status);
             return `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
-                    <td style="padding: 6px 4px; color: var(--vgt-text-dim);">${log.timestamp}</td>
-                    <td style="padding: 6px 4px;"><span class="log-op-badge ${opClass}">${log.op}</span></td>
-                    <td style="padding: 6px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="${log.target}">${log.target}</td>
-                    <td style="padding: 6px 4px; text-align: right;" class="log-status ${log.status}">${log.status}</td>
+                    <td style="padding: 6px 4px; color: var(--vgt-text-dim);">${escapeHtml(log.timestamp)}</td>
+                    <td style="padding: 6px 4px;"><span class="log-op-badge ${opClass}">${escapeHtml(log.op)}</span></td>
+                    <td style="padding: 6px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;" title="${target}">${target}</td>
+                    <td style="padding: 6px 4px; text-align: right;" class="log-status ${status}">${status}</td>
                 </tr>
             `;
         }).join("");

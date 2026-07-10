@@ -58,12 +58,18 @@ func NewSecretVault(filePath, keyPath string) (*SecretVault, error) {
 }
 
 func (sv *SecretVault) initKey() error {
-	_ = os.MkdirAll(filepath.Dir(sv.keyPath), 0755)
-	
+	_ = os.MkdirAll(filepath.Dir(sv.keyPath), 0700)
+
 	key, err := os.ReadFile(sv.keyPath)
-	if err == nil && len(key) == 32 {
+	if err == nil {
+		if len(key) != 32 {
+			return fmt.Errorf("invalid vault key length")
+		}
 		sv.key = key
 		return nil
+	}
+	if !os.IsNotExist(err) {
+		return fmt.Errorf("failed to read vault key: %w", err)
 	}
 
 	// Generate random 256-bit key
@@ -169,7 +175,7 @@ func (sv *SecretVault) save() error {
 		return err
 	}
 
-	_ = os.MkdirAll(filepath.Dir(sv.filePath), 0755)
+	_ = os.MkdirAll(filepath.Dir(sv.filePath), 0700)
 	return os.WriteFile(sv.filePath, ciphertext, 0600)
 }
 

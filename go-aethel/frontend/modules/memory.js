@@ -1,5 +1,18 @@
 import { state } from './state.js';
 
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function jsArg(value) {
+    return escapeHtml(JSON.stringify(String(value ?? "")));
+}
+
 export async function fetchMemoriesList(query = "") {
     const container = document.getElementById("mem-list-container");
     if (!container) return;
@@ -27,6 +40,7 @@ export async function fetchMemoriesList(query = "") {
 
         container.innerHTML = memories.map(m => {
             const dateStr = m.timestamp ? new Date(m.timestamp).toLocaleDateString() : "";
+            const idArg = jsArg(m.id);
             let displayContent = m.content;
             if (m.category === "secret_reference" || displayContent.toLowerCase().includes("token") || displayContent.toLowerCase().includes("password") || displayContent.toLowerCase().includes("key")) {
                 displayContent = "🔑 [SENSITIVER INHALT - VERBORGEN]";
@@ -34,11 +48,11 @@ export async function fetchMemoriesList(query = "") {
             return `
                 <div class="glass-card" style="padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.01); margin-bottom: 6px;">
                     <div style="text-align: left; max-width: 80%;">
-                        <span class="log-op-badge" style="background: rgba(0, 240, 255, 0.1); color: var(--vgt-cyan); padding: 2px 5px; border-radius: 4px; font-size: 8px; font-weight: bold; text-transform: uppercase;">${m.category}</span>
-                        <div style="font-size: 11px; margin-top: 6px; color: #fff;">${displayContent}</div>
-                        ${dateStr ? `<div style="font-size: 8px; color: var(--vgt-text-dim); margin-top: 4px;">Gespeichert am: ${dateStr}</div>` : ""}
+                        <span class="log-op-badge" style="background: rgba(0, 240, 255, 0.1); color: var(--vgt-cyan); padding: 2px 5px; border-radius: 4px; font-size: 8px; font-weight: bold; text-transform: uppercase;">${escapeHtml(m.category)}</span>
+                        <div style="font-size: 11px; margin-top: 6px; color: #fff;">${escapeHtml(displayContent)}</div>
+                        ${dateStr ? `<div style="font-size: 8px; color: var(--vgt-text-dim); margin-top: 4px;">Gespeichert am: ${escapeHtml(dateStr)}</div>` : ""}
                     </div>
-                    <button class="cyber-button font-mono" onclick="deleteMemoryItem('${m.id}')" style="width: auto; padding: 4px 10px; font-size: 8px; background: rgba(255, 0, 79, 0.1); border: 1px solid var(--vgt-red); color: var(--vgt-red);">LÖSCHEN</button>
+                    <button class="cyber-button font-mono" onclick="deleteMemoryItem(${idArg})" style="width: auto; padding: 4px 10px; font-size: 8px; background: rgba(255, 0, 79, 0.1); border: 1px solid var(--vgt-red); color: var(--vgt-red);">LÖSCHEN</button>
                 </div>
             `;
         }).join("");
@@ -64,7 +78,7 @@ export async function addMemoryItem() {
         const res = await fetch(`${state.API_BASE}/v1/memory`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: content, category: category })
+            body: JSON.stringify({ content: content, category: category, source: "operator", operator_approved: true })
         });
         const data = await res.json();
         if (data.status === "success") {
@@ -81,7 +95,7 @@ export async function addMemoryItem() {
 
 export async function deleteMemoryItem(id) {
     try {
-        const res = await fetch(`${state.API_BASE}/v1/memory?id=${id}`, {
+        const res = await fetch(`${state.API_BASE}/v1/memory?id=${encodeURIComponent(id)}`, {
             method: 'DELETE'
         });
         const data = await res.json();
