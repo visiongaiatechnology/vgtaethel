@@ -19,9 +19,15 @@ type ChatRequest struct {
 	UseTools           bool              `json:"use_tools"`
 	SystemPrompt       string            `json:"system_prompt"`
 	LiveOperatorActive bool              `json:"live_operator_active"`
+	SphereActive       bool              `json:"sphere_active"`
 }
 
-func toolDefinitionsForRequest(liveOperator bool) []map[string]interface{} {
+func toolDefinitionsForRequest(liveOperator, sphereActive bool) []map[string]interface{} {
+	sphereAllowed := map[string]bool{
+		"fs_read_file": true, "fs_list_dir": true, "fs_write_file": true, "fs_replace_file_content": true,
+		"code_cartography": true, "nexus_save": true, "nexus_recall": true, "personal_memory_save": true,
+		"personal_memory_recall": true, "web_browser": true, "weather_lookup": true, "media_control": true,
+	}
 	toolsRaw := state.skills.ToToolDefinitions()
 	tools := make([]map[string]interface{}, 0, len(toolsRaw))
 	for _, raw := range toolsRaw {
@@ -31,6 +37,9 @@ func toolDefinitionsForRequest(liveOperator bool) []map[string]interface{} {
 		}
 		function, ok := tool["function"].(map[string]interface{})
 		name, _ := function["name"].(string)
+		if sphereActive && !sphereAllowed[name] {
+			continue
+		}
 		if !liveOperator && (name == "gui_control" || name == "gui_window_control" || name == "vision_context") {
 			continue
 		}
@@ -255,10 +264,9 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	requestedModelID := req.ModelID
 	if selected, changed := state.providers.SelectAvailable(req.ModelID, state, req.UseTools, req.LiveOperatorActive); changed {
 		req.ModelID = selected.ID
-		fmt.Fprintf(w, "data: [SYSTEM WARNING]: Provider for '%s' is unavailable; securely routed to '%s'.\n\n", requestedModelID, selected.ID)
+		fmt.Fprint(w, "data: [SYSTEM WARNING]: Der angeforderte Provider ist nicht verfügbar; Aethel wurde sicher zu einem konfigurierten Core geroutet.\n\n")
 		if ok {
 			flusher.Flush()
 		}
@@ -361,14 +369,10 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 		actualModelID = strings.TrimPrefix(req.ModelID, "openai-native/")
 	} else {
 		switch actualModelID {
-		case "openai/gpt-oss-120b":
-			actualModelID = "llama-3.3-70b-versatile"
-		case "openai/gpt-oss-20b":
-			actualModelID = "llama-3.1-8b-instant"
-		case "qwen/qwen3.6-27b":
-			actualModelID = "llama-3.3-70b-versatile"
 		case "meta-llama/llama-4-scout-17b-16e-instruct":
-			actualModelID = "llama-3.1-8b-instant"
+			// llama-4-scout-17b-16e-instruct is deprecated and being turned off soon;
+			// route it to openai/gpt-oss-120b as recommended by Groq.
+			actualModelID = "openai/gpt-oss-120b"
 		}
 	}
 
@@ -381,6 +385,18 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 		systemPromptText += getOSContextPrompt()
 	}
 	systemPromptText += getRuntimeContextPrompt()
+	if req.SphereActive {
+		systemPromptText += `
+
+SPHERE WORKSPACE DIRECTIVES:
+- The operator has opened the AETHEL SPHERE WORKSPACE.
+- Within this workspace, you have a dedicated visual interface consisting of:
+  1. AETHEL WRITER (Document Canvas): A premium WYSIWYG document editor where you can write, design, and draft documents directly. For every request to create, revise or format Writer content, invoke 'fs_write_file' or 'fs_replace_file_content' on the exact relative workspace path 'sphere_document.html'. Do not use task_set_checklist/task_update_checklist as a substitute for a Writer update. The operator sees updates render in real-time.
+  2. AETHEL BROWSER: A dedicated headless web browser. Use the provider-native 'web_browser' tool call for an explicit URL or search only; never print a JSON wrapper, and never navigate to about:blank unless the operator explicitly requests it.
+  3. AETHEL CONSOLE shares the exact same conversation and persistent-run context as the chat terminal. WORKSPACE INDEX, RUN DESK, LIVE FLOW, WEATHER PULSE and MEDIA CONSOLE expose shared artifacts, active runs, verified execution progress, weather and explicit media controls.
+  4. For current weather, invoke weather_lookup with the requested city. The WEATHER PULSE widget presents the same result. For code and agent work, LIVE FLOW shows the execution plan, tool events and verified evidence; keep the operator updated with concise observable progress, not private chain-of-thought.
+- You can write whole books and documents inside the constrained workspace. Your voice mode is continuously active, and you should react and communicate interactively.`
+	}
 	if personalContext := BuildPersonalContext(state.personal); personalContext != "" {
 		systemPromptText += "\n\n" + tag("personal_context", personalContext)
 	}
@@ -513,7 +529,7 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.UseTools {
-		tools := toolDefinitionsForRequest(req.LiveOperatorActive)
+		tools := toolDefinitionsForRequest(req.LiveOperatorActive, req.SphereActive)
 		payload["tools"] = SortedToolDefinitions(tools)
 		payload["tool_choice"] = "auto"
 	}
@@ -557,7 +573,7 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 
 		var claudeTools []map[string]interface{}
 		if req.UseTools {
-			for _, m := range toolDefinitionsForRequest(req.LiveOperatorActive) {
+			for _, m := range toolDefinitionsForRequest(req.LiveOperatorActive, req.SphereActive) {
 				if fn, ok := m["function"].(map[string]interface{}); ok {
 					params := fn["parameters"]
 					claudeTools = append(claudeTools, map[string]interface{}{
@@ -675,8 +691,8 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 			resp.StatusCode == http.StatusBadRequest
 
 		if isToolError && req.UseTools {
-			log.Printf("[TOOL FALLBACK] Model %s does not support tools. Retrying without tools.", actualModelID)
-			fmt.Fprintf(w, "data: [SYSTEM WARNING]: Core-Modell '%s' unterstützt keine Tools. Führe Anfrage ohne Tools aus... \n\n", actualModelID)
+		log.Print("[TOOL FALLBACK] Selected core does not support tools. Retrying without tools.")
+		fmt.Fprint(w, "data: [SYSTEM WARNING]: Der ausgewählte Core unterstützt keine Tools. Die Anfrage läuft ohne Tools weiter.\n\n")
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()
 			}

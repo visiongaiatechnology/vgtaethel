@@ -85,10 +85,10 @@ Bitte bearbeiten Sie diese Aufgabe autonom und liefern Sie nach Abschluss eine Z
 	LogKernelActivity("HANDOFF_START", input.AgentName, "PENDING")
 
 	if openURL == "cursor" {
-		cmd := exec.Command("cmd.exe", "/c", "start", "cursor")
+		cmd := exec.Command(trustedExecutable("cmd.exe"), "/c", "start", "cursor")
 		_ = cmd.Start()
 	} else {
-		cmd := exec.Command("cmd.exe", "/c", "start", openURL)
+		cmd := exec.Command(trustedExecutable("cmd.exe"), "/c", "start", openURL)
 		_ = cmd.Start()
 	}
 

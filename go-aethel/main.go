@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
-	"os/exec"
 	"runtime"
 
 	"github.com/wailsapp/wails/v2"
@@ -111,11 +110,5 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func getPowerShellPath() string {
-	if path, err := exec.LookPath("powershell.exe"); err == nil {
-		return path
-	}
-	if path, err := exec.LookPath("powershell"); err == nil {
-		return path
-	}
-	return "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+	return trustedExecutable("powershell.exe")
 }

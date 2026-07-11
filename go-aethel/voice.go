@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -53,8 +52,16 @@ func (s *Sapi5TTSProvider) Synthesize(text string, voice string) ([]byte, string
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	tempWav := filepath.Join(os.TempDir(), "aethel_speech.wav")
-	_ = os.Remove(tempWav)
+	tempFile, err := os.CreateTemp("", "aethel_speech-*.wav")
+	if err != nil {
+		return nil, "", fmt.Errorf("secure SAPI5 temporary file could not be created: %w", err)
+	}
+	tempWav := tempFile.Name()
+	if err := tempFile.Close(); err != nil {
+		_ = os.Remove(tempWav)
+		return nil, "", fmt.Errorf("secure SAPI5 temporary file could not be closed: %w", err)
+	}
+	defer os.Remove(tempWav)
 
 	pitch := "default"
 	rate := "default"
@@ -117,7 +124,7 @@ func (s *Sapi5TTSProvider) Synthesize(text string, voice string) ([]byte, string
 
 	cmd := exec.Command(getPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return nil, "", fmt.Errorf("PowerShell SAPI5 failed: %v", err)
 	}

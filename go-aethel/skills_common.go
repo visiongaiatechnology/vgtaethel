@@ -64,6 +64,60 @@ const workspaceDir = "./vgt_workspace"
 
 var forbiddenShellMeta = regexp.MustCompile(`[;&|><` + "`" + `$]|\$\(|\r|\n`)
 
+// trustedExecutable returns only fixed operating-system installation paths.
+// Never delegate executable resolution to PATH: a user-writable PATH entry can
+// otherwise turn an approved tool call into an arbitrary binary execution.
+func trustedExecutable(name string) string {
+	switch runtime.GOOS {
+	case "windows":
+		switch strings.ToLower(name) {
+		case "powershell", "powershell.exe":
+			return `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
+		case "cmd", "cmd.exe":
+			return `C:\Windows\System32\cmd.exe`
+		case "rundll32", "rundll32.exe":
+			return `C:\Windows\System32\rundll32.exe`
+		case "where", "where.exe":
+			return `C:\Windows\System32\where.exe`
+		case "whoami", "whoami.exe":
+			return `C:\Windows\System32\whoami.exe`
+		case "tasklist", "tasklist.exe":
+			return `C:\Windows\System32\tasklist.exe`
+		case "git":
+			return `C:\Program Files\Git\cmd\git.exe`
+		case "go":
+			return `C:\Program Files\Go\bin\go.exe`
+		case "node":
+			return `C:\Program Files\nodejs\node.exe`
+		case "npm":
+			return `C:\Program Files\nodejs\npm.cmd`
+		case "npx":
+			return `C:\Program Files\nodejs\npx.cmd`
+		case "python", "python3":
+			return `C:\Program Files\Python312\python.exe`
+		}
+	case "darwin":
+		switch name {
+		case "osascript": return "/usr/bin/osascript"
+		case "open": return "/usr/bin/open"
+		}
+	default:
+		switch name {
+		case "xdotool": return "/usr/bin/xdotool"
+		case "wmctrl": return "/usr/bin/wmctrl"
+		case "xdg-open": return "/usr/bin/xdg-open"
+		case "scrot": return "/usr/bin/scrot"
+		case "git": return "/usr/bin/git"
+		case "go": return "/usr/local/go/bin/go"
+		case "node": return "/usr/bin/node"
+		case "npm": return "/usr/bin/npm"
+		case "npx": return "/usr/bin/npx"
+		case "python", "python3": return "/usr/bin/python3"
+		}
+	}
+	return ""
+}
+
 func isPathInside(baseDir, targetPath string) bool {
 	if runtime.GOOS == "windows" {
 		baseDir = strings.ToLower(baseDir)
@@ -169,37 +223,7 @@ func validatePathForAccess(pathStr string, access MountAccess) (string, error) {
 }
 
 func resolveCommandPath(command string) string {
-	lowerCmd := strings.ToLower(strings.TrimSpace(command))
-
-	if runtime.GOOS == "windows" {
-		if lowerCmd == "cmd.exe" || lowerCmd == "cmd" {
-			return "C:\\Windows\\System32\\cmd.exe"
-		}
-		if lowerCmd == "powershell.exe" || lowerCmd == "powershell" {
-			return getPowerShellPath()
-		}
-	} else {
-		// on Unix/Mac
-		if lowerCmd == "cmd.exe" || lowerCmd == "cmd" {
-			if path, err := exec.LookPath("sh"); err == nil {
-				return path
-			}
-		}
-		if lowerCmd == "powershell.exe" || lowerCmd == "powershell" || lowerCmd == "pwsh" {
-			if path, err := exec.LookPath("pwsh"); err == nil {
-				return path
-			}
-			if path, err := exec.LookPath("powershell"); err == nil {
-				return path
-			}
-		}
-	}
-
-	if path, err := exec.LookPath(command); err == nil {
-		return path
-	}
-
-	return command
+	return trustedExecutable(strings.ToLower(strings.TrimSpace(command)))
 }
 
 func CapturePrimaryDisplay() error {
@@ -212,7 +236,7 @@ func CapturePrimaryDisplay() error {
 	}
 
 	if runtime.GOOS == "linux" {
-		cmd := exec.Command("scrot", "-z", "-q", "70", screenshotPath)
+		cmd := exec.Command(trustedExecutable("scrot"), "-z", "-q", "70", screenshotPath)
 		if err := cmd.Run(); err == nil {
 			return os.Chmod(screenshotPath, 0600)
 		}

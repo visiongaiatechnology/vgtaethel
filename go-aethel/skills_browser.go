@@ -17,6 +17,8 @@ import (
 
 // --- 5. SKILL: WEB BROWSER ---
 
+var LastBrowserURL = "https://www.google.com"
+
 type WebBrowserSkill struct{}
 
 type BrowserArgs struct {
@@ -27,7 +29,7 @@ type BrowserArgs struct {
 
 func (s *WebBrowserSkill) Name() string { return "web_browser" }
 func (s *WebBrowserSkill) Description() string {
-	return "Öffnet einen lokalen Browser um Webseiten zu laden, Screenshots zu machen und Inhalte zu analysieren."
+	return "Öffnet einen lokalen Browser, um Webseiten zu laden, Screenshots zu erstellen und Inhalte zu analysieren. HINWEIS: Dieses Tool ist statuslos und lädt Seiten jedes Mal frisch. Es unterstützt KEIN Scrollen, Klicken oder andere interaktive Aktionen."
 }
 func (s *WebBrowserSkill) RiskLevel() RiskLevel { return RiskCritical }
 
@@ -35,7 +37,7 @@ func (s *WebBrowserSkill) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"action":       map[string]interface{}{"type": "string", "enum": []string{"navigate", "search"}, "description": "Aktion: navigieren oder suchen"},
+			"action":       map[string]interface{}{"type": "string", "enum": []string{"navigate", "search"}, "description": "Aktion: navigieren (url laden) oder suchen (per Google). HINWEIS: Scrollen, Klicken oder Tippen sind physisch NICHT unterstützt. Es gibt nur 'navigate' und 'search'."},
 			"url":          map[string]interface{}{"type": "string", "description": "Die URL bei 'navigate' (z.B. 'https://wikipedia.org')"},
 			"search_query": map[string]interface{}{"type": "string", "description": "Suchbegriff bei 'search'"},
 		},
@@ -55,11 +57,6 @@ func findChromePath() string {
 	for _, p := range paths {
 		if _, err := os.Stat(p); err == nil {
 			return p
-		}
-		if !strings.Contains(p, `\`) {
-			if _, err := exec.LookPath(p); err == nil {
-				return p
-			}
 		}
 	}
 	return ""
@@ -128,6 +125,7 @@ func (s *WebBrowserSkill) Execute(args json.RawMessage) (string, error) {
 		return "", errors.New("ungueltige oder nicht erlaubte Browser-URL")
 	}
 	targetURL = parsedURL.String()
+	LastBrowserURL = targetURL
 
 	chromePath := findChromePath()
 	if chromePath == "" {

@@ -59,8 +59,8 @@ func (s *ExecuteCommandSkill) Execute(args json.RawMessage) (string, error) {
 		return "", errors.New("background execution is not allowed for this command")
 	}
 
-	cmdPath, err := exec.LookPath(command)
-	if err != nil {
+	cmdPath := trustedExecutable(command)
+	if cmdPath == "" {
 		return "", fmt.Errorf("approved command is unavailable on this system")
 	}
 	fullCmdStr := command

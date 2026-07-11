@@ -133,7 +133,7 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 	if runtime.GOOS == "linux" {
 		switch input.Action {
 		case "move":
-			cmd := exec.Command("xdotool", "mousemove", fmt.Sprintf("%d", input.X), fmt.Sprintf("%d", input.Y))
+			cmd := exec.Command(trustedExecutable("xdotool"), "mousemove", fmt.Sprintf("%d", input.X), fmt.Sprintf("%d", input.Y))
 			if err := cmd.Run(); err != nil {
 				LogKernelActivity("GUI_MOVE_FAILED", fmt.Sprintf("x:%d, y:%d", input.X, input.Y), "ERROR")
 				return "", err
@@ -143,7 +143,7 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 
 		case "click":
 			if input.X != 0 || input.Y != 0 {
-				if err := exec.Command("xdotool", "mousemove", fmt.Sprintf("%d", input.X), fmt.Sprintf("%d", input.Y)).Run(); err != nil {
+				if err := exec.Command(trustedExecutable("xdotool"), "mousemove", fmt.Sprintf("%d", input.X), fmt.Sprintf("%d", input.Y)).Run(); err != nil {
 					return "", err
 				}
 			}
@@ -155,9 +155,9 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 			}
 			var cmd *exec.Cmd
 			if input.Button == "double" {
-				cmd = exec.Command("xdotool", "doubleclick", "1")
+				cmd = exec.Command(trustedExecutable("xdotool"), "doubleclick", "1")
 			} else {
-				cmd = exec.Command("xdotool", "click", clickBtn)
+				cmd = exec.Command(trustedExecutable("xdotool"), "click", clickBtn)
 			}
 			if err := cmd.Run(); err != nil {
 				LogKernelActivity("GUI_CLICK_FAILED", input.Button, "ERROR")
@@ -170,7 +170,7 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 			if input.Text == "" {
 				return "", errors.New("kein text zum tippen übergeben")
 			}
-			cmd := exec.Command("xdotool", "type", input.Text)
+			cmd := exec.Command(trustedExecutable("xdotool"), "type", input.Text)
 			if err := cmd.Run(); err != nil {
 				LogKernelActivity("GUI_TYPE_FAILED", input.Text, "ERROR")
 				return "", err
@@ -189,7 +189,7 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 			if strings.HasPrefix(keyStr, "^") && len(keyStr) == 2 {
 				keyStr = "ctrl+" + strings.ToLower(string(keyStr[1]))
 			}
-			cmd := exec.Command("xdotool", "key", keyStr)
+			cmd := exec.Command(trustedExecutable("xdotool"), "key", keyStr)
 			if err := cmd.Run(); err != nil {
 				LogKernelActivity("GUI_PRESS_FAILED", input.Keys, "ERROR")
 				return "", err
@@ -198,12 +198,12 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 			return fmt.Sprintf("Taste/Shortcut '%s' erfolgreich gedrückt.", input.Keys), nil
 
 		case "position":
-			outLoc, errLoc := exec.Command("xdotool", "getmouselocation", "--shell").Output()
+			outLoc, errLoc := exec.Command(trustedExecutable("xdotool"), "getmouselocation", "--shell").Output()
 			if errLoc != nil {
 				LogKernelActivity("GUI_POSITION_FAILED", "", "ERROR")
 				return "", errLoc
 			}
-			outGeom, errGeom := exec.Command("xdotool", "getdisplaygeometry").Output()
+			outGeom, errGeom := exec.Command(trustedExecutable("xdotool"), "getdisplaygeometry").Output()
 			if errGeom != nil {
 				LogKernelActivity("GUI_POSITION_FAILED", "", "ERROR")
 				return "", errGeom
@@ -594,10 +594,10 @@ func (s *GUIWindowControlSkill) Execute(args json.RawMessage) (string, error) {
 	} else if runtime.GOOS == "linux" {
 		switch input.Action {
 		case "list":
-			cmd := exec.Command("wmctrl", "-l", "-G")
+			cmd := exec.Command(trustedExecutable("wmctrl"), "-l", "-G")
 			out, err := cmd.CombinedOutput()
 			if err != nil {
-				cmd2 := exec.Command("xdotool", "search", "--onlyvisible", "--name", ".*")
+				cmd2 := exec.Command(trustedExecutable("xdotool"), "search", "--onlyvisible", "--name", ".*")
 				out2, err2 := cmd2.CombinedOutput()
 				if err2 != nil {
 					return "", fmt.Errorf("Linux window listing failed: %v", err2)
@@ -608,9 +608,9 @@ func (s *GUIWindowControlSkill) Execute(args json.RawMessage) (string, error) {
 		case "focus":
 			var focusCmd *exec.Cmd
 			if input.WindowID != "" {
-				focusCmd = exec.Command("xdotool", "windowactivate", input.WindowID)
+				focusCmd = exec.Command(trustedExecutable("xdotool"), "windowactivate", input.WindowID)
 			} else if input.TitlePattern != "" {
-				focusCmd = exec.Command("wmctrl", "-a", input.TitlePattern)
+				focusCmd = exec.Command(trustedExecutable("wmctrl"), "-a", input.TitlePattern)
 			} else {
 				return "", errors.New("focus requires window_id or title_pattern")
 			}
@@ -623,17 +623,17 @@ func (s *GUIWindowControlSkill) Execute(args json.RawMessage) (string, error) {
 			if input.WindowID == "" {
 				return "", errors.New("move action on Linux requires window_id")
 			}
-			cmd1 := exec.Command("xdotool", "windowmove", input.WindowID, fmt.Sprintf("%d", input.X), fmt.Sprintf("%d", input.Y))
+			cmd1 := exec.Command(trustedExecutable("xdotool"), "windowmove", input.WindowID, fmt.Sprintf("%d", input.X), fmt.Sprintf("%d", input.Y))
 			_ = cmd1.Run()
-			cmd2 := exec.Command("xdotool", "windowsize", input.WindowID, fmt.Sprintf("%d", input.Width), fmt.Sprintf("%d", input.Height))
+			cmd2 := exec.Command(trustedExecutable("xdotool"), "windowsize", input.WindowID, fmt.Sprintf("%d", input.Width), fmt.Sprintf("%d", input.Height))
 			_ = cmd2.Run()
 			return "Fenster verschoben und skaliert.", nil
 		case "close":
 			var killCmd *exec.Cmd
 			if input.WindowID != "" {
-				killCmd = exec.Command("xdotool", "windowkill", input.WindowID)
+				killCmd = exec.Command(trustedExecutable("xdotool"), "windowkill", input.WindowID)
 			} else if input.TitlePattern != "" {
-				killCmd = exec.Command("wmctrl", "-c", input.TitlePattern)
+				killCmd = exec.Command(trustedExecutable("wmctrl"), "-c", input.TitlePattern)
 			} else {
 				return "", errors.New("close requires window_id or title_pattern")
 			}
@@ -644,7 +644,7 @@ func (s *GUIWindowControlSkill) Execute(args json.RawMessage) (string, error) {
 		switch input.Action {
 		case "list":
 			script := `tell application "System Events" to get the title of every window of every process whose visible is true`
-			cmd := exec.Command("osascript", "-e", script)
+			cmd := exec.Command(trustedExecutable("osascript"), "-e", script)
 			out, err := cmd.CombinedOutput()
 			if err != nil {
 				return "", err
@@ -655,7 +655,7 @@ func (s *GUIWindowControlSkill) Execute(args json.RawMessage) (string, error) {
 				return "", errors.New("focus on macOS requires title_pattern")
 			}
 			script := fmt.Sprintf(`tell application "%s" to activate`, input.TitlePattern)
-			cmd := exec.Command("osascript", "-e", script)
+			cmd := exec.Command(trustedExecutable("osascript"), "-e", script)
 			_ = cmd.Run()
 			return "Fenster fokussiert.", nil
 		case "move":
@@ -665,7 +665,7 @@ func (s *GUIWindowControlSkill) Execute(args json.RawMessage) (string, error) {
 				return "", errors.New("close on macOS requires title_pattern")
 			}
 			script := fmt.Sprintf(`tell application "%s" to quit`, input.TitlePattern)
-			cmd := exec.Command("osascript", "-e", script)
+			cmd := exec.Command(trustedExecutable("osascript"), "-e", script)
 			_ = cmd.Run()
 			return "Fenster geschlossen.", nil
 		}

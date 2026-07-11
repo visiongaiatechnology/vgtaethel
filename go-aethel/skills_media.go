@@ -90,7 +90,7 @@ func (s *MediaControlSkill) Execute(args json.RawMessage) (string, error) {
 		"volume_down": "XF86AudioLowerVolume",
 		"mute":        "XF86AudioMute",
 	}
-	cmd := exec.Command("xdotool", "key", linuxKeyByAction[input.Action])
+	cmd := exec.Command(trustedExecutable("xdotool"), "key", linuxKeyByAction[input.Action])
 	if err := cmd.Run(); err != nil {
 		LogKernelActivity("MEDIA_CONTROL_FAILED", input.Action, "ERROR")
 		return "", err
@@ -131,14 +131,14 @@ func (s *YouTubeControlSkill) Parameters() map[string]interface{} {
 
 func openVisibleURL(targetURL string) error {
 	if runtime.GOOS == "windows" {
-		cmd := exec.Command("rundll32.exe", "url.dll,FileProtocolHandler", targetURL)
+		cmd := exec.Command(trustedExecutable("rundll32.exe"), "url.dll,FileProtocolHandler", targetURL)
 		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 		return cmd.Start()
 	}
 	if runtime.GOOS == "darwin" {
-		return exec.Command("open", targetURL).Start()
+		return exec.Command(trustedExecutable("open"), targetURL).Start()
 	}
-	return exec.Command("xdg-open", targetURL).Start()
+	return exec.Command(trustedExecutable("xdg-open"), targetURL).Start()
 }
 
 func sendWindowsKeys(sendKeys string) error {
@@ -184,7 +184,7 @@ func (s *YouTubeControlSkill) Execute(args json.RawMessage) (string, error) {
 				return "", err
 			}
 		} else {
-			if err := exec.Command("xdotool", "key", "shift+n").Run(); err != nil {
+			if err := exec.Command(trustedExecutable("xdotool"), "key", "shift+n").Run(); err != nil {
 				return "", err
 			}
 		}
@@ -196,7 +196,7 @@ func (s *YouTubeControlSkill) Execute(args json.RawMessage) (string, error) {
 				return "", err
 			}
 		} else {
-			if err := exec.Command("xdotool", "key", "f").Run(); err != nil {
+			if err := exec.Command(trustedExecutable("xdotool"), "key", "f").Run(); err != nil {
 				return "", err
 			}
 		}
@@ -206,7 +206,7 @@ func (s *YouTubeControlSkill) Execute(args json.RawMessage) (string, error) {
 				return "", err
 			}
 		} else {
-			if err := exec.Command("xdotool", "key", "c").Run(); err != nil {
+			if err := exec.Command(trustedExecutable("xdotool"), "key", "c").Run(); err != nil {
 				return "", err
 			}
 		}
