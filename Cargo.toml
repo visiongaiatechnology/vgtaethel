@@ -2,7 +2,7 @@
 members = [
     "crates/vgt-core",
     "crates/vgt-api",
-    "crates/vgt-cli"
+    "crates/vgt-skills"
 ]
 resolver = "2"
 
