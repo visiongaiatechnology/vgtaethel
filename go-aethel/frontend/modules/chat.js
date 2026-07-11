@@ -178,6 +178,17 @@ function getFriendlyModelName(modelId) {
     return name.toUpperCase();
 }
 
+let transientUIIDCounter = 0;
+function createTransientUIID(prefix) {
+    const bytes = new Uint32Array(2);
+    if (globalThis.crypto?.getRandomValues) {
+        globalThis.crypto.getRandomValues(bytes);
+        return `${prefix}-${Date.now()}-${bytes[0].toString(36)}${bytes[1].toString(36)}`;
+    }
+    transientUIIDCounter += 1;
+    return `${prefix}-${Date.now()}-${transientUIIDCounter}`;
+}
+
 export function addMessageToScreen(role, content, reasoning_content = null, model_id = null) {
     const elChatOutput = document.getElementById("chat-output");
     if (!elChatOutput) return "";
@@ -186,7 +197,7 @@ export function addMessageToScreen(role, content, reasoning_content = null, mode
     if (role === "system") {
         let consoleEl = state.activeConsoleId ? document.getElementById(state.activeConsoleId) : null;
         if (!consoleEl) {
-            const consoleId = `console-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+            const consoleId = createTransientUIID("console");
             state.activeConsoleId = consoleId;
             
             consoleEl = document.createElement("details");
@@ -225,7 +236,7 @@ export function addMessageToScreen(role, content, reasoning_content = null, mode
     const messageDiv = document.createElement("div");
     messageDiv.className = `message ${role}`;
 
-    const msgId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const msgId = createTransientUIID("msg");
     messageDiv.id = msgId;
 
     let headerText = "SYSTEM // OVERWATCH";
@@ -640,8 +651,9 @@ async function sendMessageViaPersistentRun() {
     updateMessageWithThinking(msgId, 'Persistenter Agent Run wird initialisiert…', '', startedAt);
     const uiModule = await import('./ui.js');
     const systemPrompt = uiModule.getCombinedSystemPrompt();
-    const liveOperator = !!(document.getElementById('view-control') && !document.getElementById('view-control').classList.contains('hidden'));
-    const profile = liveOperator ? 'browser_operator' : 'developer';
+    const controlActive = !!(document.getElementById('view-control') && !document.getElementById('view-control').classList.contains('hidden'));
+    const liveOperator = controlActive || state.isSphereActive;
+    const profile = state.isSphereActive ? 'sphere_workspace' : (controlActive ? 'browser_operator' : 'developer');
 
     const createRes = await fetch(`${state.API_BASE}/v1/chat/runs`, {
         method: 'POST',
@@ -654,12 +666,18 @@ async function sendMessageViaPersistentRun() {
             messages: state.messageHistory,
             cost_budget_usd: 2,
             max_agent_turns: state.maxAgenticTurns,
-            live_operator_active: liveOperator
+            live_operator_active: liveOperator,
+            sphere_active: state.isSphereActive
         })
     });
     if (!createRes.ok) throw new Error(await createRes.text());
     let run = await createRes.json();
     state.activeRunId = run.id;
+
+    let modelRedirectWarning = "";
+    if (run.model_id && run.model_id !== state.currentModel) {
+        modelRedirectWarning = `⚠️ [SYSTEM WARNING]: Provider für '${state.currentModel}' ist nicht konfiguriert. Automatisch umgeleitet auf '${run.model_id}'.\n\n`;
+    }
 
     for (let poll = 0; poll < 1200; poll++) {
         const response = await fetch(`${state.API_BASE}/v1/runs/${encodeURIComponent(run.id)}`);
@@ -667,7 +685,7 @@ async function sendMessageViaPersistentRun() {
         run = await response.json();
         const lastTrace = Array.isArray(run.trace) && run.trace.length ? run.trace[run.trace.length - 1] : null;
         const progress = `${(run.steps || []).filter(step => step.status === 'verified').length}/${(run.steps || []).length}`;
-        const thinking = `${String(run.status || '').toUpperCase()} · Schritt ${progress}${lastTrace ? `\n${lastTrace.detail}` : ''}`;
+        const thinking = `${modelRedirectWarning}${String(run.status || '').toUpperCase()} · Schritt ${progress}${lastTrace ? `\n${lastTrace.detail}` : ''}`;
         updateMessageWithThinking(msgId, thinking, run.final_report || '', startedAt, false);
 
         if (run.status === 'waiting_approval') {
@@ -683,7 +701,7 @@ async function sendMessageViaPersistentRun() {
             return;
         } else if (run.status === 'failed' || run.status === 'cancelled') {
             const errorText = run.failure_reason || `Run ${run.status}.`;
-            updateMessageWithThinking(msgId, '', `[AGENT RUN ${String(run.status).toUpperCase()}]: ${errorText}`, startedAt, true);
+            updateMessageWithThinking(msgId, '', `${modelRedirectWarning}[AGENT RUN ${String(run.status).toUpperCase()}]: ${errorText}`, startedAt, true);
             state.activeRunId = null;
             resetMicButton();
             return;
@@ -830,7 +848,8 @@ export async function sendMessage(isContinuation = false) {
                 temperature: 0.15,
                 use_tools: true,
                 system_prompt: systemPromptText,
-                live_operator_active: !!(document.getElementById("view-control") && !document.getElementById("view-control").classList.contains("hidden"))
+                live_operator_active: !!(document.getElementById("view-control") && !document.getElementById("view-control").classList.contains("hidden")) || state.isSphereActive,
+                sphere_active: state.isSphereActive
             })
         });
 

@@ -25,6 +25,7 @@ async function init() {
         security: document.getElementById("view-security"),
         memory: document.getElementById("view-memory"),
         personal: document.getElementById("view-personal"),
+        sphere: document.getElementById("view-sphere"),
         tasks: document.getElementById("view-tasks"),
         settings: document.getElementById("view-settings"),
         archive: document.getElementById("view-archive"),
@@ -40,6 +41,7 @@ async function init() {
         security: document.getElementById("nav-btn-security"),
         memory: document.getElementById("nav-btn-memory"),
         personal: document.getElementById("nav-btn-personal"),
+        sphere: document.getElementById("nav-btn-sphere"),
         tasks: document.getElementById("nav-btn-tasks"),
         settings: document.getElementById("nav-btn-settings"),
         archive: document.getElementById("nav-btn-archive"),
@@ -84,6 +86,7 @@ async function init() {
         setupSettingsUIEvents();
         import('./modules/personal_mode.js').then(m => m.setupPersonalModeUIEvents()).catch(error => console.error('Personal Mode disabled during boot', error));
         import('./modules/agent_builder.js').then(m => m.setupAgentBuilder()).catch(error => console.error('Agent Builder disabled during boot', error));
+        import('./modules/sphere.js').then(m => m.setupSphereWorkspace()).catch(error => console.error('Sphere Workspace disabled during boot', error));
 
         await checkSystemStatus();
         await refreshAPICosts();

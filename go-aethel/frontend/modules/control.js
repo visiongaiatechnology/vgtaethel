@@ -5,25 +5,27 @@ import { speak } from './voice.js';
 let viewportRefreshInterval = null;
 
 export function startViewportRefresh() {
-    const img = document.getElementById("browser-screenshot");
-    const placeholder = document.getElementById("browser-placeholder");
+    const controlView = document.getElementById("view-control");
+    const sphereView = document.getElementById("view-sphere");
+
     const addrBar = document.getElementById("browser-url-input");
-    const loadStatus = document.getElementById("browser-load-status");
-
-    if (!img) return;
-
     if (addrBar) addrBar.value = "desktop://primary_viewport (Sovereign Live Control)";
 
+    const sphereAddrBar = document.getElementById("sphere-browser-url");
+    if (sphereAddrBar) sphereAddrBar.value = "desktop://primary_viewport (Live Desktop Monitor)";
+
     // Run first fetch immediately
-    refreshViewportImage();
+    const isSphereFirst = sphereView && !sphereView.classList.contains("hidden");
+    refreshViewportImage(isSphereFirst);
 
     // Set up loop (800ms for snappier refresh rate)
     if (viewportRefreshInterval) clearInterval(viewportRefreshInterval);
     viewportRefreshInterval = setInterval(() => {
-        // Only fetch if the control panel is actually visible on screen
-        const controlView = document.getElementById("view-control");
-        if (controlView && !controlView.classList.contains("hidden")) {
-            refreshViewportImage();
+        const isControlVisible = controlView && !controlView.classList.contains("hidden");
+        const isSphereVisible = sphereView && !sphereView.classList.contains("hidden");
+        
+        if (isControlVisible || isSphereVisible) {
+            refreshViewportImage(isSphereVisible);
         } else {
             stopViewportRefresh();
         }
@@ -32,11 +34,14 @@ export function startViewportRefresh() {
 
 let isFetchingViewport = false;
 
-function refreshViewportImage() {
+function refreshViewportImage(isSphere = false) {
     if (isFetchingViewport) return;
 
-    const img = document.getElementById("browser-screenshot");
-    const placeholder = document.getElementById("browser-placeholder");
+    const imgId = isSphere ? "sphere-browser-screenshot" : "browser-screenshot";
+    const placeholderId = isSphere ? "sphere-browser-placeholder" : "browser-placeholder";
+
+    const img = document.getElementById(imgId);
+    const placeholder = document.getElementById(placeholderId);
     if (!img) return;
 
     isFetchingViewport = true;
@@ -46,12 +51,27 @@ function refreshViewportImage() {
         isFetchingViewport = false;
     }, 5000);
 
-    img.src = `${state.API_BASE}/v1/viewport/screenshot?t=${Date.now()}`;
+    const screenshotUrl = isSphere ? `${state.API_BASE}/browser/screenshot.png` : `${state.API_BASE}/v1/viewport/screenshot`;
+    img.src = `${screenshotUrl}?t=${Date.now()}`;
+
     img.onload = () => {
         clearTimeout(timeoutId);
         isFetchingViewport = false;
         img.classList.remove("hidden");
         if (placeholder) placeholder.classList.add("hidden");
+
+        // If it's the sphere browser, also refresh the URL address bar from the status endpoint
+        if (isSphere) {
+            fetch(`${state.API_BASE}/v1/viewport/status`)
+                .then(r => r.json())
+                .then(data => {
+                    const sphereAddrBar = document.getElementById("sphere-browser-url");
+                    if (sphereAddrBar && data && data.browser_url) {
+                        sphereAddrBar.value = data.browser_url;
+                    }
+                })
+                .catch(e => console.warn("Failed to fetch browser status", e));
+        }
     };
     img.onerror = (e) => {
         clearTimeout(timeoutId);
@@ -121,10 +141,17 @@ export function setupControlUIEvents() {
         });
     }
 
-    // Monitor control view visibility to start/stop screenshot stream automatically
+    // Monitor control/sphere view visibility to start/stop screenshot stream automatically
     const navBtnControl = document.getElementById("nav-btn-control");
     if (navBtnControl) {
         navBtnControl.addEventListener("click", () => {
+            startViewportRefresh();
+        });
+    }
+
+    const navBtnSphere = document.getElementById("nav-btn-sphere");
+    if (navBtnSphere) {
+        navBtnSphere.addEventListener("click", () => {
             startViewportRefresh();
         });
     }

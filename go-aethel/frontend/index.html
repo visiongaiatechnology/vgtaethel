@@ -245,6 +245,10 @@
                         <svg class="nav-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
                         <span>PERSONAL CORE</span>
                     </button>
+                    <button id="nav-btn-sphere" class="nav-menu-btn">
+                        <svg class="nav-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+                        <span>SPHERE WORKSPACE</span>
+                    </button>
                     <button id="nav-btn-tasks" class="nav-menu-btn">
                         <svg class="nav-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         <span>RUN CENTER</span>
@@ -845,6 +849,131 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- 7b. VIEW PANEL: SPHERE WORKSPACE -->
+                <div id="view-sphere" class="viewport-panel hidden" style="position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column;">
+                    <header class="sphere-topbar">
+                        <div class="sphere-brand"><span class="sphere-brand-mark">◈</span><span>SPHERE DESKTOP</span><small>SHARED AETHEL WORKSPACE</small></div>
+                        <div class="sphere-topbar-actions">
+                            <label class="sphere-ambient-control" for="sphere-ambient-level">SPHÄRE <input id="sphere-ambient-level" type="range" min="0" max="28" value="12"><output id="sphere-ambient-output">12%</output></label>
+                            <button id="sphere-btn-help" class="sphere-shell-button sphere-help-button" type="button" aria-haspopup="dialog" aria-controls="sphere-help-dialog">? HILFE</button>
+                            <button id="sphere-btn-fullscreen" class="sphere-shell-button" type="button">⛶ VOLLBILD</button>
+                        </div>
+                    </header>
+                    
+                    <!-- Background Animated Sphere Container -->
+                    <div class="sphere-background-container" style="position: absolute; inset: 0; z-index: 1; pointer-events: none; display: flex; justify-content: center; align-items: center; overflow: hidden;">
+                        <div class="sphere-canvas idle" id="workspace-sphere" style="width: 700px; height: 700px; border-radius: 50%; filter: blur(40px); transition: all 1s ease;"></div>
+                    </div>
+
+                    <!-- Virtual Desktop Workspace Area -->
+                    <div class="sphere-desktop" style="position: relative; flex-grow: 1; z-index: 2; overflow: hidden; padding: 20px; box-sizing: border-box;">
+                        
+                        <!-- Floating Window 1: Word-like Document Editor -->
+                        <div class="sphere-window glass-card active-focus" id="sphere-window-editor" style="position: absolute; width: 500px; height: 420px; left: 40px; top: 40px; display: flex; flex-direction: column; z-index: 100; border-color: rgba(0, 240, 255, 0.2);">
+                            <!-- Window Header -->
+                            <div class="sphere-window-header" id="sphere-window-editor-header" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--vgt-border); cursor: move; user-select: none; background: rgba(0,0,0,0.4); border-top-left-radius: 15px; border-top-right-radius: 15px;">
+                                <span class="window-title font-mono" style="font-size: 10px; color: var(--vgt-cyan); letter-spacing: 0.1em; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    AETHEL WRITER // DOCUMENT CANVAS
+                                </span>
+                                <div class="window-controls" style="display: flex; gap: 6px;">
+                                    <button class="win-btn" id="win-editor-min" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ffbd2e; cursor: pointer;" title="Minimieren"></button>
+                                    <button class="win-btn" id="win-editor-max" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #27c93f; cursor: pointer;" title="Maximieren"></button>
+                                    <button class="win-btn" id="win-editor-close" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ff5f56; cursor: pointer;" title="Schließen"></button>
+                                </div>
+                            </div>
+                            <!-- Format Toolbar (WYSIWYG Word Toolbar) -->
+                            <div class="sphere-editor-toolbar font-mono" style="padding: 6px 12px; display: flex; gap: 6px; flex-wrap: wrap; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--vgt-border); align-items: center;">
+                                <button class="toolbar-btn" id="editor-btn-bold" title="Fett" style="padding: 4px 8px; font-size: 10px; font-weight: bold; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">B</button>
+                                <button class="toolbar-btn" id="editor-btn-italic" title="Kursiv" style="padding: 4px 8px; font-size: 10px; font-style: italic; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">I</button>
+                                <button class="toolbar-btn" id="editor-btn-underline" title="Unterstreichen" style="padding: 4px 8px; font-size: 10px; text-decoration: underline; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">U</button>
+                                <span style="width: 1px; height: 14px; background: rgba(255,255,255,0.1); margin: 0 4px;"></span>
+                                <button class="toolbar-btn" id="editor-btn-h1" title="H1" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">H1</button>
+                                <button class="toolbar-btn" id="editor-btn-h2" title="H2" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">H2</button>
+                                <button class="toolbar-btn" id="editor-btn-h3" title="H3" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">H3</button>
+                                <button class="toolbar-btn" id="editor-btn-p" title="Text" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">P</button>
+                                <span style="width: 1px; height: 14px; background: rgba(255,255,255,0.1); margin: 0 4px;"></span>
+                                <button class="toolbar-btn" id="editor-btn-ul" title="Liste" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">• List</button>
+                                <button class="toolbar-btn" id="editor-btn-ol" title="Nummerierung" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">1. List</button>
+                                <span style="width: 1px; height: 14px; background: rgba(255,255,255,0.1); margin: 0 4px;"></span>
+                                <button class="toolbar-btn" id="editor-btn-left" title="Links" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">Align L</button>
+                                <button class="toolbar-btn" id="editor-btn-center" title="Zentriert" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">Align C</button>
+                                <button class="toolbar-btn" id="editor-btn-right" title="Rechts" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">Align R</button>
+                            </div>
+                            <!-- Editable Document Body -->
+                            <div class="sphere-window-body sphere-editor-body" style="flex-grow: 1; overflow-y: auto; background: rgba(8, 6, 20, 0.6); padding: 18px; color: #f8fafc; font-size: 13px; line-height: 1.6; outline: none; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;" contenteditable="true" id="sphere-editor-area" placeholder="Beginne mit dem Schreiben oder lass Aethel ein Dokument erstellen...">
+                                <h1>Aethel Document</h1>
+                                <p>Willkommen im interaktiven Rich-Text-Workspace. Du kannst diesen Text editieren oder formatieren.</p>
+                            </div>
+                        </div>
+
+                        <!-- Floating Window 2: Headless Web Browser Monitor -->
+                        <div class="sphere-window glass-card" id="sphere-window-browser" style="position: absolute; width: 480px; height: 380px; left: 580px; top: 80px; display: flex; flex-direction: column; z-index: 10; border-color: rgba(157, 78, 221, 0.2);">
+                            <!-- Window Header -->
+                            <div class="sphere-window-header" id="sphere-window-browser-header" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--vgt-border); cursor: move; user-select: none; background: rgba(0,0,0,0.4); border-top-left-radius: 15px; border-top-right-radius: 15px;">
+                                <span class="window-title font-mono" style="font-size: 10px; color: var(--vgt-purple); letter-spacing: 0.1em; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+                                    AETHEL BROWSER // LIVE FEED
+                                </span>
+                                <div class="window-controls" style="display: flex; gap: 6px;">
+                                    <button class="win-btn" id="win-browser-min" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ffbd2e; cursor: pointer;" title="Minimieren"></button>
+                                    <button class="win-btn" id="win-browser-max" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #27c93f; cursor: pointer;" title="Maximieren"></button>
+                                    <button class="win-btn" id="win-browser-close" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ff5f56; cursor: pointer;" title="Schließen"></button>
+                                </div>
+                            </div>
+                            <!-- Mock Browser URL bar -->
+                            <div style="padding: 6px 12px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--vgt-border); display: flex; align-items: center; gap: 8px;">
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--vgt-green);" id="sphere-browser-status-dot"></span>
+                                <input type="text" id="sphere-browser-url" readonly value="https://www.google.de" class="font-mono" style="flex-grow: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--vgt-border); color: var(--vgt-cyan); padding: 4px 8px; font-size: 9px; outline: none; border-radius: 3px;">
+                            </div>
+                            <!-- Browser Viewport with screenshot -->
+                            <div class="sphere-window-body" style="flex-grow: 1; overflow: hidden; background: #060412; display: flex; justify-content: center; align-items: center; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;">
+                                <div id="sphere-browser-placeholder" class="font-mono" style="text-align: center; color: var(--vgt-text-dim); font-size: 10px;">
+                                    <p>Warte auf Browser-Aktivität...</p>
+                                    <span style="font-size: 8px; opacity: 0.5;">(Befehle wie "Öffne die Website X" steuern diesen Feed)</span>
+                                </div>
+                                <img id="sphere-browser-screenshot" class="hidden" style="width: 100%; height: 100%; object-fit: contain;">
+                            </div>
+                        </div>
+
+                        <div id="sphere-app-layer" aria-live="polite"></div>
+
+                        <form id="sphere-command-form" class="sphere-command-bar" aria-label="Aethel Anweisung im gemeinsamen Workspace">
+                            <span class="sphere-command-mark" aria-hidden="true">&#9670;</span>
+                            <textarea id="sphere-command-input" rows="1" maxlength="12000" placeholder="Aethel im Workspace anweisen - z. B. 'Analysiere dieses Projekt und erstelle eine Architekturkarte'" aria-label="Anweisung an Aethel"></textarea>
+                            <button id="sphere-command-send" class="sphere-command-send" type="submit">SENDEN <span aria-hidden="true">&#8599;</span></button>
+                        </form>
+
+                    </div>
+                    <nav class="sphere-dock" aria-label="Sphere Apps">
+                        <button type="button" data-sphere-app="aethel" class="sphere-dock-app" title="Aethel Console"><span>◈</span>AETHEL</button>
+                        <button type="button" data-sphere-app="editor" class="sphere-dock-app active" title="Writer"><span>✦</span>WRITER</button>
+                        <button type="button" data-sphere-app="browser" class="sphere-dock-app" title="Browser"><span>◌</span>BROWSER</button>
+                        <button type="button" data-sphere-app="workspace" class="sphere-dock-app" title="Workspace Dateien"><span>▤</span>WORKSPACE</button>
+                        <button type="button" data-sphere-app="runs" class="sphere-dock-app" title="Agent Runs"><span>◈</span>RUN DESK</button>
+                        <button type="button" data-sphere-app="live" class="sphere-dock-app" title="Aethel Live Flow"><span>⌁</span>LIVE FLOW</button>
+                        <button type="button" data-sphere-app="weather" class="sphere-dock-app" title="Wetter"><span>☼</span>WETTER</button>
+                        <button type="button" data-sphere-app="media" class="sphere-dock-app" title="Media Steuerung"><span>▶</span>MEDIA</button>
+                    </nav>
+
+                    <section id="sphere-help-dialog" class="sphere-help-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="sphere-help-title">
+                        <div class="sphere-help-backdrop" data-sphere-help-close></div>
+                        <div class="sphere-help-panel">
+                            <header class="sphere-help-header">
+                                <div><span class="sphere-help-kicker">SPHERE DESKTOP // BEDIENUNGSLEITFADEN</span><h2 id="sphere-help-title">Gemeinsamer Workspace</h2></div>
+                                <button id="sphere-help-close" class="sphere-help-close" type="button" aria-label="Hilfe schliessen">&#215;</button>
+                            </header>
+                            <div class="sphere-help-grid">
+                                <section><h3>Apps</h3><p>Das Dock oeffnet Aethel Console, Writer, Browser, Workspace Index, Run Desk und Media. Fenster lassen sich am Kopf ziehen; Gelb minimiert, Gruen maximiert, Rot schliesst.</p></section>
+                                <section><h3>Workspace-Befehle</h3><ul><li>"Lies die Dateien im Workspace und fasse die Architektur zusammen."</li><li>"Erstelle im Writer eine Projektuebersicht mit offenen Punkten."</li><li>"Pruefe den Workspace auf relevante Artefakte fuer diesen Run."</li></ul></section>
+                                <section><h3>Browser</h3><ul><li>"Oeffne https://youtube.com im Sphere Browser."</li><li>"Suche im Browser nach Go Wails Dokumentation."</li><li>Gib immer eine konkrete Seite oder Suchanfrage an.</li></ul></section>
+                                <section><h3>Sprache &amp; Kontrolle</h3><p>Nutze das Mikrofon der Hauptoberflaeche fuer Spracheingaben. Formuliere Ziel, Kontext und erwartetes Ergebnis; Aethel fragt bei riskanten Aktionen nach einer Freigabe.</p></section>
+                            </div>
+                            <footer class="sphere-help-footer"><span>ENTER sendet eine Anweisung. SHIFT + ENTER fuegt eine neue Zeile ein.</span><button class="sphere-app-action" type="button" data-sphere-help-close>VERSTANDEN</button></footer>
+                        </div>
+                    </section>
                 </div>
 
                 <!-- 8. VIEW PANEL: TASK ENGINE -->

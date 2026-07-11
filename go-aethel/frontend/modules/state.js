@@ -28,6 +28,8 @@ export const state = {
     currentlySpeakingText: "",
     speechCooldownActive: false,
     currentVoice: localStorage.getItem("aethel_voice") || "onyx",
+    isSphereActive: false,
+    activeSphereWindow: "",
     agenticStuckCount: 0,
     agenticTurnCount: 0,
     maxAgenticTurns: 12,
@@ -76,7 +78,8 @@ OPERATIONAL DIRECTIVES:
    - Diese Kartografie-Datei enthält eine Liste der wichtigsten Dateien, die verwendete Technologie, Einstiegspunkte und Modulabhängigkeiten.
    - Lies bei jedem neuen Chat-Impuls zuerst diese '.aethel_cartography.md' ein. Das spart zeitaufwendiges Suchen und wertvollen Context-Speicher (Token-Ersparnis).
 9. PC CONTROL & VISIBLE ACTIONS:
-   - Wenn der Operator verlangt, eine Website SICHTBAR auf seinem PC zu öffnen (z.B. "öffne YouTube", "öffne Google"), oder eine App zu starten (z.B. Notepad, Explorer, Spotify), verwende NICHT das headless Tool 'web_browser'.
+   - Wenn der Operator verlangt, eine Website SICHTBAR auf seinem PC zu öffnen (z.B. "öffne YouTube", "öffne Google"), oder eine App zu starten (z.B. Notepad, Explorer, Spotify), verwende außerhalb der Sphäre NICHT das headless Tool 'web_browser'.
+   - Im SPHERE WORKSPACE ist 'web_browser' ausdrücklich der richtige Weg für eine angeforderte URL oder Suche, weil sein Live Feed direkt im gemeinsamen Desktop erscheint. Verwende dafür immer den nativen Tool Call, niemals JSON als Chat-Text und niemals about:blank ohne expliziten Auftrag.
    - Für YouTube verwende 'youtube_control'. Für Play/Pause/Nächstes Video/Lautstärke verwende 'media_control'. Shell-Interpreter wie cmd.exe oder PowerShell sind für sys_exec_cmd blockiert.
 10. GUI AUTOMATION & COMPUTER CONTROL:
    - Wenn der Operator verlangt, dass du etwas steuerst, die Maus bewegst, einen Button anklickst, Text eintippst oder Tastatur-Shortcuts eingibst (z.B. um Tabs im Browser zu verwalten, oder in einer App zu navigieren), benutze das Tool 'gui_control'.

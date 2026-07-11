@@ -21,7 +21,16 @@ export function switchMode(mode) {
     if (label) {
         label.textContent = mode.toUpperCase() + " MODE";
     }
+
+    const prevSphereActive = state.isSphereActive;
+    state.isSphereActive = (mode === "sphere");
     
+    if (prevSphereActive && !state.isSphereActive) {
+        import('./voice.js').then(m => {
+            try { m.endWakeSession(); } catch(e) {}
+        });
+    }
+
     if (mode === "security") {
         fetchActiveLeasesList();
         fetchSecurityAuditTrail();
@@ -30,6 +39,18 @@ export function switchMode(mode) {
         import('./secrets.js').then(m => m.fetchSecretsList());
     } else if (mode === "personal") {
         import('./personal_mode.js').then(m => m.loadPersonalMode());
+    } else if (mode === "sphere") {
+        // Auto-activate voice call if not muted and not already active
+        if (!state.isVoiceMuted && !state.isVoiceCallActive) {
+            const btnVoiceLink = document.getElementById("btn-voice-link");
+            if (btnVoiceLink) btnVoiceLink.click();
+        }
+        // Force active wake session inside the sphere!
+        import('./voice.js').then(m => {
+            if (state.isVoiceCallActive && !state.isWakeSessionActive) {
+                try { m.activateWakeSession(); } catch(e) {}
+            }
+        });
     } else if (mode === "tasks") {
         fetchTasksQueue();
     } else if (mode === "core") {
@@ -121,64 +142,54 @@ export async function loadModels() {
     const elModelDropdown = document.getElementById("model-dropdown");
     try {
         const data = await api.getModels();
-        if (elModelDropdown && data.models && data.models.length > 0) {
-            elModelDropdown.innerHTML = "";
+        const models = Array.isArray(data?.models) ? data.models.filter(model => model && typeof model.id === "string" && model.id.trim()) : [];
+        if (!elModelDropdown) return;
+        if (models.length === 0) {
+            elModelDropdown.replaceChildren();
+            const option = document.createElement("option");
+            option.textContent = "KEINE MODELLE IN DER REGISTRY";
+            option.disabled = true;
+            option.selected = true;
+            elModelDropdown.appendChild(option);
+            return;
+        }
 
-            const modelIds = data.models.map(m => m.id);
-            if (!modelIds.includes(state.currentModel)) {
-                state.currentModel = data.models[0].id;
+        const rememberedModel = localStorage.getItem("aethel_selected_model") || state.currentModel;
+        const modelIds = models.map(model => model.id);
+        state.currentModel = modelIds.includes(rememberedModel) ? rememberedModel : models[0].id;
+        elModelDropdown.replaceChildren();
+
+        const groups = new Map();
+        for (const model of models) {
+            const provider = String(model.provider || "Andere");
+            if (!groups.has(provider)) groups.set(provider, []);
+            groups.get(provider).push(model);
+        }
+        const providerOrder = ["DeepSeek", "Groq", "OpenAI", "Gemini", "Claude", "Ollama", "Andere"];
+        const providers = [...providerOrder.filter(provider => groups.has(provider)), ...[...groups.keys()].filter(provider => !providerOrder.includes(provider)).sort((a, b) => a.localeCompare(b))];
+        for (const provider of providers) {
+            const groupEl = document.createElement("optgroup");
+            groupEl.label = provider.toUpperCase();
+            for (const model of groups.get(provider)) {
+                const option = document.createElement("option");
+                option.value = model.id;
+                option.textContent = model.name || model.id;
+                option.selected = model.id === state.currentModel;
+                groupEl.appendChild(option);
             }
-
-            // Group models by provider
-            const groups = {};
-            data.models.forEach(model => {
-                const prov = model.provider || "Andere";
-                if (!groups[prov]) {
-                    groups[prov] = [];
-                }
-                groups[prov].push(model);
-            });
-
-            // Order of providers to show in dropdown
-            const providerOrder = ["DeepSeek", "Groq", "OpenAI", "Gemini", "Claude", "Ollama", "Andere"];
-            
-            // Build groups map to render
-            providerOrder.forEach(provName => {
-                const modelsInGroup = groups[provName];
-                if (modelsInGroup && modelsInGroup.length > 0) {
-                    const groupEl = document.createElement("optgroup");
-                    groupEl.label = provName.toUpperCase();
-                    
-                    modelsInGroup.forEach(model => {
-                        const opt = document.createElement("option");
-                        opt.value = model.id;
-                        opt.textContent = model.name;
-                        if (model.id === state.currentModel) {
-                            opt.selected = true;
-                        }
-                        groupEl.appendChild(opt);
-                    });
-                    
-                    elModelDropdown.appendChild(groupEl);
-                }
-            });
-
-            // Remove old listeners by cloning the node
-            const fresh = elModelDropdown.cloneNode(true);
-            elModelDropdown.parentNode.replaceChild(fresh, elModelDropdown);
-            
-            // Sync model state with dropdown selection on startup
-            state.currentModel = fresh.value;
-            updateLiveOperatorVisibility();
-            
-            fresh.addEventListener("change", (e) => {
-                state.currentModel = e.target.value;
+            elModelDropdown.appendChild(groupEl);
+        }
+        elModelDropdown.value = state.currentModel;
+        state.currentModel = elModelDropdown.value || models[0].id;
+        updateLiveOperatorVisibility();
+        if (elModelDropdown.dataset.modelListenerBound !== "true") {
+            elModelDropdown.dataset.modelListenerBound = "true";
+            elModelDropdown.addEventListener("change", event => {
+                state.currentModel = event.target.value;
+                localStorage.setItem("aethel_selected_model", state.currentModel);
                 updateLiveOperatorVisibility();
-                if (state.currentSessionId) {
-                    localStorage.setItem('model_' + state.currentSessionId, state.currentModel);
-                }
+                if (state.currentSessionId) localStorage.setItem('model_' + state.currentSessionId, state.currentModel);
             });
-
         }
     } catch (e) {
         console.error("Failed to load models", e);

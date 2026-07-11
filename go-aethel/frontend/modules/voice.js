@@ -35,6 +35,16 @@ export function updateVoiceSphereUI(statusText, classState) {
         miniSphere.style.boxShadow = miniShadow;
     }
     if (miniStatus) miniStatus.textContent = statusText;
+
+    // Support for the Sphere Workspace background canvas
+    const workspaceSphere = document.getElementById("workspace-sphere");
+    if (workspaceSphere) {
+        let workState = "idle";
+        if (classState.includes("listening")) workState = "listening";
+        else if (classState.includes("speaking")) workState = "speaking";
+        else if (classState.includes("processing")) workState = "processing";
+        workspaceSphere.className = "sphere-canvas " + workState;
+    }
 }
 
 export function stopSpeaking() {
@@ -83,7 +93,9 @@ export function handleAethelSpeechCompleted() {
     
     state.speechCooldownActive = true;
     
-    if (state.isVoiceCallActive && state.isWakeSessionActive) {
+    if (state.isSphereActive) {
+        updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
+    } else if (state.isVoiceCallActive && state.isWakeSessionActive) {
         updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
     } else if (state.isVoiceCallActive) {
         updateVoiceSphereUI("WAKE STANDBY", "voice-sphere listening");
@@ -94,7 +106,11 @@ export function handleAethelSpeechCompleted() {
     setTimeout(() => {
         state.speechCooldownActive = false;
         
-        if (state.pendingToolRequest && state.recognition && !state.isVoiceCallActive) {
+        if (state.isSphereActive && state.isVoiceCallActive && !state.isWakeSessionActive) {
+            try { activateWakeSession(); } catch(e) {}
+        } else if (localRecFallbackActive && state.isVoiceCallActive) {
+            try { state.recognition.start(); } catch(e) {}
+        } else if (state.pendingToolRequest && state.recognition && !state.isVoiceCallActive) {
             try {
                 state.recognition.start();
                 const elBtnMic = document.getElementById("btn-mic");
@@ -421,7 +437,8 @@ let isRecordingVad = false;
 let vadChunks = [];
 let silenceTimer = null;
 let lastSpeechTime = 0;
-const SPEAKING_THRESHOLD = 0.025;
+let localRecFallbackActive = false;
+const SPEAKING_THRESHOLD = 0.012;
 const SILENCE_DELAY = 1200;
 const WAKE_SESSION_MS = 45000;
 
@@ -442,6 +459,12 @@ function configuredWakeWords() {
 }
 
 export function startWakeWordListener() {
+    if (state.isSphereActive) {
+        if (state.isVoiceCallActive && !state.isWakeSessionActive) {
+            activateWakeSession();
+        }
+        return;
+    }
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     const elSpeechIndicator = document.getElementById("speech-indicator");
     if (!SpeechRec || state.isWakeWordArmed) return;
@@ -501,6 +524,10 @@ export function stopWakeWordListener() {
 }
 
 export function endWakeSession() {
+    if (state.isSphereActive) {
+        extendWakeSession();
+        return;
+    }
     state.isWakeSessionActive = false;
     if (state.wakeSessionTimer) {
         clearTimeout(state.wakeSessionTimer);
@@ -533,8 +560,14 @@ export function activateWakeSession() {
     state.isWakeSessionActive = true;
     updateVoiceSphereUI("AETHEL AKTIV", "voice-sphere processing");
     const elSpeechIndicator = document.getElementById("speech-indicator");
-    if (elSpeechIndicator) elSpeechIndicator.textContent = "Wake-Word erkannt. Whisper wird aktiviert...";
-    speak("Ja, ich höre.");
+    if (elSpeechIndicator) elSpeechIndicator.textContent = "Aethel aktiv. Whisper wird aktiviert...";
+    if (!localRecFallbackActive) {
+        if (state.isSphereActive) {
+            speak("Sphere-Modus aktiv.");
+        } else {
+            speak("Ja, ich höre.");
+        }
+    }
     setTimeout(() => {
         if (state.isVoiceCallActive && state.isWakeSessionActive) {
             startWhisperVad();
@@ -581,9 +614,10 @@ export async function startWhisperVad() {
                         body: formData
                     });
 
-                    if (res.status === 401) {
-                        if (elSpeechIndicator) elSpeechIndicator.textContent = "Whisper Fehler: Groq Key nicht gesetzt.";
-                        if (state.isVoiceCallActive) updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
+                    if (res.status === 401 || res.status === 500) {
+                        console.warn(`Whisper transcription endpoint returned status ${res.status}, falling back to local SpeechRecognition...`);
+                        stopWhisperVad();
+                        startLocalSpeechRecognitionFallback();
                         return;
                     }
 
@@ -596,9 +630,9 @@ export async function startWhisperVad() {
                         if (state.isVoiceCallActive) updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
                     }
                 } catch(e) {
-                    console.error("Whisper transcription failed", e);
-                    if (elSpeechIndicator) elSpeechIndicator.textContent = "Whisper Verbindung fehlgeschlagen.";
-                    if (state.isVoiceCallActive) updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
+                    console.error("Whisper transcription failed, falling back to local SpeechRecognition...", e);
+                    stopWhisperVad();
+                    startLocalSpeechRecognitionFallback();
                 }
             };
 
@@ -610,6 +644,9 @@ export async function startWhisperVad() {
         
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         audioContext = new AudioContextClass();
+        if (audioContext.state === 'suspended') {
+            audioContext.resume().catch(err => console.warn("Failed to resume AudioContext", err));
+        }
         const source = audioContext.createMediaStreamSource(mediaStream);
         analyserNode = audioContext.createAnalyser();
         analyserNode.fftSize = 512;
@@ -688,14 +725,16 @@ export async function startWhisperVad() {
         checkVolume();
         
     } catch(e) {
-        console.error("Failed to start Whisper VAD stream", e);
+        console.error("Failed to start Whisper VAD stream, falling back to local SpeechRecognition", e);
         const elSpeechIndicator = document.getElementById("speech-indicator");
         if (elSpeechIndicator) elSpeechIndicator.textContent = "Mikrofon Zugriff für VAD verweigert.";
+        startLocalSpeechRecognitionFallback();
     }
 }
 
 
 export function stopWhisperVad() {
+    localRecFallbackActive = false;
     if (audioContext) {
         try { audioContext.close(); } catch(e) {}
         audioContext = null;
@@ -711,6 +750,60 @@ export function stopWhisperVad() {
     isRecordingVad = false;
     clearTimeout(silenceTimer);
     silenceTimer = null;
+}
+
+export function startLocalSpeechRecognitionFallback() {
+    if (localRecFallbackActive) return;
+    
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+        console.error("Local browser SpeechRecognition API not supported on this client.");
+        return;
+    }
+    
+    localRecFallbackActive = true;
+    console.log("[Voice] Starting browser-native SpeechRecognition fallback...");
+    
+    if (!state.recognition) {
+        state.recognition = new SpeechRec();
+        state.recognition.continuous = false;
+        state.recognition.lang = 'de-DE';
+        state.recognition.interimResults = false;
+        
+        state.recognition.onstart = () => {
+            updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
+        };
+        
+        state.recognition.onresult = async (event) => {
+            const transcript = event.results[event.results.length - 1][0].transcript;
+            if (transcript.trim()) {
+                console.log("[Voice fallback] Transcribed:", transcript);
+                handleWhisperTranscript(transcript);
+            }
+        };
+        
+        state.recognition.onerror = (e) => {
+            if (e.error !== "no-speech" && e.error !== "aborted") {
+                console.error("Local SpeechRecognition fallback error:", e.error);
+            }
+        };
+        
+        state.recognition.onend = () => {
+            if (state.isVoiceCallActive && localRecFallbackActive) {
+                setTimeout(() => {
+                    if (state.isVoiceCallActive && !state.isAethelSpeaking && localRecFallbackActive) {
+                        try { state.recognition.start(); } catch(err) {}
+                    }
+                }, 300);
+            }
+        };
+    }
+    
+    try {
+        state.recognition.start();
+    } catch(e) {
+        console.warn("SpeechRecognition already active or failed to start:", e.message);
+    }
 }
 
 export async function handleWhisperTranscript(transcript) {
