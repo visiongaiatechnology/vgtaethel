@@ -1,0 +1,1883 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VGT AETHEL // BETA V2 · PRODUCTION CANDIDATE</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="aethel-ui-production.css">
+    <link rel="stylesheet" href="vgt-components.css">
+    <!-- sidebar expand + settings layout live in aethel-ui-production.css -->
+
+    <script defer src="marked.min.js"></script>
+
+    <script type='module' src='app.js'></script>
+</head>
+<body>
+    <!-- Background grid -->
+    <div class="grid-pattern"></div>
+    <div class="glow-orb orange"></div>
+    <div class="glow-orb cyan"></div>
+
+    <!-- Onboarding / Setup Wizard -->
+    <div id="setup-wizard" class="modal-overlay hidden">
+        <div class="glass-card setup-card">
+            <label class="aethel-language-control"><span data-i18n="language.label">Sprache</span><select class="aethel-language-select" aria-label="Interface language"><option value="de">Deutsch</option><option value="en">English</option><option value="ru">Русский</option><option value="es">Español</option></select></label>
+            <div class="logo-animation">
+                <svg viewBox="0 0 24 24" width="48" height="48" stroke="var(--vgt-cyan)" stroke-width="1.5" fill="none" class="pulse-icon">
+                    <rect x="2" y="2" width="20" height="20" rx="4" />
+                    <rect x="9" y="9" width="6" height="6" rx="1" />
+                    <path d="M9 1v8M15 1v8M9 15v8M15 15v8M1 9h8M1 15h8M15 9h8M15 15h8" />
+                </svg>
+            </div>
+            <h2 data-i18n="setup.title">VGT GENESIS</h2>
+            <p class="subtitle" data-i18n="setup.subtitle">Erste Systemkonfiguration</p>
+            
+            <div class="input-group">
+                <label for="api-key">
+                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--vgt-cyan)" stroke-width="2" fill="none"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                    GROQ KEY (gsk_...) — Optional
+                </label>
+                <input type="password" id="api-key" placeholder="gsk_..." autocomplete="off">
+            </div>
+
+            <div class="input-group" style="margin-bottom: 12px;">
+                <label for="deepseek-api-key" style="color: #00c8ff;">
+                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="#00c8ff" stroke-width="2" fill="none"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                    DEEPSEEK KEY (sk-...) — Optional
+                </label>
+                <input type="password" id="deepseek-api-key" placeholder="sk-..." autocomplete="off">
+            </div>
+
+            <div class="input-group" style="margin-bottom: 12px;">
+                <label for="openai-api-key" style="color: var(--vgt-purple);">
+                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--vgt-purple)" stroke-width="2" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    OPENAI KEY (sk-...) — Optional (Premium Voice + GPT-4o)
+                </label>
+                <input type="password" id="openai-api-key" placeholder="sk-..." autocomplete="off">
+            </div>
+
+            <div class="input-group" style="margin-bottom: 12px;">
+                <label for="gemini-api-key" style="color: #4285f4;">
+                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="#4285f4" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+                    GOOGLE GEMINI KEY (AIza...) — Optional
+                </label>
+                <input type="password" id="gemini-api-key" placeholder="AIza..." autocomplete="off">
+            </div>
+
+            <div class="input-group" style="margin-bottom: 20px;">
+                <label for="claude-api-key" style="color: #d97757;">
+                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="#d97757" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                    ANTHROPIC CLAUDE KEY (sk-ant-...) — Optional
+                </label>
+                <input type="password" id="claude-api-key" placeholder="sk-ant-..." autocomplete="off">
+                <div id="setup-error" class="error-msg hidden">
+                    <span class="dot red-dot"></span>
+                    <span id="setup-error-text">API Key invalid</span>
+                </div>
+            </div>
+
+            <button id="btn-initiate" class="cyber-button">
+                <span data-i18n="setup.initialize">SYSTEM INITIALISIEREN</span>
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+
+            <button id="btn-use-local" class="cyber-button hidden" style="margin-top: 10px; background: rgba(0, 240, 255, 0.08); border: 1.5px solid var(--vgt-cyan); color: var(--vgt-cyan); box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);">
+                <span data-i18n="setup.local">LOKALE KI STARTEN (OLLAMA)</span>
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M9 9h6v6H9z" /><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3" /></svg>
+            </button>
+
+            <div class="card-footer">
+                <span class="secure-badge">
+                    <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    AES-256-GCM ENCRYPTION ACTIVE
+                </span>
+                <p class="footnote">Keys encrypted at rest in ./vgt_workspace/aethel_config.json</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permission Gate Modal -->
+    <div id="permission-gate-modal" class="modal-overlay hidden" style="z-index: 110;">
+        <div class="glass-card security-gate-card permission-command-center">
+            <div class="permission-emblem">
+                <svg viewBox="0 0 24 24" width="40" height="40" stroke="var(--vgt-orange)" stroke-width="1.5" fill="none" class="pulse-icon" style="animation-duration: 1.5s;">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+            </div>
+            <p class="eyebrow">Security Control / Human in the Loop</p>
+            <h3>Operator-Zustimmung erforderlich</h3>
+            <p class="permission-copy">Aethel wartet auf deine explizite Freigabe, bevor die angeforderte Capability ausgeführt wird.</p>
+            
+            <div class="permission-details font-mono text-xs">
+                <div style="margin-bottom: 8px;"><span style="color: var(--vgt-text-dim);">TOOL:</span> <span id="gate-tool-name" style="color: var(--vgt-cyan);">sys_exec_cmd</span></div>
+                <div style="margin-bottom: 8px;"><span style="color: var(--vgt-text-dim);">BENÖTIGTE CAPABILITY:</span> <span id="gate-capability" style="color: var(--vgt-purple);">system.exec</span></div>
+                <div style="margin-bottom: 8px;"><span style="color: var(--vgt-text-dim);">RISK LEVEL:</span> <span id="gate-risk-level" style="color: var(--vgt-red);">HIGH</span></div>
+                <div style="margin-bottom: 8px;"><span style="color: var(--vgt-text-dim);">ARGUMENTE:</span></div>
+                <pre id="gate-arguments" style="background: rgba(0,0,0,0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.03); max-height: 120px; overflow-y: auto; white-space: pre-wrap; font-size: 9px; color: var(--vgt-text);"></pre>
+            </div>
+
+            <div id="gate-threat-warning" class="hidden" style="border: 1px solid var(--vgt-red); background: rgba(255, 0, 79, 0.05); padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: left;">
+                <h5 style="color: var(--vgt-red); font-size: 10px; font-family: var(--font-mono); margin-bottom: 6px; font-weight: 700; letter-spacing: 0.05em;">⚠️ GEFAHR ERKANNT (FIREWALL WARNUNG)</h5>
+                <ul id="gate-threat-list" style="font-size: 9px; color: var(--vgt-text-dim); padding-left: 15px; line-height: 1.4;"></ul>
+            </div>
+
+            <div class="tool-actions permission-actions">
+                <button id="gate-btn-approve-once" class="cyber-button permission-primary">EINMALIG ERLAUBEN</button>
+                <div class="permission-lease-actions">
+                    <button id="gate-btn-approve-15m" class="cyber-button">15 MIN FREIGEBEN</button>
+                    <button id="gate-btn-approve-1h" class="cyber-button">1 STD FREIGEBEN</button>
+                </div>
+                <button id="gate-btn-reject" class="cyber-button permission-reject">ABLEHNEN / BLOCKIEREN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Handoff Modal -->
+    <div id="handoff-modal" class="modal-overlay hidden" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+        <div class="glass-card" style="width: 90%; max-width: 600px; max-height: 85vh; padding: 30px; display: flex; flex-direction: column; gap: 20px; border: 1px solid var(--vgt-cyan); box-shadow: 0 0 30px rgba(0, 240, 255, 0.25);">
+            <div style="border-bottom: 1px solid rgba(0, 240, 255, 0.3); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-family: var(--font-mono); font-size: 14px; color: var(--vgt-cyan); margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    EXTERNAL AGENT HANDOFF PROMPT
+                </h3>
+                <span id="handoff-agent-badge" style="font-family: var(--font-mono); font-size: 9px; padding: 2px 8px; background: rgba(0,240,255,0.2); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan); border-radius: 4px;">CURSOR</span>
+            </div>
+            
+            <div style="flex-grow: 1; overflow-y: auto; background: rgba(0,0,0,0.6); border: 1px solid rgba(0,240,255,0.15); border-radius: 6px; padding: 15px; font-family: var(--font-mono); font-size: 11px; color: #fff; line-height: 1.5; white-space: pre-wrap;" id="handoff-modal-content">
+                Lade Übergabe-Protokoll...
+            </div>
+            
+            <p style="font-family: var(--font-mono); font-size: 9px; color: var(--vgt-text-dim); margin: 0; line-height: 1.4;">
+                * Hinweis: Dieser Prompt wird in <code class="cyan-text">./vgt_workspace/handoff_payload.md</code> gespeichert. Sie können ihn kopieren und direkt in das externe Tool einfügen.
+            </p>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="handoff-btn-copy" class="cyber-button font-mono" style="width: auto; padding: 10px 20px; font-size: 10px; background: rgba(0,240,255,0.1); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan);">PROMPT KOPIEREN</button>
+                <button id="handoff-btn-close" class="cyber-button font-mono" style="width: auto; padding: 10px 20px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: #fff;">SCHLIESSEN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app-container" class="app-layout">
+        <!-- Header -->
+        <header class="glass-card header-bar">
+            <div class="branding">
+                <img class="brand-mark" src="aethel.webp" alt="Aethel Emblem">
+                <div>
+                    <h1>VGT <span class="white-text">AETHEL</span></h1>
+                    <p class="status-sub">BETA V2 :: <span id="current-mode-label" class="cyan-text">NEURAL CORE</span></p>
+                </div>
+            </div>
+            
+            <div class="system-status-hud">
+                <div class="hud-item">
+                    <span class="label">CORE:</span>
+                    <span class="value font-mono">GO-CORTEX 1.0</span>
+                </div>
+                <div class="hud-item">
+                    <span class="label">LEASES:</span>
+                    <span id="hud-leases-count" class="value font-mono">0</span>
+                </div>
+                <div class="hud-item" style="border-left: 1.5px solid rgba(255,255,255,0.08); padding-left: 10px; margin-left: 2px;">
+                    <span class="label" style="color: var(--vgt-cyan);">COSTS TODAY:</span>
+                    <span id="hud-costs-today" class="value font-mono" style="color: var(--vgt-cyan);">$0.00</span>
+                </div>
+                <div class="hud-item">
+                    <span class="label" style="color: var(--vgt-purple);">MONTH:</span>
+                    <span id="hud-costs-month" class="value font-mono" style="color: var(--vgt-purple);">$0.00</span>
+                </div>
+                <div class="hud-item">
+                    <span class="label">VOICE CALL:</span>
+                    <button id="btn-voice-link" class="hud-action" title="Kontinuierlichen Freisprech-Sprachmodus starten/stoppen">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M15.05 5A5 5 0 0 1 19 8.95M15.05 1A9 9 0 0 1 23 8.94m-1 7.98v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    </button>
+                </div>
+                <div class="hud-item">
+                    <span class="label">VOICE:</span>
+                    <button id="btn-toggle-voice" class="hud-action active" title="Mute/Unmute AI Voice Response">
+                        <svg id="icon-voice-on" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                        <svg id="icon-voice-off" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" class="hidden"><path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/></svg>
+                    </button>
+                </div>
+                <div class="hud-indicator">
+                    <span id="hud-integrity-dot" class="pulse-dot green"></span>
+                    <span id="hud-integrity-label" class="font-mono">SECURE</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main HUD Grid -->
+        <div class="hud-grid">
+            <!-- Sidebar: Navigation, Models and Config -->
+            <aside class="glass-card sidebar">
+                <!-- Scrollable navigation content -->
+                <div class="sidebar-scroll">
+
+                    <!-- ── ASSISTANT SECTION ── -->
+                    <div class="nav-section-header" data-section="assistant" id="nav-section-hdr-assistant">
+                        <span class="nav-section-label" data-i18n="nav.assistant">Assistent</span>
+                        <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="nav-section-content" data-section="assistant" id="nav-section-assistant">
+                        <button id="nav-btn-core" class="nav-menu-btn active">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+                            <span data-i18n="nav.core">Neural Core</span>
+                        </button>
+                        <button id="nav-btn-chat" class="nav-menu-btn">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            <span data-i18n="nav.chat">Chat</span>
+                        </button>
+                        <button id="nav-btn-personas" class="nav-menu-btn">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <span data-i18n="nav.personas">Personas</span>
+                        </button>
+                        <button id="nav-btn-agent" class="nav-menu-btn">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 17h6M9 12h6M9 7h6"/></svg>
+                            <span data-i18n="nav.agents">Agenten-Team</span>
+                        </button>
+                        <button id="nav-btn-control" class="nav-menu-btn">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                            <span data-i18n="nav.operator">Live-Operator</span>
+                        </button>
+                    </div>
+
+                    <!-- ── WORKSPACE SECTION ── -->
+                    <div class="nav-section-header" data-section="workspace" id="nav-section-hdr-workspace">
+                        <span class="nav-section-label" data-i18n="nav.workspace">Workspace</span>
+                        <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="nav-section-content" data-section="workspace" id="nav-section-workspace">
+                        <button id="nav-btn-sphere" class="nav-menu-btn">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 2.3 3.8 5 3.8 8S14.5 17.7 12 20c-2.5-2.3-3.8-5-3.8-8S9.5 6.3 12 4z"/></svg>
+                            <span data-i18n="nav.sphere">Sphere</span>
+                        </button>
+                        <button id="nav-btn-memory" class="nav-menu-btn">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+                            <span data-i18n="nav.memory">Nexus Memory</span>
+                        </button>
+                        <button id="nav-btn-personal" class="nav-menu-btn">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="8" r="3"/><path d="M5 21c.7-4.1 3-6 7-6s6.3 1.9 7 6"/></svg>
+                            <span data-i18n="nav.personal">Personal Core</span>
+                        </button>
+                    </div>
+
+                    <!-- ── GLOBAL WATCH SECTION ── -->
+                    <div class="nav-section-header" data-section="global-watch" id="nav-section-hdr-global-watch">
+                        <span class="nav-section-label" data-i18n="nav.global">Global Watch</span>
+                        <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="nav-section-content" data-section="global-watch" id="nav-section-global-watch">
+                        <button id="nav-btn-global-watch" class="nav-menu-btn">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                            <span data-i18n="nav.globe">Live-Globus &amp; Feeds</span>
+                        </button>
+                        <button id="nav-btn-tasks" class="nav-menu-btn">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span data-i18n="nav.runs">Run Center</span>
+                        </button>
+                    </div>
+
+                    <!-- ── CASE WORKSPACE SECTION ── -->
+                    <div class="nav-section-header" data-section="case-workspace" id="nav-section-hdr-case-workspace">
+                        <span class="nav-section-label" data-i18n="nav.casesSection">Fälle &amp; Sicherheit</span>
+                        <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div class="nav-section-content" data-section="case-workspace" id="nav-section-case-workspace">
+                        <button id="nav-btn-case" class="nav-menu-btn">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><path d="M12 11v6M9 14h6"/></svg>
+                            <span data-i18n="nav.cases">Cases &amp; Evidenz</span>
+                        </button>
+                        <button id="nav-btn-security" class="nav-menu-btn">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            <span data-i18n="nav.security">Security &amp; Audit</span>
+                        </button>
+                        <button id="nav-btn-archive" class="nav-menu-btn">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            <span data-i18n="nav.archive">Chat-Archiv</span>
+                        </button>
+                    </div>
+
+                    <!-- ── DROPDOWNS ── -->
+                    <div class="sidebar-controls">
+                        <div class="model-select-container font-mono">
+                            <label class="ds-label" data-i18n="sidebar.model">KI-Modell</label>
+                            <select id="model-dropdown" class="cyber-select font-mono" aria-label="KI-Modell">
+                                <option value="" disabled selected>MODELL-REGISTRY WIRD GELADEN…</option>
+                            </select>
+                            <label class="ds-label orchestrator-model-label" for="orchestrator-model-dropdown">Orchestrator</label>
+							<select id="orchestrator-model-dropdown" class="cyber-select font-mono" aria-label="Orchestrator-Modell"></select>
+							<label class="ds-label" for="reasoning-effort-dropdown">Reasoning</label>
+							<select id="reasoning-effort-dropdown" class="cyber-select font-mono" aria-label="Reasoning-Stufe"></select>
+                        </div>
+                        <div class="voice-select-container font-mono">
+                            <label class="ds-label" data-i18n="sidebar.voice">Stimme</label>
+                            <select id="voice-dropdown" class="cyber-select font-mono"></select>
+                        </div>
+                        <div class="persona-select-container font-mono">
+                            <label class="ds-label" data-i18n="sidebar.persona">Persona</label>
+                            <select id="persona-dropdown" class="cyber-select font-mono"></select>
+                        </div>
+                    </div>
+
+                    <button id="btn-new-chat" class="cyber-button font-mono" style="width: 100%;" data-i18n="sidebar.newChat">+ Neuer Chat</button>
+
+                    <div class="sidebar-info font-mono" style="width: 100%;">
+                        <h4>Systemstatus</h4>
+                        <div class="info-row"><span>SANDBOX:</span> <span class="green-text">ENABLED</span></div>
+                        <div class="info-row"><span>FIREWALL:</span> <span class="green-text">ACTIVE</span></div>
+                        <div class="info-row" style="cursor: pointer; user-select: none;" id="sidebar-full-machine-row" title="Klicke hier, um den vollautonomen Modus zu steuern">
+                            <span>FULL AUTONOMY:</span> <span class="red-text" id="full-machine-status" style="font-weight: bold; color: var(--vgt-red);">DISABLED</span>
+                        </div>
+                        <div class="info-row"><span>MEMORY:</span> <span class="cyan-text" id="memory-count">0 Einträge</span></div>
+						<div class="info-row"><span>CONTEXT:</span> <span class="cyan-text" id="context-utilization">0 / —</span></div>
+                        <div style="margin-top: 12px; width: 100%; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: var(--vgt-text-dim);">
+                                <span>SYSTEM VERSION:</span>
+                                <span class="release-badge">BETA V2</span> <!-- dynamically synchronized with ProductVersion=1.0.0-beta.2 -->
+                            </div>
+                            <button id="btn-donation" class="cyber-button font-mono" style="width: 100%; font-size: 9px; letter-spacing: 0.1em; padding: 8px; background: rgba(157, 78, 221, 0.08); border: 1px solid var(--vgt-purple); color: var(--vgt-purple); cursor: pointer; border-radius: 4px; transition: all 0.2s;">❤️ UNTERSTÜTZEN</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar bottom: settings always visible -->
+                <div class="sidebar-bottom">
+                    <button id="nav-btn-settings" class="nav-menu-btn">
+                        <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        <span>Einstellungen</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Dynamic Viewport Area (Takes 1fr) -->
+            <div class="console-container main-viewport" style="flex: 1 1 auto; display: flex; flex-direction: column; overflow: hidden; position: relative; min-height: 0;">
+
+                <!-- 1. VIEW PANEL: NEURAL CORE command center -->
+                <div id="view-core" class="viewport-panel neural-core-view">
+                    <div class="neural-core-hero">
+                        <div class="neural-core-hero-grid" aria-hidden="true"></div>
+                        <div class="neural-core-hero-inner">
+                            <div class="neural-core-bubble-stage">
+                                <div class="sphere-wrapper neural-core-bubble">
+                                    <div class="voice-sphere" id="voice-sphere">
+                                        <div class="sphere-inner"></div>
+                                    </div>
+                                </div>
+                                <p class="sphere-status font-mono" id="sphere-hud-status">CORE ONLINE</p>
+                            </div>
+                            <div class="neural-core-welcome glass-card">
+                                <div class="neural-core-kicker font-mono">AETHEL // NEURAL CORE</div>
+                                <h1 id="neural-core-greeting" class="neural-core-greeting">Willkommen, Operator</h1>
+                                <p id="neural-core-subline" class="neural-core-subline">Lokale Kommandozentrale · Personal Core gekoppelt · Zero CDN</p>
+                                <div class="neural-core-cta-row">
+                                    <button type="button" id="neural-core-open-personal" class="cyber-button font-mono neural-core-cta">PERSONAL CORE</button>
+                                    <button type="button" id="neural-core-open-gw" class="cyber-button font-mono neural-core-cta secondary">LIVE GLOBE</button>
+                                    <button type="button" id="core-btn-test-voice" class="cyber-button font-mono neural-core-cta secondary">TEST VOICE</button>
+                                </div>
+                                <div id="neural-core-first-run" class="neural-core-first-run hidden">
+                                    <p>Erster Start erkannt. Richte deinen Namen und Stil im Personal Core ein — danach begrüßt dich Aethel persönlich.</p>
+                                    <button type="button" id="neural-core-start-setup" class="cyber-button font-mono">JETZT EINRICHTEN</button>
+                                </div>
+                            </div>
+                            <div class="neural-core-hud glass-card font-mono">
+                                <h3 class="neural-core-hud-title">SYSTEM HUD</h3>
+                                <div class="neural-core-hud-row"><span>INTEGRITY</span><span id="core-status-integrity" class="green-text">SECURE</span></div>
+                                <div class="neural-core-hud-row"><span>LEASES</span><span id="core-status-leases" class="cyan-text">0 active</span></div>
+                                <div class="neural-core-hud-row"><span>VOICE</span><span id="core-status-voice" class="white-text">—</span></div>
+                                <div class="neural-core-hud-row"><span>UPLINK</span><span class="white-text">Local Host</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <section class="neural-module neural-situation font-mono" aria-labelledby="nc-eval-title">
+                        <header class="neural-module-header">
+                            <div class="neural-module-heading"><span class="pulse-dot cyan"></span><div><span class="neural-module-kicker">CONTEXT FUSION</span><h3 id="nc-eval-title">Neural State Evaluation</h3></div></div>
+                            <div class="neural-module-actions"><span id="nc-eval-timestamp" class="neural-module-meta">LAST UPDATED: NEVER</span><button id="nc-eval-trigger-btn" class="cyber-button font-mono neural-module-button">LAGE ANALYSIEREN</button></div>
+                        </header>
+                        <div class="neural-state-grid">
+                            <article class="neural-state-card world"><h4><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>Globale Lage</h4><div id="nc-eval-world-text" class="neural-state-copy">Lade globale Risikolage...</div></article>
+                            <article class="neural-state-card local"><h4><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Operator-Relevanz</h4><div id="nc-eval-local-text" class="neural-state-copy">Berechne lokale Auswirkungen auf Projekte, Regionen und Ziele...</div></article>
+                        </div>
+                    </section>
+
+                    <section class="neural-module neural-voice font-mono" aria-labelledby="voice-diagnostics-title">
+                        <header class="neural-module-header"><div class="neural-module-heading"><span class="neural-module-icon">◉</span><div><span class="neural-module-kicker">AUDIO PIPELINE</span><h3 id="voice-diagnostics-title">Voice Diagnostics</h3></div></div></header>
+                        <div class="neural-voice-grid">
+                            <div class="neural-diagnostic-list">
+                                <div class="neural-diagnostic-row"><span>Voice Subsystem</span><span id="voice-health-status" class="cyan-text">ONLINE</span></div>
+                                <div class="neural-diagnostic-row"><span>OpenAI TTS</span><span id="voice-health-openai" class="green-text">ACTIVE</span></div>
+                                <div class="neural-diagnostic-row"><span>Local SAPI5</span><span id="voice-health-sapi5" class="green-text">ACTIVE</span></div>
+                                <div class="neural-diagnostic-row"><span>Groq Whisper</span><span id="voice-health-whisper" class="green-text">ACTIVE</span></div>
+                            </div>
+                            <form class="neural-voice-test"><label for="voice-test-phrase">Voice Dry Run</label><div class="neural-input-action"><input type="text" id="voice-test-phrase" value="Aethel, Systemtest abgeschlossen." class="font-mono"><button type="button" id="voice-btn-run-test" class="cyber-button font-mono neural-module-button">TESTEN</button></div><output id="voice-test-result" for="voice-test-phrase" aria-live="polite"></output></form>
+                        </div>
+                    </section>
+
+                    <section class="neural-module neural-events font-mono" aria-labelledby="core-events-title">
+                        <header class="neural-module-header"><div class="neural-module-heading"><span class="neural-module-icon">⌁</span><div><span class="neural-module-kicker">AUDIT STREAM</span><h3 id="core-events-title">Recent Event Logs</h3></div></div></header>
+                        <div class="neural-table-wrap"><table class="neural-table"><thead><tr><th>Time</th><th>Operation</th><th>Target</th><th>Status</th></tr></thead><tbody id="core-logs-tbody"><tr><td colspan="4" class="neural-table-empty">Lade Logbuch-Einträge...</td></tr></tbody></table></div>
+                    </section>
+                </div>
+
+                <!-- OSINT GLOBAL WATCH — VGT command center (UX inspired by modern geospatial HUDs; original code) -->
+                <div id="view-global-watch" class="viewport-panel hidden">
+                    <div class="gw-header">
+                        <div class="gw-header-left">
+                            <div class="gw-brand-row">
+                                <span class="gw-brand-mark">VGT</span>
+                                <div>
+                                    <div class="gw-eyebrow">AETHEL // GEOSPATIAL INTELLIGENCE · LOCAL-FIRST</div>
+                            <div class="gw-title" data-i18n="gw.title">GLOBAL WATCH</div>
+                                </div>
+                            </div>
+                            <div class="gw-layer-legend" aria-label="Epistemic layers">
+                                <span class="gw-legend-chip gw-legend-raw">RAW</span>
+                                <span class="gw-legend-chip gw-legend-inf">INFERENCE</span>
+                                <span class="gw-legend-chip gw-legend-ver">VERIFIED</span>
+                            </div>
+                        </div>
+                        <div class="gw-header-center">
+                            <label class="gw-search-bar">
+                                <span class="gw-sr-only">Search</span>
+                                <input type="search" id="gw-global-search" class="gw-global-search" placeholder="Search places, titles, sources…" autocomplete="off" maxlength="120">
+                            </label>
+                            <div class="gw-region-chips font-mono" role="group" aria-label="Focus regions">
+                                <button type="button" class="gw-region-chip" data-focus="global">Global</button>
+                                <button type="button" class="gw-region-chip" data-focus="europe">Europe</button>
+                                <button type="button" class="gw-region-chip" data-focus="germany">Germany</button>
+                                <button type="button" class="gw-region-chip" data-focus="mena">MENA</button>
+                                <button type="button" class="gw-region-chip" data-focus="asia">Asia</button>
+                                <button type="button" class="gw-region-chip" data-focus="americas">Americas</button>
+                                <button type="button" class="gw-region-chip" data-focus="oceania">Oceania</button>
+                            </div>
+                        </div>
+                        <div class="gw-header-right">
+                            <div class="gw-status-badge" id="gw-status-badge">
+                                <span class="pulse-dot orange"></span>
+                                <span id="gw-refresh-info">LAST SYNC: …</span>
+                            </div>
+                            <div class="gw-header-metrics font-mono" id="gw-header-metrics">
+                                <span id="gw-metric-obs">OBS —</span>
+                                <span id="gw-metric-risk">RISK —</span>
+                                <span id="gw-metric-alert">ALERT —</span>
+                            </div>
+                            <label class="gw-time-window font-mono" title="Zeitfenster für Feed &amp; Pins">
+                                <span class="gw-sr-only">Zeitfenster</span>
+                                <select id="gw-time-window" class="gw-feed-select" aria-label="Zeitfenster">
+                                    <option value="6">6h</option>
+                                    <option value="24" selected>24h</option>
+                                    <option value="72">72h</option>
+                                    <option value="168">7d</option>
+                                    <option value="0">ALL</option>
+                                </select>
+                            </label>
+                            <button type="button" id="gw-briefing-btn" class="gw-briefing-btn" data-i18n="gw.briefing">Lagebriefing</button>
+                            <button type="button" id="gw-refresh-btn" class="gw-briefing-btn gw-btn-secondary" data-i18n="gw.refresh">Feed aktualisieren</button>
+                            <button type="button" id="gw-settings-open" class="gw-briefing-btn gw-btn-secondary" title="Einstellungen: Quellen, Data Configuration, Alerts" data-i18n="gw.settings">Einstellungen</button>
+                            <button type="button" id="gw-connector-fetch-all" class="gw-briefing-btn gw-btn-secondary hidden" title="Fetch all registered connectors into Shared model">Connectors</button>
+                        </div>
+                    </div>
+
+                    <div class="gw-command-bar" role="region" aria-label="Aethel Global Watch Anweisungen">
+                        <span class="gw-command-mark" aria-hidden="true">◈</span>
+                        <input type="text" id="gw-ai-command" class="gw-ai-command" maxlength="2000" placeholder="Aethel anweisen: z.B. „Wechsle auf Deutschland und suche News der letzten 24h“" autocomplete="off" aria-label="Anweisung an Aethel im Global Watch">
+                        <button type="button" id="gw-ai-command-send" class="gw-briefing-btn">Anweisen</button>
+                        <button type="button" id="gw-open-report-reader" class="gw-tool-btn" title="Lagebericht im Reader öffnen">Reader</button>
+                    </div>
+
+                    <div class="gw-body gw-body-triple">
+                        <!-- LEFT: map layers + domain (Data Config + Alerts → Settings) -->
+                        <aside class="gw-left-rail" aria-label="Kartenebenen">
+                            <div class="gw-rail-section gw-collapsible" data-gw-collapse="layers">
+                                <button type="button" class="gw-rail-head gw-collapse-toggle" data-gw-collapse-btn="layers" aria-expanded="true">
+                                    <span data-i18n="gw.layers">KARTENEBENEN</span>
+                                    <span class="gw-collapse-chevron">▾</span>
+                                </button>
+                                <div class="gw-collapse-body" data-gw-collapse-body="layers">
+                                    <div class="gw-layer-list font-mono" role="group" aria-label="Kartenebenen">
+                                        <button type="button" class="gw-layer-row active" data-layer="borders"><span>Grenzen &amp; Land</span><span class="gw-layer-count" id="gw-cnt-borders">AN</span></button>
+                                        <button type="button" class="gw-layer-row active" data-layer="daynight"><span>Tag / Nacht</span><span class="gw-layer-count">UTC</span></button>
+                                        <button type="button" class="gw-layer-row active" data-layer="cameras"><span>Kameras</span><span class="gw-layer-count" id="gw-cnt-cameras">—</span></button>
+                                        <button type="button" class="gw-layer-row active" data-layer="satellites"><span>Satelliten</span><span class="gw-layer-count" id="gw-cnt-sats">—</span></button>
+                                        <button type="button" class="gw-layer-row active" data-layer="cables"><span>Seekabel</span><span class="gw-layer-count">KARTE</span></button>
+                                        <button type="button" class="gw-layer-row active" data-layer="news"><span>News / Events</span><span class="gw-layer-count" id="gw-cnt-news">—</span></button>
+                                        <button type="button" class="gw-layer-row active" data-layer="earthquakes"><span>Erdbeben</span><span class="gw-layer-count" id="gw-cnt-quakes">—</span></button>
+                                        <button type="button" class="gw-layer-row active" data-layer="volcanoes"><span>Vulkane</span><span class="gw-layer-count" id="gw-cnt-volcanoes">—</span></button>
+                                        <button type="button" class="gw-layer-row active" data-layer="cities"><span>Städte</span><span class="gw-layer-count">REF</span></button>
+                                        <button type="button" class="gw-layer-row active" data-layer="risks"><span>Risiko-Marker</span><span class="gw-layer-count" id="gw-cnt-risks">—</span></button>
+                                        <button type="button" id="btn-add-cam-static" class="gw-action-btn gw-layer-add" title="Lokale Kamera hinzufügen">+ Lokale Kamera</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gw-rail-section gw-collapsible" data-gw-collapse="domain">
+                                <button type="button" class="gw-rail-head gw-collapse-toggle" data-gw-collapse-btn="domain" aria-expanded="true">
+                                    <span>THEMENFILTER</span>
+                                    <span class="gw-collapse-chevron">▾</span>
+                                </button>
+                                <div class="gw-collapse-body" data-gw-collapse-body="domain">
+                                    <div class="gw-domain-filters font-mono" role="group" aria-label="Themenfilter">
+                                        <button type="button" class="gw-domain-filter active" data-domain="all">ALLE</button>
+                                        <button type="button" class="gw-domain-filter" data-domain="geo">GEO</button>
+                                        <button type="button" class="gw-domain-filter" data-domain="cyber">CYBER</button>
+                                        <button type="button" class="gw-domain-filter" data-domain="economic">WIRTSCHAFT</button>
+                                        <button type="button" class="gw-domain-filter" data-domain="humanitarian">HUMANITÄR</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gw-rail-section gw-layer-legend-rail" aria-label="Legende Naturgefahren">
+                                <div class="gw-rail-head">LEGENDE</div>
+                                <div class="gw-hazard-legend font-mono">
+                                    <span class="gw-hz-chip gw-hz-green">Erdbeben ≤ M2.5</span>
+                                    <span class="gw-hz-chip gw-hz-orange">M2.5–4.5</span>
+                                    <span class="gw-hz-chip gw-hz-red">Erdbeben &gt; M4.5</span>
+                                    <span class="gw-hz-chip gw-hz-volcano">Vulkan aktiv</span>
+                                </div>
+                            </div>
+                            <!-- Hidden stubs for connectors wiring (live UI in settings modal) -->
+                            <div id="gw-connectors-list" class="hidden" aria-hidden="true"></div>
+                            <button type="button" id="gw-connectors-refresh" class="hidden" aria-hidden="true"></button>
+                        </aside>
+
+                        <!-- CENTER: Globe canvas -->
+                        <div class="gw-globe-panel">
+                            <div id="osint-globe" class="gw-globe-stage">
+                                <div id="gw-map-coords" class="gw-map-coords font-mono" aria-live="polite">LAT — · LON — · SCALE —</div>
+                                <div id="gw-risk-hud" class="gw-risk-hud gw-float-panel" role="region" aria-label="Regionales Risiko">
+                                    <div id="gw-risk-hud-head" class="gw-risk-hud-head gw-float-drag-handle" title="Ziehen zum Verschieben">
+                                        <span>REGIONALES RISIKO</span>
+                                        <span class="gw-risk-hud-head-actions">
+                                            <span class="gw-risk-hud-live">LIVE</span>
+                                            <button type="button" id="gw-risk-hud-collapse" class="gw-tool-btn" aria-expanded="true" title="Ein-/ausklappen">▾</button>
+                                        </span>
+                                    </div>
+                                    <div id="gw-risk-hud-body" class="gw-risk-hud-body">
+                                        <div id="gw-risk-hud-list" class="gw-risk-hud-list">
+                                            <div class="gw-risk-empty">Wird geladen…</div>
+                                        </div>
+                                        <button type="button" id="gw-risk-explain-hint" class="gw-risk-hint">Region anklicken · erklären</button>
+                                    </div>
+                                </div>
+                                <div id="gw-selection-panel" class="gw-selection-panel hidden" role="dialog" aria-label="Ausgewählte Meldung">
+                                    <div class="gw-selection-head">
+                                        <span class="gw-selection-layer" id="gw-selection-layer">RAW</span>
+                                        <button type="button" id="gw-selection-close" class="gw-selection-close" title="Schließen">×</button>
+                                    </div>
+                                    <div class="gw-selection-media" id="gw-selection-media" aria-hidden="true"></div>
+                                    <div class="gw-selection-title" id="gw-selection-title"></div>
+                                    <div class="gw-selection-meta font-mono" id="gw-selection-meta"></div>
+                                    <div class="gw-selection-body" id="gw-selection-body"></div>
+                                    <div class="gw-selection-actions">
+                                        <button type="button" id="gw-selection-open-reader" class="gw-tool-btn">READER</button>
+                                        <button type="button" id="gw-selection-translate" class="gw-tool-btn" data-i18n="gw.translate">ÜBERSETZEN</button>
+                                        <button type="button" id="gw-selection-compose" class="gw-tool-btn" data-i18n="gw.compose">BEITRAG ERSTELLEN</button>
+                                        <button type="button" id="gw-selection-ask-chat" class="gw-tool-btn" data-i18n="gw.discuss">MIT AETHEL BESPRECHEN</button>
+                                        <button type="button" id="gw-selection-promote" class="gw-tool-btn">→ CASE</button>
+                                        <button type="button" id="gw-selection-focus" class="gw-tool-btn">FOKUSSIEREN</button>
+                                    </div>
+                                </div>
+                                <div id="gw-explain-drawer" class="gw-explain-drawer hidden" role="dialog" aria-label="Risiko-Erklärung">
+                                    <div class="gw-explain-head">
+                                        <span>WARUM DIESER SCORE?</span>
+                                        <button type="button" id="gw-explain-close" class="gw-selection-close" title="Schließen">×</button>
+                                    </div>
+                                    <pre id="gw-explain-body" class="gw-explain-body font-mono"></pre>
+                                </div>
+                            </div>
+                            <div class="gw-globe-footer">
+                                <div class="gw-globe-footer-row">
+                                    <div class="gw-globe-label">LIVE-ERDKUGEL · LOKAL · OHNE CDN</div>
+                                    <button type="button" id="globe-reset-btn" class="gw-tool-btn">ANSICHT ZURÜCKSETZEN</button>
+                                </div>
+                                <div class="gw-timeline" id="gw-timeline" role="region" aria-label="Zeitachse">
+                                    <div class="gw-timeline-track">
+                                        <input type="range" id="gw-timeline-range" class="gw-timeline-range" min="0" max="100" value="100" title="Nach Aktualität filtern">
+                                    </div>
+                                    <div class="gw-timeline-labels font-mono">
+                                        <span id="gw-timeline-left">älter</span>
+                                        <span id="gw-timeline-now">jetzt</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT: docked Meldungsfeed (Data Config + Alerts live in Settings) -->
+                        <aside class="gw-right-rail gw-feed-dock" id="gw-feed-panel" aria-label="Meldungsfeed">
+                            <div class="gw-feed-header">
+                                <div class="gw-feed-header-left">
+                                    <span class="gw-feed-title" data-i18n="gw.feed">Meldungsfeed</span>
+                                    <span class="gw-feed-subtitle">Aktuelle Beobachtungen · Zeitfenster aktiv</span>
+                                </div>
+                                <span id="gw-feed-count" class="gw-feed-count font-mono">0</span>
+                            </div>
+                            <div class="gw-feed-toolbar font-mono">
+                                <label class="gw-feed-search-wrap">
+                                    <span class="gw-sr-only">Feed filtern</span>
+                                    <input type="search" id="gw-feed-search" class="gw-feed-search" placeholder="Suchen…" autocomplete="off" maxlength="120">
+                                </label>
+                                <select id="gw-feed-layer-filter" class="gw-feed-select" title="Vertrauensstufe">
+                                    <option value="all">Alle</option>
+                                    <option value="raw">RAW</option>
+                                    <option value="inference">INFERENCE</option>
+                                    <option value="verified">VERIFIED</option>
+                                </select>
+                            </div>
+                            <div id="gw-feed-list" class="gw-feed-list" role="list"></div>
+                            <div class="gw-feed-footer font-mono">
+                                <span class="gw-feed-refresh-info" id="gw-feed-poll-label">AUTO-SYNC</span>
+                                <span class="gw-feed-src-label">HTTPS · LOKAL</span>
+                            </div>
+                        </aside>
+                    </div>
+
+                    <div id="gw-briefing-overlay" class="gw-briefing-overlay">
+                        <div class="gw-briefing-overlay-header">
+                            <div>
+                                <span class="gw-settings-kicker">AETHEL // MULTI-SOURCE SYNTHESIS</span>
+                                <div class="gw-briefing-overlay-title">INTELLIGENCE LAGEBRIEFING</div>
+                            </div>
+                            <div class="gw-briefing-header-actions">
+                                <label class="gw-briefing-language"><span>SPRACHE</span><select id="gw-briefing-language"><option value="de">Deutsch</option><option value="en">English</option><option value="ru">Русский</option><option value="es">Español</option></select></label>
+                                <button type="button" id="gw-briefing-regenerate" class="gw-tool-btn">NEU GENERIEREN</button>
+                                <button type="button" id="gw-briefing-chat" class="gw-tool-btn" disabled>MIT AETHEL BESPRECHEN</button>
+                                <button type="button" id="gw-briefing-reader" class="gw-tool-btn" disabled>IM READER ÖFFNEN</button>
+                                <button type="button" id="gw-briefing-close" class="gw-briefing-close" title="Briefing schließen">✕</button>
+                            </div>
+                        </div>
+                        <div class="gw-briefing-workspace">
+                            <aside class="gw-briefing-context font-mono">
+                                <span class="gw-briefing-context-label">ANALYSEKONTEXT</span>
+                                <div><span>ZEITFENSTER</span><strong id="gw-briefing-window">24H</strong></div>
+                                <div><span>MELDUNGEN</span><strong id="gw-briefing-observations">0</strong></div>
+                                <div><span>MODELL</span><strong id="gw-briefing-model">—</strong></div>
+                                <div><span>STATUS</span><strong id="gw-briefing-status">BEREIT</strong></div>
+                                <p>Quelleninhalte sind unvertraute Daten. Das Briefing trennt Beobachtungen, Schlussfolgerungen und Unsicherheiten.</p>
+                            </aside>
+                            <article id="gw-briefing-content" class="gw-briefing-content markdown-body"></article>
+                        </div>
+                    </div>
+
+                    <!-- Global Watch Settings: connectors, Data Configuration, Alerts, personal -->
+                    <div id="gw-settings-modal" class="gw-settings-modal hidden" role="dialog" aria-modal="true" aria-labelledby="gw-settings-title">
+                        <div class="gw-settings-backdrop" data-gw-settings-close></div>
+                        <div class="gw-settings-panel gw-settings-panel-wide">
+                            <header class="gw-settings-header">
+                                <div>
+                                    <span class="gw-settings-kicker">GLOBAL WATCH · EINSTELLUNGEN</span>
+                                    <h2 id="gw-settings-title">Quellen, Daten &amp; Alerts</h2>
+                                </div>
+                                <button type="button" class="gw-selection-close" data-gw-settings-close title="Schließen">×</button>
+                            </header>
+                            <div class="gw-settings-body gw-settings-body-grid">
+                                <section class="gw-settings-section gw-settings-runtime" aria-labelledby="gw-runtime-settings-title">
+                                    <div class="gw-settings-section-head">
+                                        <h3 id="gw-runtime-settings-title">Betrieb &amp; Performance</h3>
+                                        <button type="button" id="gw-runtime-reset" class="gw-tool-btn">Standard</button>
+                                    </div>
+                                    <p class="gw-settings-hint">Steuert Kartenqualität, Live-Bewegung, Feed-Menge und lokale Aktualisierung unmittelbar.</p>
+                                    <div class="gw-settings-form-grid">
+                                        <label class="gw-settings-field"><span>Renderqualität</span><select id="gw-render-quality"><option value="performance">Performance</option><option value="balanced">Ausgewogen</option><option value="ultra">Ultra</option></select></label>
+                                        <label class="gw-settings-field"><span>Auto-Sync</span><select id="gw-auto-refresh"><option value="0">Aus</option><option value="30">30 Sekunden</option><option value="60">60 Sekunden</option><option value="120">2 Minuten</option><option value="300">5 Minuten</option></select></label>
+                                        <label class="gw-settings-field"><span>Feed-Limit</span><select id="gw-feed-limit"><option value="100">100</option><option value="200">200</option><option value="500">500</option><option value="1000">1.000</option></select></label>
+                                        <label class="gw-settings-field"><span>Pin-Clustering</span><select id="gw-cluster-mode"><option value="compact">Kompakt</option><option value="balanced">Ausgewogen</option><option value="precise">Präzise</option></select></label>
+                                        <label class="gw-settings-field"><span>Hazard-FPS</span><select id="gw-hazard-fps"><option value="2">2 FPS</option><option value="4">4 FPS</option><option value="6">6 FPS</option><option value="8">8 FPS</option></select></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-idle-rotation"><span>Globus im Leerlauf drehen</span></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-hazard-animation"><span>Naturgefahren animieren</span></label>
+                                    </div>
+                                    <div class="gw-settings-divider"></div>
+                                    <div class="gw-settings-section-head"><h3>Lokale Lageberichte</h3><span id="gw-schedule-status" class="gw-settings-state">—</span></div>
+                                    <div class="gw-settings-form-grid">
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-schedule-enabled"><span>Automatische MD-Berichte</span></label>
+                                        <label class="gw-settings-field"><span>Intervall</span><select id="gw-schedule-interval"><option value="15">15 Minuten</option><option value="30">30 Minuten</option><option value="60">1 Stunde</option><option value="120">2 Stunden</option><option value="360">6 Stunden</option><option value="720">12 Stunden</option><option value="1440">24 Stunden</option></select></label>
+                                        <label class="gw-settings-field"><span>Aufbewahrung</span><select id="gw-schedule-retention"><option value="7">7 Tage</option><option value="30">30 Tage</option><option value="90">90 Tage</option><option value="365">1 Jahr</option></select></label>
+                                        <label class="gw-settings-field"><span>Max. Berichte</span><select id="gw-schedule-max-reports"><option value="25">25</option><option value="100">100</option><option value="250">250</option><option value="1000">1.000</option></select></label>
+                                    </div>
+                                </section>
+                                <section class="gw-settings-section">
+                                    <h3>Datenquellen (Connectors)</h3>
+                                    <p class="gw-settings-hint">Eingebaute Quellen laden Beobachtungen lokal (RAW – nicht automatisch verifiziert). Inkl. Erdbeben (USGS) und Naturereignisse/Vulkane (NASA EONET).</p>
+                                    <div class="gw-settings-actions">
+                                        <button type="button" id="gw-settings-fetch-connectors" class="gw-briefing-btn">Alle Quellen laden</button>
+                                        <button type="button" id="gw-settings-refresh-connectors" class="gw-tool-btn">↻ Liste</button>
+                                    </div>
+                                    <div class="gw-settings-form-grid gw-hazard-source-controls">
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-source-usgs-enabled" checked><span>USGS-Erdbebenfeed automatisch laden</span></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-source-volcano-enabled" checked><span>NASA-EONET-Vulkanfeed automatisch laden</span></label>
+                                    </div>
+                                    <div id="gw-settings-connectors-list" class="gw-connectors-list gw-settings-connectors"></div>
+                                </section>
+                                <section class="gw-settings-section">
+                                    <div class="gw-settings-section-head">
+                                        <h3>RSS-Quellenverwaltung</h3>
+                                        <button type="button" id="btn-add-source" class="gw-tool-btn">+ RSS-QUELLE</button>
+                                    </div>
+                                    <p class="gw-settings-hint">Alle mitgelieferten und eigenen RSS-Feeds sind gleichwertig verwaltbar und dauerhaft entfernbar.</p>
+                                    <div id="osint-controls" class="gw-source-manager">
+                                        <button type="button" id="btn-edit-prompt" class="gw-tool-btn">BRIEFING-PROMPT</button>
+                                        <button type="button" id="gw-source-refresh" class="gw-tool-btn">↻ QUELLEN</button>
+                                        <div id="collector-list" class="gw-source-manager-list font-mono"></div>
+                                    </div>
+                                    <div class="gw-settings-divider"></div>
+                                    <h3>Aktive Quellen im Lagebild</h3>
+                                    <div id="gw-settings-sources-list" class="gw-settings-sources font-mono">—</div>
+                                </section>
+                                <section class="gw-settings-section" id="gw-intel-detail" data-gw-collapse="config">
+                                    <h3>Data Configuration</h3>
+                                    <p class="gw-settings-hint">Details zum zuletzt gewählten Pin, zur Kamera oder zur Meldung.</p>
+                                    <div class="gw-intel-empty" id="gw-intel-empty">Noch nichts ausgewählt – tippe auf einen Pin oder eine Meldung.</div>
+                                    <div class="gw-intel-fields hidden" id="gw-intel-fields">
+                                        <div class="gw-intel-row"><span>TYP</span><span id="gw-intel-type">—</span></div>
+                                        <div class="gw-intel-row"><span>BREITE</span><span id="gw-intel-lat">—</span></div>
+                                        <div class="gw-intel-row"><span>LÄNGE</span><span id="gw-intel-lon">—</span></div>
+                                        <div class="gw-intel-row"><span>DOMAIN</span><span id="gw-intel-domain">—</span></div>
+                                        <div class="gw-intel-row"><span>QUELLE</span><span id="gw-intel-source">—</span></div>
+                                        <div class="gw-intel-row"><span>LAYER</span><span id="gw-intel-layer">—</span></div>
+                                        <div class="gw-intel-row"><span>ID</span><span id="gw-intel-id">—</span></div>
+                                        <div class="gw-intel-row"><span>ZEIT</span><span id="gw-intel-time">—</span></div>
+                                    </div>
+                                </section>
+                                <section class="gw-settings-section" id="gw-alerts-center" role="region" aria-label="Aktive Alerts">
+                                    <div class="gw-settings-section-head">
+                                        <h3>Alerts</h3>
+                                        <button type="button" id="gw-alerts-refresh" class="gw-tool-btn">Sync</button>
+                                    </div>
+                                    <p class="gw-settings-hint">Aktive Warnungen aus dem gemeinsamen Intelligence-Modell.</p>
+                                    <div id="gw-alerts-list" class="gw-alerts-list">
+                                        <div class="gw-risk-empty">Keine aktiven Alerts</div>
+                                    </div>
+                                </section>
+                                <section class="gw-settings-section" id="gw-personal-impact" role="region" aria-label="Persönlicher Bezug">
+                                    <div class="gw-settings-section-head">
+                                        <h3>Persönlicher Bezug</h3>
+                                        <div class="gw-personal-impact-actions">
+                                            <button type="button" id="gw-personal-sync" class="gw-tool-btn">Sync</button>
+                                            <button type="button" id="gw-personal-refresh" class="gw-tool-btn">Aktualisieren</button>
+                                        </div>
+                                    </div>
+                                    <pre id="gw-personal-impact-body" class="gw-personal-impact-body font-mono">Optional: Profil synchronisieren · Empfehlungen sind keine Fakten</pre>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Full-scale research article / report reader -->
+                    <div id="gw-report-reader" class="gw-report-reader hidden" role="dialog" aria-modal="true" aria-label="Artikel-Leser">
+                        <div class="gw-report-reader-backdrop" id="gw-report-reader-backdrop" data-gw-reader-close></div>
+                        <div class="gw-report-reader-shell">
+                            <header class="gw-report-reader-header">
+                                <div class="gw-report-reader-brand">
+                                    <span class="gw-report-reader-kicker font-mono">AETHEL · RESEARCH READER</span>
+                                    <h2 class="gw-report-reader-title" id="gw-report-reader-title">Artikel</h2>
+                                </div>
+                                <div class="gw-report-reader-actions">
+                                    <button type="button" id="gw-report-export" class="gw-tool-btn">Export MD</button>
+                                    <button type="button" id="gw-report-close" class="gw-selection-close" title="Schließen" data-gw-reader-close>×</button>
+                                </div>
+                            </header>
+                            <div class="gw-report-reader-meta" id="gw-report-reader-meta">
+                                <div class="gw-reader-meta-grid">
+                                    <div class="gw-reader-meta-item">
+                                        <span class="gw-reader-meta-label">Quelle</span>
+                                        <span class="gw-reader-meta-value" id="gw-reader-source">—</span>
+                                    </div>
+                                    <div class="gw-reader-meta-item">
+                                        <span class="gw-reader-meta-label">Datum</span>
+                                        <span class="gw-reader-meta-value" id="gw-reader-date">—</span>
+                                    </div>
+                                    <div class="gw-reader-meta-item">
+                                        <span class="gw-reader-meta-label">Uhrzeit</span>
+                                        <span class="gw-reader-meta-value" id="gw-reader-time">—</span>
+                                    </div>
+                                    <div class="gw-reader-meta-item">
+                                        <span class="gw-reader-meta-label">Domain</span>
+                                        <span class="gw-reader-meta-value" id="gw-reader-domain">—</span>
+                                    </div>
+                                    <div class="gw-reader-meta-item">
+                                        <span class="gw-reader-meta-label">Koordinaten</span>
+                                        <span class="gw-reader-meta-value font-mono" id="gw-reader-coords">—</span>
+                                    </div>
+                                    <div class="gw-reader-meta-item">
+                                        <span class="gw-reader-meta-label">Vertrauensstufe</span>
+                                        <span class="gw-reader-meta-value" id="gw-reader-layer">—</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="gw-report-reader-body" class="gw-report-reader-body markdown-body"></div>
+                            <footer class="gw-report-reader-footer font-mono">
+                                <span id="gw-reader-id">ID —</span>
+                                <div class="gw-reader-source-actions"><button type="button" id="gw-reader-internal" class="gw-tool-btn hidden">Originalquelle intern lesen</button><a id="gw-reader-external" class="gw-reader-external hidden" href="#" target="_blank" rel="noopener noreferrer">Extern öffnen ↗</a></div>
+                            </footer>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CASE WORKSPACE PANEL -->
+                <div id="view-case" class="viewport-panel hidden case-workspace-view">
+                    <div class="gw-header">
+                        <div class="gw-header-left">
+                            <div class="gw-eyebrow">Fälle · Evidenz · Datenschutz</div>
+                            <div class="gw-title">CASE WORKSPACE</div>
+                            <div class="gw-subtitle">Fallbasierte Untersuchungen, Evidenzversiegelung und Re-ID-Gate</div>
+                        </div>
+                        <div class="gw-header-right">
+                            <div class="gw-status-badge case-hmac-status">
+                                <span class="pulse-dot purple"></span>
+                                <span>HMAC ANONYMIZATION: ACTIVE</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="case-status-region" class="case-status-region" role="status" aria-live="polite"></div>
+                    <div class="case-workspace-grid">
+                        <!-- Left Panel: Cases List -->
+                        <aside class="gw-feed-panel case-list-panel">
+                            <div class="gw-feed-header">
+                                <span class="gw-feed-title">Ermittlungs-Cases</span>
+                                <span id="case-count" class="gw-feed-count font-mono">0 Cases</span>
+                            </div>
+                            <div id="case-list" class="case-list">
+                                <div class="case-empty">KEINE AKTIVEN ERMITTLUNGSVERFAHREN GEFUNDEN</div>
+                            </div>
+                            <div class="gw-feed-footer font-mono case-list-footer">
+                                <button id="btn-create-case" type="button" class="cyber-button font-mono ds-btn-purple">+ Fall eröffnen</button>
+                            </div>
+                        </aside>
+
+                        <!-- Right Panel: Active Case Details -->
+                        <main class="glass-card case-details-panel" id="case-details-panel">
+                            <div class="case-details-empty">
+                                <span class="case-empty-symbol">◇</span>
+                                <h3>Kein aktiver Case</h3>
+                                <p>Wähle einen Case im linken Panel aus, um die Beweiskette und Entitäten-Beziehungen anzuzeigen.</p>
+                            </div>
+                        </main>
+                    </div>
+                </div>
+
+                <!-- 2. VIEW PANEL: CHAT CONSOLE -->
+                <div id="view-chat" class="viewport-panel chat-workspace hidden">
+                    <!-- Current Task Checklist Panel -->
+                    <div id="current-task-checklist-panel" class="chat-run-plan hidden">
+                        <div class="chat-run-plan-header">
+                            <span class="chat-run-plan-title">⚙ AKTIONSPLAN DES AGENTEN</span>
+                            <button id="btn-close-checklist" class="chat-run-plan-collapse" type="button">[ MINIMIEREN ]</button>
+                        </div>
+                        <div id="current-task-checklist-items" class="chat-run-plan-items" role="list">
+                            <!-- Dynamically populated checklist items -->
+                        </div>
+                    </div>
+
+                    <div class="terminal-screen" id="chat-output">
+                        <div class="system-message font-mono">
+                            <p>Willkommen im Chat</p>
+                            <p>Schreibe eine Nachricht oder nutze das Mikrofon für Spracheingabe. Alles läuft lokal und unter deiner Kontrolle.</p>
+                        </div>
+                    </div>
+
+                    <!-- Input Panel -->
+                    <div class="input-panel">
+                        <div class="input-wrapper">
+                            <button id="btn-mic" class="mic-button" title="Spracheingabe starten (Push-to-Talk)">
+                                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" class="mic-icon">
+                                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+                                </svg>
+                                <span class="mic-wave"></span>
+                            </button>
+
+                            <textarea id="user-input" placeholder="Nachricht an Aethel schreiben…" autocomplete="off" rows="1"></textarea>
+                            
+                            <button id="btn-send" class="send-button" title="Absenden">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            </button>
+                        </div>
+                        <div class="speech-status font-mono" id="speech-indicator">Mikrofon bereit <button id="btn-code-cartography" class="chat-cartography-button" type="button">◈ Code-Kartografie</button></div>
+                    </div>
+                </div>
+
+                <!-- 3. VIEW PANEL: AGENT BUILDER & WORKSPACE -->
+                <div id="view-agent" class="viewport-panel agent-workspace-view hidden">
+                    
+                    <!-- COLLAPSIBLE TEAM CONFIGURATION HEADER -->
+                    <details id="agent-builder-config-details" open class="agent-team-config">
+                        <summary class="agent-team-config-summary">
+                            <span>⚙️ Agenten-Team konfigurieren</span>
+                            <button id="agent-btn-add-custom" class="cyber-button font-mono agent-add-button" type="button">+ Neuer Agent</button>
+                        </summary>
+                        
+                        <!-- Grid of Role Configs -->
+                        <div class="agent-role-grid">
+                            
+                            <!-- Role: Orchestrator -->
+                            <div class="glass-card font-mono agent-role-card">
+                                <div class="agent-role-card-head">
+                                    <span class="agent-role-title">👑 Orchestrator (Planung)</span>
+                                </div>
+                                <div class="agent-role-fields">
+                                    <select id="agent-persona-orchestrator" class="cyber-select font-mono agent-role-persona-select"></select>
+                                    <select id="agent-model-orchestrator" class="cyber-select font-mono"></select>
+                                </div>
+                                <textarea id="agent-prompt-orchestrator" class="font-mono agent-role-prompt">Du bist der führende Operator und Teamleiter. Deine Aufgabe ist es, die globale Zielstellung in eine klare, logische Checkliste (Schritte) aufzuteilen.</textarea>
+                            </div>
+
+                            <!-- Role: Builder -->
+                            <div class="glass-card font-mono agent-role-card">
+                                <div class="agent-role-card-head">
+                                    <span class="agent-role-title">🛠️ System Builder (Ausführung)</span>
+                                </div>
+                                <div class="agent-role-fields">
+                                    <select id="agent-persona-builder" class="cyber-select font-mono agent-role-persona-select"></select>
+                                    <select id="agent-model-builder" class="cyber-select font-mono"></select>
+                                </div>
+                                <textarea id="agent-prompt-builder" class="font-mono agent-role-prompt">Du bist der Builder. Du führst den zugewiesenen Teilschritt aktiv aus und nutzt dafür alle System-Tools (fs_write_file, sys_exec_cmd, etc.). Führe den Befehl präzise aus.</textarea>
+                            </div>
+
+                            <!-- Role: Reviewer -->
+                            <div class="glass-card font-mono agent-role-card">
+                                <div class="agent-role-card-head">
+                                    <span class="agent-role-title">🛡️ Reviewer (Validierung)</span>
+                                    <label class="agent-role-toggle">
+                                        <input type="checkbox" id="agent-toggle-reviewer" checked> Aktiv
+                                    </label>
+                                </div>
+                                <div class="agent-role-fields">
+                                    <select id="agent-persona-reviewer" class="cyber-select font-mono agent-role-persona-select"></select>
+                                    <select id="agent-model-reviewer" class="cyber-select font-mono"></select>
+                                </div>
+                                <textarea id="agent-prompt-reviewer" class="font-mono agent-role-prompt">Du bist der Reviewer. Du überprüfst das Ergebnis des Builders. Bestätige mit "VALID", wenn alles korrekt ist. Wenn Fehler vorliegen, nenne die Gründe, damit der Builder korrigieren kann.</textarea>
+                            </div>
+
+                            <!-- Role: Repairer -->
+                            <div class="glass-card font-mono agent-role-card">
+                                <div class="agent-role-card-head">
+                                    <span class="agent-role-title">🔧 Repairer (Fehlerbehebung)</span>
+                                    <label class="agent-role-toggle">
+                                        <input type="checkbox" id="agent-toggle-repairer" checked> Aktiv
+                                    </label>
+                                </div>
+                                <div class="agent-role-fields">
+                                    <select id="agent-persona-repairer" class="cyber-select font-mono agent-role-persona-select"></select>
+                                    <select id="agent-model-repairer" class="cyber-select font-mono"></select>
+                                </div>
+                                <textarea id="agent-prompt-repairer" class="font-mono agent-role-prompt">Du bist der Repairer. Bei Compiler-Fehlern, Syntax-Fehlern oder Tool-Abstürzen analysierst du die Fehlermeldung und korrigierst den Code bzw. den Pfad autonom.</textarea>
+                            </div>
+
+                            <!-- Role: Documentator -->
+                            <div class="glass-card font-mono agent-role-card">
+                                <div class="agent-role-card-head">
+                                    <span class="agent-role-title">📝 Documentator (Kortex)</span>
+                                    <label class="agent-role-toggle">
+                                        <input type="checkbox" id="agent-toggle-documentator" checked> Aktiv
+                                    </label>
+                                </div>
+                                <div class="agent-role-fields">
+                                    <select id="agent-persona-documentator" class="cyber-select font-mono agent-role-persona-select"></select>
+                                    <select id="agent-model-documentator" class="cyber-select font-mono"></select>
+                                </div>
+                                <textarea id="agent-prompt-documentator" class="font-mono agent-role-prompt">Du bist der Documentator. Nach jedem Schritt fasst du kurz zusammen: Was wurde getan? Was ist das Ergebnis? Halte dich extrem kurz und prägnant.</textarea>
+                            </div>
+
+                        </div>
+
+                        <!-- Dynamic container for custom agents -->
+                        <div id="custom-agents-container" class="agent-custom-grid"></div>
+                    </details>
+
+                    <!-- WORKSPACE GRID (Always visible) -->
+                    <div id="agent-workspace-grid" class="agent-execution-grid">
+                        
+                        <!-- Left Column: Aktionsplan (Checklist) -->
+                        <section class="agent-plan-panel font-mono" aria-labelledby="agent-plan-title">
+                            <header class="agent-panel-heading"><span class="agent-panel-kicker">VERIFIED PIPELINE</span><h3 id="agent-plan-title">Team-Aktionsplan</h3></header>
+                            <div id="agent-steps-container" class="agent-steps-container">
+                                <div class="agent-empty-state">Warte auf Team-Lauf...</div>
+                            </div>
+                        </section>
+
+                        <!-- Right Column: Interactive Chat Console -->
+                        <section class="agent-run-console font-mono" aria-label="Agenten-Team Live-Konsole">
+                            
+                            <!-- Chat Header controls -->
+                            <div class="agent-launch-bar">
+                                <textarea id="agent-team-task-input" placeholder="Globale Team-Aufgabe eingeben (z.B. Ordner /Dev_Bunker sortieren)..." class="font-mono"></textarea>
+                                <div class="agent-launch-actions">
+                                    <button id="agent-btn-launch-team" class="cyber-button font-mono">Team starten</button>
+                                    <button id="agent-btn-abort-run" class="agent-abort-button hidden">Abbrechen</button>
+                                </div>
+                            </div>
+
+                            <!-- Interactive Chat output screen -->
+                            <div class="terminal-screen agent-live-output" id="agent-chat-output">
+                                <div class="agent-standby">[STANDBY] Bereit zur Orchestrierung. Gib oben ein Ziel ein und klicke auf STARTEN.</div>
+                            </div>
+
+                            <!-- Operator Mid-run input area -->
+                            <div id="agent-chat-input-wrapper" class="agent-feedback-bar">
+                                <textarea id="agent-user-input" class="font-mono" placeholder="Befehl oder Feedback an das laufende Agenten-Team senden..." rows="1"></textarea>
+                                <button id="agent-btn-send" class="send-button agent-feedback-send" title="Absenden">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                </button>
+                            </div>
+
+                        </section>
+                    </div>
+                    
+                </div>
+
+                <!-- 4. VIEW PANEL: LIVE OPERATOR (CONTROL VIEW) -->
+                <div id="view-control" class="viewport-panel operator-workspace hidden">
+                    <!-- Headless address bar mockup -->
+                    <div class="browser-address-bar operator-address-bar">
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--vgt-cyan)" stroke-width="2" fill="none" class="lock-icon"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <input type="text" id="browser-url-input" class="font-mono operator-address" value="about:blank" readonly>
+                        <div class="browser-indicator" id="browser-load-status">
+                            <span class="pulse-dot green"></span>
+                        </div>
+                    </div>
+
+                    <!-- Operator screenshot display -->
+                    <div class="browser-viewport operator-viewport">
+                        <div class="viewport-placeholder font-mono operator-placeholder" id="browser-placeholder">
+                            <svg viewBox="0 0 24 24" width="48" height="48" stroke="var(--vgt-text-dim)" stroke-width="1.2" fill="none">
+                                <circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/>
+                            </svg>
+                            <p>Live-Ansicht getrennt</p>
+                            <p class="operator-placeholder-copy">Browser-Screenshot wird geladen…</p>
+                        </div>
+                        <img id="browser-screenshot" src="" class="operator-screenshot hidden" alt="Live Viewport Screenshot">
+                    </div>
+
+                    <!-- Control command bar -->
+                    <div class="operator-command-deck font-mono">
+                        <div class="operator-status-cluster">
+                            <span class="pulse-dot green" id="control-active-dot"></span>
+                            <span class="operator-uplink-label">AUTOMATION UPLINK ACTIVE</span>
+                            <div class="operator-voice-cluster">
+                                <div id="control-voice-sphere" class="voice-sphere-mini"></div>
+                                <span id="control-voice-status">CORE STANDBY</span>
+                                <button id="control-btn-mic" class="cyber-button font-mono operator-mic-button">SPRECHEN</button>
+                            </div>
+                        </div>
+                        
+                        <div class="operator-action-cluster">
+                            <button id="control-btn-pause" class="cyber-button font-mono operator-pause-button">PAUSE RUN</button>
+                            <button id="control-btn-kill" class="cyber-button font-mono operator-stop-button">STOP OPERATION</button>
+                            <button id="control-btn-revoke" class="cyber-button font-mono ds-btn-danger operator-revoke-button">Alle Rechte entziehen</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. VIEW PANEL: SECURITY CORE -->
+                <div id="view-security" class="viewport-panel security-workspace hidden">
+                    <div class="security-overview-grid">
+                        <!-- Active leases -->
+                        <section class="security-panel font-mono">
+                            <h4 class="ds-section-title">Aktive Berechtigungen</h4>
+                            <div id="sec-leases-container" class="security-leases-list">
+                                <div class="security-empty-state">Keine aktiven Berechtigungen vorhanden.</div>
+                            </div>
+                        </section>
+
+                        <!-- System capabilities -->
+                        <section class="security-panel font-mono">
+                            <h4 class="ds-section-title">Firewall-Regeln &amp; Risiken</h4>
+                            <div class="security-rules-list">
+                                <div class="security-rule-row">
+                                    <span>system.exec</span>
+                                    <strong class="critical">HIGH RISK (RESTRICTED)</strong>
+                                </div>
+                                <div class="security-rule-row">
+                                    <span>fs.write / fs.delete</span>
+                                    <strong class="moderate">MODERATE RISK</strong>
+                                </div>
+                                <div class="security-rule-row">
+                                    <span>gui.type / gui.press_key</span>
+                                    <strong class="moderate">MODERATE RISK</strong>
+                                </div>
+                                <div class="security-rule-row">
+                                    <span>fs.read / fs.mount</span>
+                                    <strong class="low">LOW RISK</strong>
+                                </div>
+                                <div class="security-rule-row">
+                                    <span>memory.read / memory.write</span>
+                                    <strong class="safe">SAFE</strong>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Hash-Chained Audit Logs -->
+                    <section class="security-panel security-audit-panel font-mono">
+                        <h4 class="ds-section-title">Kryptografischer Audit-Trail</h4>
+                        <div class="security-table-wrap">
+                            <table class="security-table">
+                                <thead>
+                                    <tr>
+                                        <th>TIMESTAMP</th><th>OP/CAP</th><th>RISK</th><th>DECISION</th><th>HASH BLÖCKE</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sec-audit-tbody">
+                                    <tr>
+                                        <td colspan="5" class="security-table-empty">Lade Audit Trail...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- 6. VIEW PANEL: NEXUS MEMORY -->
+                <div id="view-memory" class="viewport-panel memory-workspace hidden">
+                    <!-- Memory Search & Add Form -->
+                    <div class="memory-action-grid">
+                        <!-- Search card -->
+                        <section class="memory-panel font-mono">
+                            <h4 class="ds-section-title">Erinnerungen durchsuchen</h4>
+                            <div class="memory-input-row">
+                                <input type="text" id="mem-search-query" placeholder="Suchbegriff eingeben…">
+                                <button id="mem-btn-search" class="cyber-button font-mono memory-action-button">Suchen</button>
+                            </div>
+                        </section>
+
+                        <!-- Add memory card -->
+                        <section class="memory-panel font-mono">
+                            <h4 class="ds-section-title">Erinnerung anlegen</h4>
+                            <div class="memory-input-row memory-add-row">
+                                <input type="text" id="mem-add-content" placeholder="Inhalt der Erinnerung…">
+                                <select id="mem-add-category" class="cyber-select font-mono">
+                                    <option value="project">Projekt</option>
+                                    <option value="preference">Präferenz</option>
+                                    <option value="task">Aufgabe</option>
+                                    <option value="secret_reference">Secret-Ref</option>
+                                </select>
+                                <button id="mem-btn-add" class="cyber-button font-mono memory-action-button">Speichern</button>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Memories display lists -->
+                    <section class="memory-panel memory-list-panel font-mono">
+                        <h4 class="ds-section-title">Gespeicherte Einträge</h4>
+                        <div id="mem-list-container" class="memory-entry-list">
+                            <div class="memory-empty-state">Lade Gedächtnis-Einträge...</div>
+                        </div>
+                    </section>
+
+                    <!-- Secret Vault Section -->
+                    <div class="memory-vault-grid">
+                        <!-- Stored Secrets List -->
+                        <section class="memory-panel vault-list-panel font-mono">
+                            <h4 class="memory-vault-title">
+                                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                Secrets-Tresor
+                            </h4>
+                            <div id="secrets-list-container" class="memory-entry-list vault-entry-list">
+                                <div class="memory-empty-state">Lade Tresor-Einträge...</div>
+                            </div>
+                        </section>
+
+                        <!-- Add Secret Form -->
+                        <section class="memory-panel vault-form-panel font-mono">
+                            <h4 class="ds-section-title accent-purple">Secret hinzufügen</h4>
+                            <div class="vault-form-grid">
+                                <input type="text" id="secr-add-id" placeholder="Schlüssel ID (z.B. github_token)">
+                                <input type="text" id="secr-add-service" placeholder="Service (z.B. github)">
+                            </div>
+                            <div class="vault-form-grid vault-value-grid">
+                                <select id="secr-add-type">
+                                    <option value="api_token">API Token</option>
+                                    <option value="password">Passwort</option>
+                                    <option value="key">Key/Zertifikat</option>
+                                </select>
+                                <input type="password" id="secr-add-token" placeholder="Klartext Secret Wert">
+                            </div>
+                            <div class="vault-form-actions">
+                                <label class="vault-approval-label">
+                                    <input type="checkbox" id="secr-add-approval" checked>
+                                    Freigabe vor Nutzung verlangen
+                                </label>
+                                <button id="secr-btn-add" class="cyber-button font-mono ds-btn-purple memory-action-button">Speichern</button>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <!-- 7. VIEW PANEL: PERSONAL MODE -->
+                <div id="view-personal" class="viewport-panel personal-workspace hidden">
+                    <div class="personal-dashboard-grid">
+                        <section class="personal-panel personal-profile-panel font-mono">
+                            <h4 class="ds-section-title accent-purple">Persönlicher Modus</h4>
+                            <label class="personal-field-label">Name</label>
+                            <input id="personal-display-name" type="text" placeholder="Wie soll Aethel dich nennen?">
+                            <div class="personal-two-column">
+                                <div class="personal-field-group"><label class="personal-field-label" for="personal-location-city">Stadt / Region</label><input id="personal-location-city" type="text" maxlength="120" placeholder="z. B. Köln"></div>
+                                <div class="personal-field-group"><label class="personal-field-label" for="personal-location-country">Land</label><input id="personal-location-country" type="text" maxlength="120" placeholder="z. B. Deutschland"></div>
+                            </div>
+                            <label class="personal-field-label">Ton</label>
+                            <input id="personal-tone" type="text" placeholder="z.B. direkt, locker, motivierend">
+                            <label class="personal-field-label">Assistant-Stil</label>
+                            <textarea id="personal-style" placeholder="Wie soll Aethel als persönlicher Bro/Assistent mit dir umgehen?"></textarea>
+                            <div class="personal-two-column">
+                                <div class="personal-field-group">
+                                    <label class="personal-field-label">Interessen</label>
+                                    <textarea id="personal-interests" placeholder="YouTube, Coding, Musik..."></textarea>
+                                </div>
+                                <div class="personal-field-group">
+                                    <label class="personal-field-label">Ziele</label>
+                                    <textarea id="personal-goals" placeholder="Was soll Aethel über deine Ziele wissen?"></textarea>
+                                </div>
+                            </div>
+                            <textarea id="personal-notes" class="personal-notes" placeholder="Weitere Dinge, die Aethel über dich wissen soll..."></textarea>
+                            <div class="personal-two-column personal-profile-actions">
+                                <button id="personal-btn-guided-setup" class="cyber-button font-mono personal-primary-action">GEFÜHRTES SETUP</button>
+                                <button id="personal-btn-setup" class="cyber-button font-mono personal-secondary-action">PROFIL INITIALISIEREN</button>
+                            </div>
+                        </section>
+                        <section class="personal-panel personal-core-panel font-mono">
+                            <h4 class="personal-panel-title">AETHEL PERSONAL CORE</h4>
+                            <div id="personal-status" class="personal-status">Lade persönlichen Modus...</div>
+                            <div class="personal-toggle-grid">
+                                <label><input id="personal-enabled" type="checkbox"> Aktiv</label>
+                                <label><input id="personal-learning" type="checkbox"> Lernen aktiv</label>
+                                <label><input id="personal-startup-briefing" type="checkbox"> Start-Lagebericht</label>
+                                <label><input id="personal-startup-read-aloud" type="checkbox"> Danach vorlesen</label>
+                            </div>
+                            <div class="personal-core-traits">
+                                <div class="personal-core-trait"><label for="personal-humor">TROCKENER HUMOR <output id="personal-humor-value">35%</output></label><input id="personal-humor" type="range" min="0" max="100" value="35"></div>
+                                <div class="personal-core-trait"><label for="personal-honesty">DIREKTHEIT & EHRLICHKEIT <output id="personal-honesty-value">90%</output></label><input id="personal-honesty" type="range" min="0" max="100" value="90"></div>
+                                <div class="personal-core-trait"><label for="personal-initiative">PROAKTIVE INITIATIVE <output id="personal-initiative-value">60%</output></label><input id="personal-initiative" type="range" min="0" max="100" value="60"></div>
+                            </div>
+                            <p class="personal-core-note">Loyaler Arbeitskollege: trocken im Ton, eindeutig bei Risiken, proaktiv bei sinnvollen nächsten Schritten. Sicherheits- und Freigabegrenzen bleiben unverändert.</p>
+                            <input id="personal-wake-word" type="text" placeholder="Wake Word, z.B. Aethel">
+                            <select id="personal-primary-model" class="cyber-select font-mono"></select>
+                            <select id="personal-fallback-model" class="cyber-select font-mono"></select>
+                            <button id="personal-btn-config" class="cyber-button font-mono personal-config-button">CONFIG SPEICHERN</button>
+                            <h4 class="personal-memory-title">PERSÖNLICHE ERINNERUNGEN</h4>
+                            <div id="personal-memory-list" class="personal-memory-list"></div>
+                        </section>
+
+                        <!-- Colleague Dashboard (Proaktives Dashboard) -->
+                        <section class="personal-panel colleague-panel font-mono">
+                            <h4 class="personal-panel-title colleague-title">
+                                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                                PROAKTIVES DASHBOARD (COLLEAGUE STATUS)
+                            </h4>
+                            
+                            <!-- Tagesüberblick -->
+                            <div class="colleague-card cyan">
+                                <span>📅 Tagesüberblick &amp; Zeitkontext</span>
+                                <div id="colleague-daily-overview" class="colleague-card-content">Lade Tagesüberblick...</div>
+                            </div>
+                            
+                            <!-- Aktive Projekte -->
+                            <div class="colleague-card purple">
+                                <span>📂 Aktive Projekte (Workspaces)</span>
+                                <div id="colleague-active-projects" class="colleague-card-list">Lade Projekte...</div>
+                            </div>
+
+                            <!-- Priorisierte Runs -->
+                            <div class="colleague-card orange">
+                                <span>🔥 Priorisierte Runs (Offen/Pausiert)</span>
+                                <div id="colleague-prioritized-runs" class="colleague-card-list">Lade offene Runs...</div>
+                            </div>
+
+                            <!-- Wiederkehrende Vorschläge / Proaktivität -->
+                            <div class="colleague-card cyan colleague-suggestions-card">
+                                <span>💡 Wiederkehrende Vorschläge</span>
+                                <div id="colleague-suggestions" class="colleague-suggestions">
+                                    <!-- suggestions will be loaded here -->
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <!-- 7b. VIEW PANEL: SPHERE WORKSPACE -->
+                <div id="view-sphere" class="viewport-panel hidden" style="position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column;">
+                    <header class="sphere-topbar">
+                        <div class="sphere-brand"><span class="sphere-brand-mark">◈</span><span>SPHERE DESKTOP</span><small>SHARED AETHEL WORKSPACE</small></div>
+                        <div class="sphere-topbar-actions">
+                            <label class="sphere-ambient-control" for="sphere-ambient-level">SPHÄRE <input id="sphere-ambient-level" type="range" min="0" max="28" value="12"><output id="sphere-ambient-output">12%</output></label>
+                            <button id="sphere-btn-help" class="sphere-shell-button sphere-help-button" type="button" aria-haspopup="dialog" aria-controls="sphere-help-dialog">? HILFE</button>
+                            <button id="sphere-btn-fullscreen" class="sphere-shell-button" type="button">⛶ VOLLBILD</button>
+                        </div>
+                    </header>
+                    
+                    <!-- Background Animated Sphere Container -->
+                    <div class="sphere-background-container" style="position: absolute; inset: 0; z-index: 1; pointer-events: none; display: flex; justify-content: center; align-items: center; overflow: hidden;">
+                        <div class="sphere-canvas idle" id="workspace-sphere" style="width: 700px; height: 700px; border-radius: 50%; filter: blur(40px); transition: all 1s ease;"></div>
+                    </div>
+
+                    <!-- Virtual Desktop Workspace Area -->
+                    <div class="sphere-desktop" style="position: relative; flex-grow: 1; z-index: 2; overflow: hidden; padding: 20px; box-sizing: border-box;">
+                        
+                        <!-- Floating Window 1: Word-like Document Editor (opens on demand via dock — not auto-open) -->
+                        <div class="sphere-window glass-card hidden" id="sphere-window-editor" style="position: absolute; width: 520px; height: 400px; left: 48px; top: 36px; display: flex; flex-direction: column; z-index: 100; border-color: rgba(0, 240, 255, 0.2);">
+                            <!-- Window Header -->
+                            <div class="sphere-window-header" id="sphere-window-editor-header" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--vgt-border); cursor: move; user-select: none; background: rgba(0,0,0,0.4); border-top-left-radius: 15px; border-top-right-radius: 15px;">
+                                <span class="window-title font-mono" style="font-size: 10px; color: var(--vgt-cyan); letter-spacing: 0.1em; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    AETHEL WRITER // DOCUMENT CANVAS
+                                </span>
+                                <div class="window-controls" style="display: flex; gap: 6px;">
+                                    <button class="win-btn" id="win-editor-min" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ffbd2e; cursor: pointer;" title="Minimieren"></button>
+                                    <button class="win-btn" id="win-editor-max" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #27c93f; cursor: pointer;" title="Maximieren"></button>
+                                    <button class="win-btn" id="win-editor-close" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ff5f56; cursor: pointer;" title="Schließen"></button>
+                                </div>
+                            </div>
+                            <!-- Format Toolbar (WYSIWYG + export) -->
+                            <div class="sphere-editor-toolbar font-mono" style="padding: 6px 12px; display: flex; gap: 6px; flex-wrap: wrap; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--vgt-border); align-items: center;">
+                                <button class="toolbar-btn" id="editor-btn-bold" title="Fett" style="padding: 4px 8px; font-size: 10px; font-weight: bold; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">B</button>
+                                <button class="toolbar-btn" id="editor-btn-italic" title="Kursiv" style="padding: 4px 8px; font-size: 10px; font-style: italic; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">I</button>
+                                <button class="toolbar-btn" id="editor-btn-underline" title="Unterstreichen" style="padding: 4px 8px; font-size: 10px; text-decoration: underline; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">U</button>
+                                <span style="width: 1px; height: 14px; background: rgba(255,255,255,0.1); margin: 0 4px;"></span>
+                                <button class="toolbar-btn" id="editor-btn-h1" title="H1" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">H1</button>
+                                <button class="toolbar-btn" id="editor-btn-h2" title="H2" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">H2</button>
+                                <button class="toolbar-btn" id="editor-btn-h3" title="H3" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">H3</button>
+                                <button class="toolbar-btn" id="editor-btn-p" title="Text" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">P</button>
+                                <span style="width: 1px; height: 14px; background: rgba(255,255,255,0.1); margin: 0 4px;"></span>
+                                <button class="toolbar-btn" id="editor-btn-ul" title="Liste" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">• List</button>
+                                <button class="toolbar-btn" id="editor-btn-ol" title="Nummerierung" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">1. List</button>
+                                <span style="width: 1px; height: 14px; background: rgba(255,255,255,0.1); margin: 0 4px;"></span>
+                                <button class="toolbar-btn" id="editor-btn-left" title="Links" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">Align L</button>
+                                <button class="toolbar-btn" id="editor-btn-center" title="Zentriert" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">Align C</button>
+                                <button class="toolbar-btn" id="editor-btn-right" title="Rechts" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">Align R</button>
+                                <span style="width: 1px; height: 14px; background: rgba(255,255,255,0.1); margin: 0 4px;"></span>
+                                <button class="toolbar-btn" id="editor-btn-export-html" title="Als HTML exportieren" style="padding: 4px 8px; font-size: 9px; background: rgba(0,240,255,0.1); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan); border-radius: 3px; cursor: pointer;">↓ HTML</button>
+                                <button class="toolbar-btn" id="editor-btn-export-md" title="Als Markdown exportieren" style="padding: 4px 8px; font-size: 9px; background: rgba(157,78,221,0.12); border: 1px solid var(--vgt-purple); color: var(--vgt-purple); border-radius: 3px; cursor: pointer;">↓ MD</button>
+                            </div>
+                            <div class="sphere-writer-documentbar">
+                                <input id="sphere-writer-title" type="text" maxlength="120" value="Aethel Document" aria-label="Dokumenttitel">
+                                <button type="button" id="editor-btn-new" class="toolbar-btn">NEU</button>
+                                <button type="button" id="editor-btn-open" class="toolbar-btn">ÖFFNEN</button>
+                                <input id="sphere-writer-file" class="hidden" type="file" accept=".txt,.md,.html,text/plain,text/markdown,text/html">
+                                <span id="sphere-writer-save-state" class="sphere-writer-save-state">BEREIT</span>
+                            </div>
+                            <!-- Editable Document Body -->
+                            <div class="sphere-window-body sphere-editor-body" style="flex-grow: 1; overflow-y: auto; background: rgba(8, 6, 20, 0.6); padding: 18px; color: #f8fafc; font-size: 13px; line-height: 1.6; outline: none; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;" contenteditable="true" id="sphere-editor-area" placeholder="Beginne mit dem Schreiben oder lass Aethel ein Dokument erstellen...">
+                                <h1>Aethel Document</h1>
+                                <p>Willkommen im interaktiven Rich-Text-Workspace. Du kannst diesen Text editieren oder formatieren.</p>
+                            </div>
+                            <footer class="sphere-writer-statusbar font-mono">
+                                <span id="sphere-writer-word-count">0 WÖRTER</span>
+                                <span id="sphere-writer-char-count">0 ZEICHEN</span>
+                                <span id="sphere-writer-read-time">0 MIN LESEZEIT</span>
+                                <span>AETHEL LIVE-SYNC</span>
+                            </footer>
+                        </div>
+
+                        <!-- Floating Window 2: Headless Web Browser Monitor (on demand) -->
+                        <div class="sphere-window glass-card hidden" id="sphere-window-browser" style="position: absolute; width: 480px; height: 360px; left: 420px; top: 56px; display: flex; flex-direction: column; z-index: 10; border-color: rgba(157, 78, 221, 0.2);">
+                            <!-- Window Header -->
+                            <div class="sphere-window-header" id="sphere-window-browser-header" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--vgt-border); cursor: move; user-select: none; background: rgba(0,0,0,0.4); border-top-left-radius: 15px; border-top-right-radius: 15px;">
+                                <span class="window-title font-mono" style="font-size: 10px; color: var(--vgt-purple); letter-spacing: 0.1em; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+                                    AETHEL BROWSER // LIVE FEED
+                                </span>
+                                <div class="window-controls" style="display: flex; gap: 6px;">
+                                    <button class="win-btn" id="win-browser-min" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ffbd2e; cursor: pointer;" title="Minimieren"></button>
+                                    <button class="win-btn" id="win-browser-max" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #27c93f; cursor: pointer;" title="Maximieren"></button>
+                                    <button class="win-btn" id="win-browser-close" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ff5f56; cursor: pointer;" title="Schließen"></button>
+                                </div>
+                            </div>
+                            <!-- Mock Browser URL bar -->
+                            <div style="padding: 6px 12px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--vgt-border); display: flex; align-items: center; gap: 8px;">
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--vgt-green);" id="sphere-browser-status-dot"></span>
+                                <input type="text" id="sphere-browser-url" readonly value="https://www.google.de" class="font-mono" style="flex-grow: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--vgt-border); color: var(--vgt-cyan); padding: 4px 8px; font-size: 9px; outline: none; border-radius: 3px;">
+                            </div>
+                            <!-- Browser Viewport with screenshot -->
+                            <div class="sphere-window-body" style="flex-grow: 1; overflow: hidden; background: #060412; display: flex; justify-content: center; align-items: center; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;">
+                                <div id="sphere-browser-placeholder" class="font-mono" style="text-align: center; color: var(--vgt-text-dim); font-size: 10px;">
+                                    <p>Warte auf Browser-Aktivität...</p>
+                                    <span style="font-size: 8px; opacity: 0.5;">(Befehle wie "Öffne die Website X" steuern diesen Feed)</span>
+                                </div>
+                                <img id="sphere-browser-screenshot" class="hidden" style="width: 100%; height: 100%; object-fit: contain;">
+                            </div>
+                        </div>
+
+                        <!-- Floating Window 3: Aethel Terminal -->
+                        <div class="sphere-window glass-card hidden" id="sphere-window-terminal" style="position: absolute; width: 520px; height: 350px; left: 300px; top: 120px; display: flex; flex-direction: column; z-index: 50; border-color: rgba(255, 123, 0, 0.2);">
+                            <!-- Window Header -->
+                            <div class="sphere-window-header" id="sphere-window-terminal-header" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--vgt-border); cursor: move; user-select: none; background: rgba(0,0,0,0.4); border-top-left-radius: 15px; border-top-right-radius: 15px;">
+                                <span class="window-title font-mono" style="font-size: 10px; color: var(--vgt-orange); letter-spacing: 0.1em; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                                    AETHEL RUN ENGINE // TERMINAL
+                                </span>
+                                <div class="window-controls" style="display: flex; gap: 6px;">
+                                    <button class="win-btn" id="win-terminal-min" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ffbd2e; cursor: pointer;" title="Minimieren"></button>
+                                    <button class="win-btn" id="win-terminal-max" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #27c93f; cursor: pointer;" title="Maximieren"></button>
+                                    <button class="win-btn" id="win-terminal-close" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ff5f56; cursor: pointer;" title="Schließen"></button>
+                                </div>
+                            </div>
+                            <!-- Terminal Controls -->
+                            <div style="padding: 6px 12px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--vgt-border); display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                <div style="display: flex; gap: 6px;">
+                                    <button id="sphere-term-btn-tasks" class="cyber-button font-mono" style="padding: 4px 8px; font-size: 8px; width: auto; background: rgba(255,123,0,0.08); border: 1px solid var(--vgt-orange); color: var(--vgt-orange);">BACKGROUND TASKS</button>
+                                    <button id="sphere-term-btn-runs" class="cyber-button font-mono" style="padding: 4px 8px; font-size: 8px; width: auto; background: rgba(157,78,221,0.08); border: 1px solid var(--vgt-purple); color: var(--vgt-purple);">AGENT RUNS</button>
+                                </div>
+                                <span style="font-size: 8px; color: var(--vgt-text-dim);" id="sphere-term-status">READY // LOCAL HOST UPLINK</span>
+                            </div>
+                            <!-- Terminal Console Viewport -->
+                            <div class="sphere-window-body" style="flex-grow: 1; overflow: hidden; background: #04030a; display: flex; flex-direction: column; padding: 12px; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;">
+                                <div id="sphere-terminal-output" class="font-mono" style="flex-grow: 1; overflow-y: auto; color: #39ff14; font-size: 10px; line-height: 1.4; white-space: pre-wrap; margin-bottom: 8px;">
+                                    Aethel Autonomous Exec Engine. Type command or choose query...
+                                </div>
+                                <!-- Stdin Input -->
+                                <div style="display: flex; gap: 6px; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
+                                    <span style="color: var(--vgt-orange); font-size: 10px; font-weight: bold; font-family: var(--font-mono);">$</span>
+                                    <input type="text" id="sphere-terminal-input" placeholder="Execute command in shell..." class="font-mono" style="flex-grow: 1; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 4px 8px; font-size: 10px; outline: none; border-radius: 3px;">
+                                    <button id="sphere-terminal-run-btn" class="cyber-button font-mono" style="width: auto; padding: 4px 10px; font-size: 9px; background: rgba(0,255,0,0.1); border: 1px solid #39ff14; color: #39ff14;">RUN</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="sphere-app-layer" aria-live="polite"></div>
+
+                        <form id="sphere-command-form" class="sphere-command-bar" aria-label="Aethel Anweisung im gemeinsamen Workspace">
+                            <span class="sphere-command-mark" aria-hidden="true">&#9670;</span>
+                            <textarea id="sphere-command-input" rows="1" maxlength="12000" placeholder="Aethel im Workspace anweisen - z. B. 'Analysiere dieses Projekt und erstelle eine Architekturkarte'" aria-label="Anweisung an Aethel"></textarea>
+                            <button id="sphere-command-send" class="sphere-command-send" type="submit">SENDEN <span aria-hidden="true">&#8599;</span></button>
+                        </form>
+
+                    </div>
+                    <nav class="sphere-dock" aria-label="Sphere Apps">
+                        <button type="button" data-sphere-app="aethel" class="sphere-dock-app" title="Aethel Console"><span>◈</span>AETHEL</button>
+                        <button type="button" data-sphere-app="editor" class="sphere-dock-app" title="Writer"><span>✦</span>WRITER</button>
+                        <button type="button" data-sphere-app="browser" class="sphere-dock-app" title="Browser"><span>◌</span>BROWSER</button>
+                        <button type="button" data-sphere-app="terminal" class="sphere-dock-app" title="Terminal"><span>$</span>TERMINAL</button>
+                        <button type="button" data-sphere-app="workspace" class="sphere-dock-app" title="Workspace Dateien"><span>▤</span>WORKSPACE</button>
+                        <button type="button" data-sphere-app="runs" class="sphere-dock-app" title="Agent Runs"><span>◈</span>RUN DESK</button>
+                        <button type="button" data-sphere-app="live" class="sphere-dock-app" title="Aethel Live Flow"><span>⌁</span>LIVE FLOW</button>
+                        <button type="button" data-sphere-app="notes" class="sphere-dock-app" title="Scratch Notes"><span>✎</span>NOTES</button>
+                        <button type="button" data-sphere-app="weather" class="sphere-dock-app" title="Wetter"><span>☼</span>WETTER</button>
+                        <button type="button" data-sphere-app="market" class="sphere-dock-app" title="Marktkurse"><span>◇</span>MÄRKTE</button>
+                        <button type="button" data-sphere-app="media" class="sphere-dock-app" title="Media Steuerung"><span>▶</span>MEDIA</button>
+                    </nav>
+
+                    <section id="sphere-help-dialog" class="sphere-help-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="sphere-help-title">
+                        <div class="sphere-help-backdrop" data-sphere-help-close></div>
+                        <div class="sphere-help-panel">
+                            <header class="sphere-help-header">
+                                <div><span class="sphere-help-kicker">SPHERE DESKTOP // BEDIENUNGSLEITFADEN</span><h2 id="sphere-help-title">Gemeinsamer Workspace</h2></div>
+                                <button id="sphere-help-close" class="sphere-help-close" type="button" aria-label="Hilfe schliessen">&#215;</button>
+                            </header>
+                            <div class="sphere-help-grid">
+                                <section><h3>Apps</h3><p>Das Dock oeffnet Aethel Console, Writer, Browser, Workspace Index, Run Desk und Media. Fenster lassen sich am Kopf ziehen; Gelb minimiert, Gruen maximiert, Rot schliesst.</p></section>
+                                <section><h3>Workspace-Befehle</h3><ul><li>"Lies die Dateien im Workspace und fasse die Architektur zusammen."</li><li>"Erstelle im Writer eine Projektuebersicht mit offenen Punkten."</li><li>"Pruefe den Workspace auf relevante Artefakte fuer diesen Run."</li></ul></section>
+                                <section><h3>Browser</h3><ul><li>"Oeffne https://youtube.com im Sphere Browser."</li><li>"Suche im Browser nach Go Wails Dokumentation."</li><li>Gib immer eine konkrete Seite oder Suchanfrage an.</li></ul></section>
+                                <section><h3>Sprache &amp; Kontrolle</h3><p>Nutze das Mikrofon der Hauptoberflaeche fuer Spracheingaben. Formuliere Ziel, Kontext und erwartetes Ergebnis; Aethel fragt bei riskanten Aktionen nach einer Freigabe.</p></section>
+                            </div>
+                            <footer class="sphere-help-footer"><span>ENTER sendet eine Anweisung. SHIFT + ENTER fuegt eine neue Zeile ein.</span><button class="sphere-app-action" type="button" data-sphere-help-close>VERSTANDEN</button></footer>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- 8. VIEW PANEL: TASK ENGINE -->
+                <div id="view-tasks" class="viewport-panel run-workspace hidden">
+                    <!-- Tasks creation card -->
+                    <section class="run-panel run-create-panel font-mono">
+                        <h4 class="ds-section-title">Neuen Agent-Run starten</h4>
+                        <div class="run-form-grid">
+                            <input type="text" id="task-add-text" placeholder="Task Titel (z.B. Log-Audit Check)...">
+                            <div class="run-form-subgrid">
+                                <select id="task-add-schedule">
+                                    <option value="developer">Developer</option>
+                                    <option value="researcher">Researcher</option>
+                                    <option value="browser_operator">Browser Operator</option>
+                                    <option value="personal_assistant">Personal Assistant</option>
+                                </select>
+                                <input type="number" id="task-add-interval" placeholder="Kostenlimit USD" value="2" min="0.01" max="1000" step="0.25">
+                            </div>
+                        </div>
+                        <textarea id="task-add-objective" placeholder="Detailliertes Agenten-Ziel (z.B. Prüfe den Inhalt von './vgt_workspace/security_audit.json', filtere nach blockierten Aktionen und erstelle einen Report)..." rows="2"></textarea>
+                        <div class="run-form-grid run-form-options">
+                            <input type="text" id="task-add-capabilities" placeholder="Modell-ID (leer = aktuelles Modell)">
+                            <select id="task-add-risk">
+                                <option value="queued">Erstellen · manuell starten</option>
+                                <option value="start" selected>Erstellen · direkt starten</option>
+                            </select>
+                        </div>
+                        <div class="run-form-actions">
+                            <button id="task-btn-add" class="cyber-button font-mono run-create-button">Run erstellen</button>
+                        </div>
+                    </section>
+
+                    <!-- Tasks queue monitor -->
+                    <section class="run-panel run-list-panel font-mono">
+                        <h4 class="ds-section-title">Aktive &amp; gespeicherte Runs</h4>
+                        <div id="tasks-list-container" class="run-list-container">
+                            <div class="run-center-empty">Lade Runs...</div>
+                        </div>
+                    </section>
+
+                    <!-- Datei-Snapshots & Undo Center (Artefakte) -->
+                    <section class="run-panel artifact-panel font-mono">
+                        <h4 class="artifact-panel-title">
+                            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 1 0 9.5 21.5M2 12.5A10 10 0 1 0 14.5 2.5"/></svg>
+                            Datei-Snapshots &amp; Undo
+                        </h4>
+                        <div id="artifacts-list-container" class="artifact-list-container">
+                            <div class="run-center-empty">Lade Snapshots...</div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- 8. VIEW PANEL: SETTINGS -->
+                <div id="view-settings" class="viewport-panel settings-view hidden">
+                    <header class="settings-page-header">
+                        <div>
+                            <p class="settings-page-kicker">VGT AETHEL · LOKAL</p>
+                            <h2 class="settings-page-title" data-i18n="settings.title">Einstellungen</h2>
+                            <p class="settings-page-sub" data-i18n="settings.subtitle">API-Zugänge, Provider-Status und Systemaktionen — alles bleibt auf deinem Gerät.</p>
+                        </div>
+                        <label class="aethel-language-control settings-language-control"><span data-i18n="language.label">Sprache</span><select class="aethel-language-select" aria-label="Interface language"><option value="de">Deutsch</option><option value="en">English</option><option value="ru">Русский</option><option value="es">Español</option></select></label>
+                    </header>
+
+                    <div class="settings-layout">
+                        <!-- Left column: status + health -->
+                        <div class="settings-col">
+                            <section id="settings-credentials-card" class="settings-card glass-card" aria-labelledby="settings-cred-title">
+                                <h4 id="settings-cred-title" class="ds-section-title">API-Zugänge · Status</h4>
+                                <div class="settings-status-list">
+                                    <div class="settings-status-row ds-status-row">
+                                        <span id="settings-groq-status" class="pulse-dot"></span>
+                                        <span id="settings-groq-label" class="settings-status-label">Lade Status…</span>
+                                    </div>
+                                    <div class="settings-status-row ds-status-row">
+                                        <span id="settings-deepseek-status" class="pulse-dot"></span>
+                                        <span id="settings-deepseek-label" class="settings-status-label">Lade Status…</span>
+                                    </div>
+                                    <div class="settings-status-row ds-status-row">
+                                        <span id="settings-openai-status" class="pulse-dot"></span>
+                                        <span id="settings-openai-label" class="settings-status-label">Lade Status…</span>
+                                    </div>
+                                    <div class="settings-status-row ds-status-row">
+                                        <span id="settings-gemini-status" class="pulse-dot"></span>
+                                        <span id="settings-gemini-label" class="settings-status-label">Lade Status…</span>
+                                    </div>
+                                    <div class="settings-status-row ds-status-row">
+                                        <span id="settings-claude-status" class="pulse-dot"></span>
+                                        <span id="settings-claude-label" class="settings-status-label">Lade Status…</span>
+                                    </div>
+                                    <div class="settings-status-row ds-status-row settings-os-row">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="var(--vgt-cyan)" stroke-width="2" fill="none" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                                        <span class="settings-status-label"><strong>Host-OS:</strong> <span id="settings-os-label">Erkenne…</span></span>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section id="settings-health-card" class="settings-card glass-card" aria-labelledby="settings-health-title">
+                                <h4 id="settings-health-title" class="ds-section-title">Provider-Gesundheit &amp; Fallback</h4>
+                                <div id="settings-provider-health-list" class="settings-provider-list">
+                                    <div class="ds-empty">Lade Provider-Status…</div>
+                                </div>
+                            </section>
+
+                            <section class="settings-card glass-card" aria-labelledby="settings-dirs-title">
+                                <h4 id="settings-dirs-title" class="ds-section-title">Eingebundene Verzeichnisse</h4>
+                                <div id="settings-mounted-dirs" class="settings-dirs-list">
+                                    <span class="settings-status-label">Lade…</span>
+                                </div>
+                            </section>
+                        </div>
+
+                        <!-- Right column: keys + actions -->
+                        <div class="settings-col">
+                            <section id="settings-keys-card" class="settings-card glass-card" aria-labelledby="settings-keys-title">
+                                <h4 id="settings-keys-title" class="ds-section-title">API-Keys aktualisieren</h4>
+                                <p class="settings-hint">Leer lassen = unverändert. Keys werden lokal verschlüsselt gespeichert.</p>
+
+                                <div class="settings-field ds-field">
+                                    <label for="settings-groq-input" class="ds-label settings-key-label settings-key-groq">Groq Key (gsk_…)</label>
+                                    <input type="password" id="settings-groq-input" class="settings-input" placeholder="gsk_… (leer = unverändert)" autocomplete="off">
+                                </div>
+                                <div class="settings-field ds-field">
+                                    <label for="settings-deepseek-input" class="ds-label settings-key-label settings-key-deepseek">DeepSeek Key (sk-…)</label>
+                                    <input type="password" id="settings-deepseek-input" class="settings-input" placeholder="sk-… (leer = unverändert)" autocomplete="off">
+                                </div>
+                                <div class="settings-field ds-field">
+                                    <label for="settings-openai-input" class="ds-label settings-key-label settings-key-openai">OpenAI Key (sk-…)</label>
+                                    <input type="password" id="settings-openai-input" class="settings-input" placeholder="sk-… (leer = unverändert)" autocomplete="off">
+                                </div>
+                                <div class="settings-field ds-field">
+                                    <label for="settings-gemini-input" class="ds-label settings-key-label settings-key-gemini">Google Gemini Key (AIza…)</label>
+                                    <input type="password" id="settings-gemini-input" class="settings-input" placeholder="AIza… (leer = unverändert)" autocomplete="off">
+                                </div>
+                                <div class="settings-field ds-field">
+                                    <label for="settings-claude-input" class="ds-label settings-key-label settings-key-claude">Anthropic Claude Key (sk-ant-…)</label>
+                                    <input type="password" id="settings-claude-input" class="settings-input" placeholder="sk-ant-… (leer = unverändert)" autocomplete="off">
+                                </div>
+
+                                <div id="settings-save-feedback" class="settings-feedback hidden"></div>
+
+                                <button id="settings-btn-save" type="button" class="cyber-button font-mono settings-btn-primary">
+                                    Keys speichern
+                                </button>
+                            </section>
+
+                            <section class="settings-card glass-card" aria-labelledby="settings-actions-title">
+                                <h4 id="settings-actions-title" class="ds-section-title accent-orange">System-Aktionen</h4>
+
+                                <button id="settings-btn-force-setup" type="button" class="cyber-button font-mono ds-btn-purple">
+                                    Setup-Assistent öffnen
+                                </button>
+                                <p class="settings-hint">Öffnet das Onboarding zur Erstkonfiguration, ohne die App neu zu starten.</p>
+
+                                <button id="settings-btn-reset" type="button" class="cyber-button font-mono ds-btn-danger">
+                                    Konfiguration zurücksetzen
+                                </button>
+                                <p class="settings-hint">Löscht alle Keys und Konfiguration. Die App startet danach im Setup-Modus.</p>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 8b. VIEW PANEL: PERSONA REGISTRY -->
+                <div id="view-personas" class="viewport-panel hidden persona-registry-view">
+                    <section class="glass-card persona-registry-shell">
+                        <header class="persona-registry-heading">
+                            <div>
+                                <span class="vgt-eyebrow">IDENTITY FABRIC // CUSTOM CORTEX</span>
+                                <h4 class="ds-section-title">Personas · eigene Aethel-Rollen</h4>
+                            </div>
+                            <span class="persona-registry-status">SYSTEMWEIT VERKNÜPFT</span>
+                        </header>
+                        <p class="persona-registry-intro">
+                            Erstelle und verwalte eigene Personas ("Gems"), um Aethels Verhalten systemweit oder im Agenten-Team anzupassen. 
+                            Jede Persona hat einen individuellen Systemprompt, der das Verhalten steuert.
+                        </p>
+
+                        <div class="persona-registry-grid">
+                            <!-- Form Column -->
+                            <section class="glass-card persona-registry-editor">
+                                <h5>Persona Details</h5>
+                                <input type="hidden" id="settings-persona-id" value="">
+                                
+                                <div class="input-group persona-registry-field">
+                                    <label for="settings-persona-name">Aethel Name</label>
+                                    <input type="text" id="settings-persona-name" maxlength="120" autocomplete="off" placeholder="z. B. Aethel Python-Coder">
+                                </div>
+                                
+                                <div class="input-group persona-registry-field persona-registry-prompt-field">
+                                    <label for="settings-persona-prompt">System Prompt / Anweisungen</label>
+                                    <textarea id="settings-persona-prompt" maxlength="12000" placeholder="z. B. Du bist ein präziser Programmier-Assistent..."></textarea>
+                                </div>
+                                <div id="settings-persona-feedback" class="persona-registry-feedback" role="status" aria-live="polite" hidden></div>
+                                <div class="persona-registry-form-actions">
+                                    <button id="settings-persona-btn-save" type="button" class="cyber-button font-mono persona-registry-save">SPEICHERN</button>
+                                    <button id="settings-persona-btn-clear" type="button" class="cyber-button font-mono persona-registry-clear">NEU / LEEREN</button>
+                                </div>
+                            </section>
+
+                            <!-- List Column -->
+                            <section class="glass-card persona-registry-library">
+                                <div class="persona-registry-library-heading">
+                                    <h5>Vorhandene Personas</h5>
+                                    <span>LIVE REGISTRY</span>
+                                </div>
+                                <div id="settings-personas-list" class="persona-registry-list">
+                                    <!-- Dynamically loaded custom personas -->
+                                </div>
+                            </section>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- 9. VIEW PANEL: CHAT ARCHIVE -->
+                <div id="view-archive" class="viewport-panel hidden archive-workspace">
+                    <section class="glass-card archive-shell">
+                        <header class="archive-heading">
+                            <div><span class="vgt-eyebrow">HISTORY LAYER // CONVERSATION MEMORY</span><h4 class="ds-section-title">Chat-Archiv</h4></div>
+                            <span class="archive-local-status">LOKAL · PRIVAT</span>
+                        </header>
+                        <p class="archive-intro">Vergangene Gespräche verwalten und wieder in den Chat laden.</p>
+                        
+                        <div id="archive-grid" class="archive-grid">
+                            <!-- Dynamically loaded chat cards -->
+                        </div>
+                    </section>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Full Machine Activation Modal -->
+    <div id="full-machine-modal" class="modal-overlay hidden" style="z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center;">
+        <div class="glass-card" style="max-width: 480px; padding: 25px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--vgt-red); background: rgba(18, 5, 10, 0.95); box-shadow: 0 0 30px rgba(255,0,79,0.25); border-radius: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px; color: var(--vgt-red); font-family: var(--font-mono);">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></svg>
+                <h3 style="margin: 0; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 800; color: var(--vgt-red);">⚠️ SYSTEM WARNUNG: VOLLAUTONOMER MODUS</h3>
+            </div>
+            
+            <p style="font-size: 11px; line-height: 1.5; color: var(--vgt-text-dim); margin: 0; font-family: var(--font-mono);">
+                Du bist im Begriff, den <strong style="color: var(--vgt-red);">Full Machine Modus (Vollautonomie)</strong> zu aktivieren. 
+                In diesem Modus darf Aethel alle Systembefehle, Dateizugriffe und GUI-Interaktionen <strong style="color: #fff;">ohne vorherige Rückfrage oder Bestätigung</strong> direkt auf deinem PC ausführen.
+            </p>
+            
+            <div style="background: rgba(255, 0, 79, 0.05); border: 1px solid rgba(255,0,79,0.2); border-radius: 4px; padding: 12px; font-size: 10px; color: var(--vgt-red); font-family: var(--font-mono); line-height: 1.4;">
+                <strong>RISIKOHINWEIS:</strong><br>
+                Die KI kann selbstständig Programme starten, Dateien manipulieren, das Internet nutzen und Steuerungseingaben simulieren. Missbrauch, Fehler oder unvorhergesehene Handlungen des Modells können zu Datenverlust oder Systeminstabilitäten führen.
+            </div>
+            
+            <div style="display: flex; gap: 10px; font-family: var(--font-mono); margin-top: 10px;">
+                <button id="full-machine-btn-confirm" class="cyber-button" style="flex: 1; font-size: 9px; padding: 10px; background: rgba(255,0,79,0.15); border: 1px solid var(--vgt-red); color: var(--vgt-red); font-weight: bold; cursor: pointer; border-radius: 4px;">
+                    AKZEPTIEREN & AKTIVIEREN
+                </button>
+                <button id="full-machine-btn-cancel" class="cyber-button" style="flex: 1; font-size: 9px; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; cursor: pointer; border-radius: 4px;">
+                    ABBRECHEN
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Chat Mount Modal -->
+    <div id="new-chat-mount-modal" class="modal-overlay hidden" style="z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center;">
+        <div class="glass-card" style="max-width: 480px; width: 90%; padding: 25px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--vgt-cyan); background: rgba(8, 8, 18, 0.95); box-shadow: 0 0 30px rgba(0,240,255,0.15); border-radius: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px; color: var(--vgt-cyan); font-family: var(--font-mono);">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <h3 style="margin: 0; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 800; color: var(--vgt-cyan);">📁 Ordner für Aethel freigeben</h3>
+            </div>
+            
+            <p style="font-size: 11px; line-height: 1.5; color: var(--vgt-text-dim); margin: 0; font-family: var(--font-mono);">
+                Wähle ein Projekt- oder Arbeitsverzeichnis auf deinem PC aus, auf das Aethel zugreifen und Modifikationen vornehmen darf. Du kannst diesen Schritt auch überspringen.
+            </p>
+
+            <div style="display: flex; gap: 8px; font-family: var(--font-mono);">
+                <input type="text" id="new-chat-mount-input" placeholder="Wähle einen Pfad..." 
+                    style="flex-grow: 1; background: rgba(0,0,0,0.6); border: 1px solid var(--vgt-border); border-radius: 4px; color: #fff; padding: 10px; font-size: 11px; outline: none;">
+                <button id="new-chat-btn-browse" class="cyber-button" style="width: auto; padding: 0 15px; font-size: 10px; background: rgba(0,240,255,0.08); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan);">DURCHSUCHEN</button>
+            </div>
+
+            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px; font-family: var(--font-mono);">
+                <button id="new-chat-btn-skip" class="cyber-button" style="width: auto; padding: 10px 20px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff;">ÜBERSPRINGEN</button>
+                <button id="new-chat-btn-confirm" class="cyber-button" style="width: auto; padding: 10px 24px; font-size: 10px; background: rgba(0,240,255,0.12); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan);">FREIGEBEN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Startup Warning Modal -->
+    <div id="startup-warning-modal" class="modal-overlay" style="z-index: 20000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(3,2,6,0.95); display: flex; justify-content: center; align-items: center;">
+        <div class="glass-card runtime-disclosure-card">
+            <div style="display: flex; align-items: center; gap: 12px; color: var(--vgt-orange);">
+                <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></svg>
+                <h3 style="margin: 0; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 800; color: var(--vgt-orange);">BETA V2 RUNTIME DISCLOSURE</h3>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 14px; font-size: 11px; line-height: 1.5; color: var(--vgt-text-dim);">
+                <div>
+                    <strong style="color: #fff; text-transform: uppercase;">[DE] WICHTIGER HINWEIS:</strong><br>
+                    Dies ist <strong style="color: var(--vgt-cyan);">VGT AETHEL Beta V2</strong> — ein souveränes Personal Intelligence OS im Production-Candidate-Stadium, entwickelt von <strong style="color: var(--vgt-purple);">VisionGaiaTechnology</strong>.
+                    Die Nutzung der Software erfolgt vollständig auf eigene Verantwortung. Aethel besitzt weitreichende Berechtigungen (Shell-Befehle, Dateisystem-Zugriff, Tastatur- & Maus-Simulation). Unerwartete Aktionen oder Fehlfunktionen können Datenverlust oder Systeminstabilitäten verursachen.
+                </div>
+                
+                <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+                    <strong style="color: #fff; text-transform: uppercase;">[EN] IMPORTANT NOTICE:</strong><br>
+                    This is <strong style="color: var(--vgt-cyan);">VGT AETHEL Beta V2</strong> — a sovereign Personal Intelligence OS at Production Candidate stage, developed by <strong style="color: var(--vgt-purple);">VisionGaiaTechnology</strong>.
+                    Use of this software is entirely at your own risk. Aethel holds low-level host capabilities (terminal execution, filesystem write, GUI simulation). Unintended model behaviors or bugs may result in data loss or host instability.
+                </div>
+            </div>
+            
+            <button id="startup-warning-btn-accept" class="cyber-button" onclick="document.getElementById('startup-warning-modal').style.setProperty('display','none','important')" style="font-size: 10px; padding: 14px; background: rgba(255,123,0,0.15); border: 1px solid var(--vgt-orange); color: var(--vgt-orange); font-weight: bold; cursor: pointer; border-radius: 4px; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 10px; height: auto;">
+                I UNDERSTAND & AGREE // VERSTANDEN & BESTÄTIGEN
+            </button>
+        </div>
+    </div>
+
+    <!-- Donation Modal -->
+    <div id="donation-modal" class="modal-overlay hidden" style="z-index: 20000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center;">
+        <div class="glass-card" style="max-width: 520px; width: 90%; padding: 25px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--vgt-purple); background: rgba(8, 5, 18, 0.96); box-shadow: 0 0 35px rgba(157,78,221,0.2); border-radius: 10px; font-family: var(--font-mono);">
+            <div style="display: flex; align-items: center; gap: 10px; color: var(--vgt-purple);">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                <h3 style="margin: 0; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 800;">❤️ Aethel Unterstützen</h3>
+            </div>
+            
+            <p style="font-size: 11px; line-height: 1.5; color: var(--vgt-text-dim); margin: 0;">
+                Wenn dir VGT Aethel gefällt und du die Weiterentwicklung dieses autonomen Agentensystems unterstützen möchtest, freuen wir uns über eine Spende:
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 5px;">
+                <!-- PayPal -->
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 4px; display: flex; flex-direction: column; gap: 4px;">
+                    <div style="font-size: 9px; color: var(--vgt-cyan); font-weight: bold; letter-spacing: 0.05em;">PAYPAL</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                        <a href="https://paypal.me/dergoldenelotus" target="_blank" style="color: #fff; text-decoration: underline;">paypal.me/dergoldenelotus</a>
+                        <button onclick="navigator.clipboard.writeText('paypal.me/dergoldenelotus'); alert('PayPal-Link kopiert!');" class="cyber-button" style="width: auto; padding: 2px 8px; font-size: 8px; background: rgba(0,240,255,0.05); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan);">KOPIEREN</button>
+                    </div>
+                </div>
+
+                <!-- Bitcoin -->
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 4px; display: flex; flex-direction: column; gap: 4px;">
+                    <div style="font-size: 9px; color: #ff9f1c; font-weight: bold; letter-spacing: 0.05em;">BITCOIN (BTC)</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px;">
+                        <span style="color: #fff; word-break: break-all; max-width: 320px;">bc1q3ue5gq822tddmkdrek79adlkm36fatat3lz0dm</span>
+                        <button onclick="navigator.clipboard.writeText('bc1q3ue5gq822tddmkdrek79adlkm36fatat3lz0dm'); alert('Bitcoin-Adresse kopiert!');" class="cyber-button" style="width: auto; padding: 2px 8px; font-size: 8px; background: rgba(255,159,28,0.05); border: 1px solid #ff9f1c; color: #ff9f1c; margin-left: 10px;">KOPIEREN</button>
+                    </div>
+                </div>
+
+                <!-- ETH / USDT -->
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 4px; display: flex; flex-direction: column; gap: 4px;">
+                    <div style="font-size: 9px; color: var(--vgt-purple); font-weight: bold; letter-spacing: 0.05em;">ETH / USDT (ERC-20)</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px;">
+                        <span style="color: #fff; word-break: break-all; max-width: 320px;">0xD37DEfb09e07bD775EaaE9ccDaFE3a5b2348Fe85</span>
+                        <button onclick="navigator.clipboard.writeText('0xD37DEfb09e07bD775EaaE9ccDaFE3a5b2348Fe85'); alert('Ethereum-Adresse kopiert!');" class="cyber-button" style="width: auto; padding: 2px 8px; font-size: 8px; background: rgba(157,78,221,0.05); border: 1px solid var(--vgt-purple); color: var(--vgt-purple); margin-left: 10px;">KOPIEREN</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="display: flex; justify-content: flex-end; font-family: var(--font-mono); margin-top: 5px;">
+                <button id="donation-btn-close" class="cyber-button" style="width: auto; padding: 10px 24px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff;">SCHLIESSEN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Beta V2 Production Candidate Boot Sequence -->
+    <div id="startup-splash-screen" class="startup-splash">
+        <div class="splash-grid"></div>
+        <div class="splash-scanline"></div>
+        <section class="splash-console" aria-label="Aethel boot sequence">
+            <div class="splash-orbit orbit-one"></div><div class="splash-orbit orbit-two"></div>
+            <img class="splash-emblem" src="aethel.webp" alt="Aethel emblem">
+            <p class="splash-kicker">VisionGaia Technology / Sovereign Runtime</p>
+            <h1>AETHEL</h1>
+            <p class="splash-release">BETA V2 <span></span> PRODUCTION CANDIDATE</p>
+            <div class="splash-progress"><div class="splash-progress-value"></div></div>
+            <div class="splash-readout"><span class="readout-dot"></span><span id="splash-status-text">BOOTING CORE KERNEL...</span></div>
+            <p class="splash-note">POLICY GATE · NEXUS MEMORY · OPERATOR CONTROL</p>
+            <button id="splash-start-button" class="splash-start-button" type="button" hidden>STARTEN <span>›</span></button>
+        </section>
+    </div>
+    <script>
+        (function () {
+            var splash = document.getElementById('startup-splash-screen');
+            var status = document.getElementById('splash-status-text');
+            var button = document.getElementById('splash-start-button');
+            var warning = document.getElementById('startup-warning-modal');
+            var acceptWarning = document.getElementById('startup-warning-btn-accept');
+            function ready() { if (status) status.textContent = 'SYSTEM BOOT READY // OPERATOR LINK ESTABLISHED'; if (button) { button.hidden = false; button.focus(); } }
+            function dismiss() { if (!splash) return; splash.classList.add('startup-splash-exit'); splash.style.opacity = '0'; setTimeout(function () { splash.remove(); }, 800); }
+            if (button) button.addEventListener('click', dismiss);
+            if (acceptWarning && warning) acceptWarning.addEventListener('click', function () {
+                warning.classList.add('hidden');
+                warning.style.display = 'none';
+                warning.setAttribute('aria-hidden', 'true');
+            });
+            ['core','chat','personas','agent','control','security','memory','personal','tasks','settings','archive'].forEach(function (name) {
+                var nav = document.getElementById('nav-btn-' + name);
+                var view = document.getElementById('view-' + name);
+                if (!nav || !view) return;
+                nav.addEventListener('click', function () {
+                    document.querySelectorAll('.viewport-panel').forEach(function (panel) { panel.classList.add('hidden'); });
+                    document.querySelectorAll('.nav-menu-btn').forEach(function (item) { item.classList.remove('active'); });
+                    view.classList.remove('hidden'); view.style.display = 'flex'; nav.classList.add('active');
+                });
+            });
+            setTimeout(ready, 3600);
+        }());
+    </script>
+</body>
+</html>

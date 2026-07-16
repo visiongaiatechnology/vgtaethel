@@ -1,0 +1,15 @@
+STATUS: DIAMANT VGT SUPREME
+
+Asset: earth_day_8k.jpg
+Title: Equirectangular Projected Earth for "LARGEST"
+Source: https://svs.gsfc.nasa.gov/3615/
+Direct source file: https://svs.gsfc.nasa.gov/vis/a000000/a003600/a003615/flat_earth_Largest_still.0330.jpg
+Dimensions: 8192 x 4096 pixels (2:1 equirectangular)
+SHA-256: 5EA6B68A4412421CAE11711AE4FEC1A7B1F2DBD7265C0C3004D487A03C43BE9A
+
+Credit requested by source:
+NASA/Goddard Space Flight Center Scientific Visualization Studio.
+Blue Marble Next Generation data courtesy of Reto Stockli (NASA/GSFC)
+and NASA's Earth Observatory.
+
+Bundled locally so Global Watch does not require an external map or CDN at runtime.
