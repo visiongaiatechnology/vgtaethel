@@ -1,0 +1,31 @@
+U5–U7 open-items static proof
+Date: 2026-07-12
+
+CASE ID UNIFICATION
+- IntelligenceStore.CreateCaseWithID → SharedIntelStore.CreateCaseWithID(same id)
+- AddEntity / LinkEntities mirror into Shared
+
+OSINT SKILLS
+- osint_entity_propose, osint_relation_propose, osint_timeline_generate, osint_report_generate
+- osint_evidence_capture (prior)
+- Registered in app.go
+
+RE-ID
+- RequestReID / ApproveReID dual-control
+- GET status: reidentification always not_eligible; alias_unlock flag
+- POST /cases/{id}/reid action=request|approve
+- UI buttons request + approve + timeline
+
+U6
+- content_hash on obs/source; multi-source corroboration
+- connectors.Register(builtinRSSConnector)
+
+U7
+- RecordAgentAction on tools/execute
+- intelligence_identity_status + GET /identity
+- tool name accepts skill alias
+
+TESTS
+- TestMultiSourceCorroboration, TestRecordAgentActionAndIdentity
+- TestCaseIDUnificationRootAndShared
+- TestIntelligenceBriefingAndReIDGate extended dual-control

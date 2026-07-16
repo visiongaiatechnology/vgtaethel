@@ -1,0 +1,8 @@
+Continuation slice static proof
+- SealCaseEvidence + root seal mirrors shared
+- IngestObservationsBatch
+- builtin-rss Fetch → OSINT cache/refresh → Observations
+- intelligence_connector_fetch + /connectors + /connectors/fetch
+- RunEngine executeRunStep RecordAgentAction
+- Regions POLAND BALTICS TAIWAN ISRAEL
+- Briefing CORROBORATED separate from VERIFIED

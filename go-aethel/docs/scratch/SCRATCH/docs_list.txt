@@ -1,0 +1,25 @@
+docs/intelligence/ foundation documents (present):
+VISION.md
+ARCHITECTURE.md
+DATA_MODEL.md
+RISK_SCORING.md
+SOURCE_POLICY.md
+OSINT_BOUNDARIES.md
+THREAT_MODEL.md
+PRIVACY_MODEL.md
+LICENSING_MATRIX.md
+ROADMAP.md
+PHASE0_ANALYSIS.md
+
+ADRs:
+adr_event_bus.md
+adr_evidence_storage.md
+adr_risk_scoring.md
+adr_region_model.md
+adr_connector_sandbox.md
+adr_memory_separation.md
+adr_case_isolation.md
+adr_reid_workflow.md
+
+ROADMAP and PHASE0_ANALYSIS updated 2026-07-12 to match shipped vertical behavior
+and Obs/Assessment separation.

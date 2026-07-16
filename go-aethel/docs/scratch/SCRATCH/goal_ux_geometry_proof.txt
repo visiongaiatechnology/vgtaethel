@@ -1,0 +1,13 @@
+GOAL UX/geometry proof pointer (product tree)
+============================================
+Primary tree: C:\Users\Masterboard\Downloads\vgtaethel-main\vgtaethel-main\go-aethel
+
+Shipped markers:
+- computeGlobeFocusRotation in frontend/modules/osint_watch.js
+- buildSphereDocumentExport in frontend/modules/sphere.js  
+- navigate_ui skill + IntelligenceStore.NavigateUI
+- TestSphereBuildDocumentExportHTMLAndMarkdown in sphere_export_runtime_test.go
+- TestGlobeMathRuntimeFromShippedJS extended focus/time-window checks
+
+Agent scratch evidence:
+C:\Users\MASTER~1\AppData\Local\Temp\grok-goal-46f92dc627d7\implementer\

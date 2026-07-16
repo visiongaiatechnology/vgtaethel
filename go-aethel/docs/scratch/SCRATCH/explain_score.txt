@@ -1,0 +1,21 @@
+=== ExplainScore expected shape (from intelligence/store.go ExplainScore) ===
+
+When region has RiskScore (e.g. after Berlin/Germany ingest):
+
+## Why is this score this high?
+Region GERMANY OverallRisk=…% (trend …, conf …%)
+Primary drivers: […]
+Contributing dimensions (selected): Geopol=… Conflict=… Cyber=… Infra=… Econ=… Energy=…
+Data freshness ~…%. MissingData: […]
+Formula: OverallRisk = 0.6*max(dims) + 0.4*avg(dims); per-event weight * severity * e^(-λ·hours) * confidence.
+Layer note: score is DERIVED (inference). Raw observations feeding it remain UNVERIFIED.
+Evidence: see EvidenceIDs on related Alerts/Assessments; source trust tier factors confidence.
+
+Assertions in store_test.go + globe_math_runtime_test.go:
+- contains OverallRisk
+- contains unverified
+- contains Missing or fresh
+- does NOT label raw observations as verified facts
+
+When region missing:
+"No risk score computed for region … yet. Ingest observations with geo in the region first."

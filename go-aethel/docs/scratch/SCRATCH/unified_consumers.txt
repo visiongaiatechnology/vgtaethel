@@ -1,0 +1,29 @@
+=== Unified model consumers (static structural check) ===
+
+BACKEND (prefer SharedIntelStore):
+- app.go: SharedIntelStore init; OSINT refresh → IngestObservation only into shared store
+- intelligence.go handlers:
+  /v1/intelligence/status → snap Observations/Events/RiskScores/Alerts/Sources
+  /v1/intelligence/risks → GetRiskScores()
+  /v1/intelligence/alerts → GetAlerts()
+  /v1/intelligence/sources → GetSources()
+  /v1/intelligence/briefing → GenerateReport
+  /v1/intelligence/explain/{region} → ExplainScore
+  /v1/intelligence/events GET → subSnap.Events exclusively when SharedIntelStore set
+- skills_intelligence.go:
+  intelligence_region_status → QueryRegionSecurity + ExplainScore
+  intelligence_explain_score → ExplainScore
+  intelligence_generate_brief → GenerateReport
+  intelligence_global_status / recent_changes / summaries / watchlist / source_health → GetSnapshot/shared APIs
+- Residual root IntelligenceStore kept for compatibility (cases, propose, monitor) — criterion 1:
+  exclusive use of unified model for vertical outputs (events/risks/alerts/brief/explain), not total deletion.
+
+FRONTEND:
+- osint_watch.js: merges /v1/osint/feeds with /v1/intelligence/events
+  mapped pins: provenance='unified-shared-model', status='unverified', domain from Event
+  buildGlobePins(activeFeedEvents) — no second invented chat-only event list
+- intelligence.js: refreshIntelligence pulls status/events/alerts/risks from /v1/intelligence/*
+  renderEvents shows provenance + UNVERIFIED badge; risks click → explain/{id}
+  renderAlerts/renderSources tolerate shared-model JSON field shapes
+
+No parallel chat truth for intelligence answers: skills read SharedIntelStore only when available.

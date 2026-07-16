@@ -1,0 +1,23 @@
+U3/U4/U5 static proof (shell go unavailable in agent environment)
+Date: 2026-07-12
+
+SYMBOLS PRESENT
+- intelligence.NewAlertManager / CreateAlert (intelligence/alert_manager.go)
+- Store.SetPersonalContext / GetPersonalContext / PersonalImpact / StartProactiveLoop
+- Store.EvaluateAlertRules uses NewAlertManager (no circular import)
+- app.go: SharedIntelStore.StartProactiveLoop(2*time.Minute)
+- app.go: optional BuildSharedPersonalContext on startup
+- Skills registered: IntelligenceSyncPersonalSkill, IntelligencePersonalImpactSkill, OSINTEvidenceCaptureSkill
+- personal.go: BuildSharedPersonalContext, SyncPersonalToSharedIntel
+- HTTP: /v1/intelligence/personal/{context,sync,impact}
+- SealEvidenceWithEvent + source_event_id + event.promoted audit
+- Frontend: #gw-personal-impact, loadAndRenderPersonalImpact, promote passes eventId
+- Tests added: TestSetPersonalContextAndImpact; promote audit in case isolation test; frontend personal paths
+
+NO CIRCULAR IMPORT
+- store does NOT import intelligence/alerts
+- alerts subpackage is thin façade over intelligence.AlertManager
+
+OPERATOR VERIFY (when go available)
+  go test ./intelligence/ -count=1
+  go test . -count=1 -run "TestIntelligenceCase|TestOSINTFrontend|TestSetPersonal"

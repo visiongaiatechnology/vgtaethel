@@ -1,0 +1,20 @@
+Compile fix for intelligence_integration_test.go (skeptic gap)
+==============================================================
+
+BEFORE (broken package main):
+  store := Newintelligence.IntelligenceStore(...)  // undefined
+  _, events := store.bus.Subscribe()               // unexported
+
+AFTER:
+  store := intelligence.NewIntelligenceStore(...)
+  id, ch := store.Bus().Subscribe()
+
+Also:
+  - intelligence.IntelligenceEvent / OSINTEvent / DomainGeo / ErrDuplicateObservation
+  - osint.ValidatePublicCollectorURL (exported)
+  - osint.NewOSINTEngine / OSINTCollectorConfig
+  - intelligence.NewEventBus / NewStore
+  - USGS parse test in intelligence/usgs_parse_test.go
+  - Gating scripts: scripts/run_gating_tests.bat
+
+Grep audit: zero remaining Newintelligence / store.bus in go-aethel.
