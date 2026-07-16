@@ -10,10 +10,10 @@
 ```
 
 # VGT AETHEL
-### Sovereign Intelligence Framework
+### Sovereign Intelligence OS
 
 [![License](https://img.shields.io/badge/License-AGPLv3-blue?style=for-the-badge)](https://www.gnu.org/licenses/agpl-3.0)
-[![Version](https://img.shields.io/badge/Version-v1.0.0--beta.1-orange?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/Version-v2.0.0--beta.2-orange?style=for-the-badge)](#)
 [![Status](https://img.shields.io/badge/Status-BETA-yellow?style=for-the-badge)](#)
 [![Go](https://img.shields.io/badge/Go-1.21-00ADD8?style=for-the-badge&logo=go)](https://golang.org)
 [![Framework](https://img.shields.io/badge/Framework-Wails_Desktop-00ADD8?style=for-the-badge)](#)
@@ -23,9 +23,10 @@
 [![KeyStore](https://img.shields.io/badge/KeyStore-Windows_DPAPI-purple?style=for-the-badge)](#)
 [![TTS](https://img.shields.io/badge/TTS-Sherpa--ONNX_(Offline)-brightgreen?style=for-the-badge)](#-sherpa-onnx-integration-guide)
 [![Audit](https://img.shields.io/badge/Audit_Log-Blockchain--chained-purple?style=for-the-badge)](#)
+[![Orchestrator](https://img.shields.io/badge/Orchestrator-AI--Kernel--v2-cyan?style=for-the-badge)](#-orchestration--intent-routing)
 [![VGT](https://img.shields.io/badge/VGT-VisionGaiaTechnology-cyan?style=for-the-badge)](https://visiongaiatechnology.de)
 
-**SOVEREIGN AI KERNEL · NATIVE DESKTOP APP · OPERATOR-GATED EXECUTION · OFFLINE TTS**
+**SOVEREIGN AI OS · ORCHESTRATOR · PERSONAL CORE · GLOBAL WATCH · SPHERE WORKSPACE · NATIVE DESKTOP · OFFLINE TTS**
 
 <img width="50%" alt="VGT AETHEL Neural Interface" src="https://github.com/user-attachments/assets/509b3a60-ea7f-44a8-8c11-bc61bbbcc188" />
 
@@ -47,12 +48,11 @@ Found a vulnerability or have an improvement? **Open an issue or contact us.**
 
 <img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/5bbcd1a1-930e-4570-aa59-776180f12ccb" />
 
-
 ---
 
 ## 🔍 What is VGT AETHEL?
 
-AETHEL is not a chatbot. It is a **local sovereign AI kernel** — personal assistant, code agent, computer-control agent, voice assistant, task orchestrator and security kernel in one native desktop application.
+AETHEL is not a chatbot. It is a **local sovereign AI operating system** — a personal intelligence layer that connects chat, planning, computer control, global situational awareness and personal assistance into one cohesive system.
 
 ```
 Conventional AI Agents:
@@ -61,83 +61,146 @@ Conventional AI Agents:
   No audit trail                  → nothing is logged
   No operator gate                → changes applied silently
   Cloud-dependent TTS             → sends voice data externally
+  No intent routing               → greetings trigger tool calls
 
-VGT AETHEL:
-  Go Cortex (pure stdlib)         → zero external attack surface (subject to change)
+VGT AETHEL v2:
+  Go Cortex (pure stdlib)         → zero external attack surface
   Wails native desktop app        → embedded frontend, no browser required
+  AI Orchestrator (v2)            → separate orchestrator coordinates models, tools, UI
+  Intent Router                   → deterministic: chat / agent / UI / writer / watch
   Guard Kernel (policy engine)    → every tool call risk-scored before execution
   Operator gate                   → Moderate/High/Critical requires human confirmation
   Blockchain audit log            → every action chained and tamper-evident
-  Windows DPAPI key store         → master key bound to OS user, not plaintext on disk
+  Windows DPAPI key store         → master key bound to OS user
   AES-256-GCM sealed stores       → all local state encrypted at rest
-  Sherpa-ONNX TTS                 → fully offline voice output, no cloud dependency
+  Sherpa-ONNX TTS                 → fully offline voice output
+  Personal Core                   → identity, memory, humor, location, proactivity
+  Sphere Workspace                → writer, browser, run flow, weather, market data
+  Global Watch                    → 3D globe with events, news, risks, alerts
+  Token-optimized context         → compact, goal-specific model payloads
   Capability-based agent profiles → hard permission boundaries per role
   File snapshot & restore         → automatic rollback before destructive operations
 ```
 
 AETHEL implements a **strict separation of intelligence, execution and communication** — the governance layer that most AI agent runtimes are missing.
 
-<img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/9f36524d-4c74-4bfb-8eb3-ea3a375eba45" />
+> In Beta V1, many capabilities existed in isolation. In Beta V2, they are connected for the first time into a coherent system.
 
+<img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/9f36524d-4c74-4bfb-8eb3-ea3a375eba45" />
 
 ---
 
 ## 🏛️ Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                   OPERATOR (WAILS DESKTOP)                    │
-│        ES6 Frontend — 16 Modules — Embedded via go:embed     │
-│  Chat · Run Center · Agent Builder · Personal Mode · Voice   │
-│  Security · Tasks · Personas · Memory · Diagnostics          │
-├──────────────────────────────────────────────────────────────┤
-│                    REST API v1 (HTTP/JSON)                    │
-├──────────────────────────────────────────────────────────────┤
-│              GO CORTEX — MODULAR (~77 source files)           │
-│                                                              │
-│  ┌──────────────┬──────────────┬─────────────┬────────────┐ │
-│  │  Chat Engine │ Skills Layer │ Guard Kernel│  Voice     │ │
-│  │  (Streaming) │ (Modular)    │ (Policy +   │  Engine    │ │
-│  │              │ skills_gui   │  Audit Log) │  Sherpa    │ │
-│  │              │ skills_fs    │             │  SAPI5     │ │
-│  │              │ skills_browser│            │  Whisper   │ │
-│  └──────────────┴──────────────┴─────────────┴────────────┘ │
-│                                                              │
-│  ┌──────────────┬──────────────┬─────────────┬────────────┐ │
-│  │  Run Engine  │ Sealed Store │ Key Store   │ File       │ │
-│  │  (Persistent │ (AES-256-GCM │ (DPAPI)     │ Snapshots  │ │
-│  │   State      │  at rest)    │             │ & Restore  │ │
-│  │   Machine)   │              │             │            │ │
-│  └──────────────┴──────────────┴─────────────┴────────────┘ │
-├──────────────────────────────────────────────────────────────┤
-│                    NEXUS MEMORY STORE                         │
-│         ./vgt_workspace  (Sealed JSON / Sled DB)             │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                      OPERATOR (WAILS DESKTOP)                         │
+│         ES6 Frontend — 16+ Modules — Embedded via go:embed           │
+│  Chat · Sphere Workspace · Global Watch · Run Center · Agent Builder │
+│  Personal Mode · Voice · Security · Tasks · Memory · Diagnostics     │
+├──────────────────────────────────────────────────────────────────────┤
+│                       REST API v1 (HTTP/JSON)                         │
+├──────────────────────────────────────────────────────────────────────┤
+│                  GO CORTEX — MODULAR (~77+ source files)              │
+│                                                                      │
+│  ┌─────────────────┬──────────────┬────────────────┬──────────────┐ │
+│  │  AI Orchestrator│ Chat Engine  │  Guard Kernel  │  Voice       │ │
+│  │  (v2)           │ (Streaming)  │  (Policy +     │  Engine      │ │
+│  │  Intent Router  │              │   Audit Log)   │  Sherpa      │ │
+│  │  Token Optimizer│              │                │  SAPI5       │ │
+│  │  Provider Health│              │                │  Whisper     │ │
+│  └─────────────────┴──────────────┴────────────────┴──────────────┘ │
+│                                                                      │
+│  ┌─────────────────┬──────────────┬────────────────┬──────────────┐ │
+│  │  Skills Layer   │  Run Engine  │  Sealed Store  │  Personal    │ │
+│  │  skills_gui     │  (Persistent │  (AES-256-GCM) │  Core        │ │
+│  │  skills_fs      │   State      │                │  Memory      │ │
+│  │  skills_browser │   Machine)   │  Key Store     │  Profile     │ │
+│  │  writer_tool    │              │  (DPAPI)       │  Consent     │ │
+│  └─────────────────┴──────────────┴────────────────┴──────────────┘ │
+│                                                                      │
+│  ┌─────────────────┬──────────────┬────────────────┬──────────────┐ │
+│  │  Global Watch   │ Intelligence │  Cases &       │  Feed        │ │
+│  │  3D Globe       │ Layer        │  Evidence      │  Reader      │ │
+│  │  Events/News    │ Alerts/Risk  │  (Isolated     │  RSS/Danger  │ │
+│  │  Earthquakes    │ Briefings    │   Contexts)    │  Sources     │ │
+│  └─────────────────┴──────────────┴────────────────┴──────────────┘ │
+├──────────────────────────────────────────────────────────────────────┤
+│                        NEXUS MEMORY STORE                             │
+│           ./vgt_workspace  (Sealed JSON / Sled DB)                   │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 <img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/711672e6-59ef-4956-9a6a-7eeade41962f" />
 
-
 ---
 
-## 📊 v0.6.0 → v1.0.0-beta.1 — What Changed
+## 📊 Beta V1 → Beta V2 — What Changed
 
-| Criterion | v0.6.0 Alpha | v1.0.0-beta.1 | Status |
-|---|---|---|---|
-| **Platform Format** | Go CLI + local webserver (localhost:3000) | Native Wails Desktop App | 🚀 Upgrade |
-| **Key Store** | Plaintext `vault.key` on disk | Windows DPAPI (`config.key.dpapi`) — bound to OS user | 🔒 Hardened |
-| **Local Databases** | Plaintext JSON in workspace | Encrypted sealed files (`AETHEL-SEAL-v1:`) | 🔒 Hardened |
-| **Code Structure** | Monolithic (few large files) | Highly modular (~77 Go source files) | 🧹 Refactored |
-| **Agent Runs** | Temporary web sessions | Persistent, pausable, budgeted runs with state machine | ✨ New |
-| **TTS** | Cloud-dependent (Edge TTS) | Fully offline (Sherpa-ONNX / SAPI5 fallback) | 🎙️ Upgrade |
-| **File Safety** | Path jail check only | Active snapshot & restore engine | 🛡️ Hardened |
-| **Platform Focus** | Windows / macOS / Linux | Official focus: Windows 10/11 x64 | 🎯 Focused |
-| **Frontend Modules** | 10 JS modules | 16 JS modules | ✨ Expanded |
-
----
+| Area | Beta V2 |
+|---|---|
+| **AI Orchestration** | Separation between normal AI model and orchestrator. The main model generates solutions; the orchestrator coordinates AETHEL, tools, UI and execution. |
+| **Intent Routing** | Deterministic routing between chat, agent task, UI control, writer task and Global Watch. A greeting no longer accidentally triggers computer control. |
+| **Token Optimization** | Instead of always explaining the full system, the model receives compact, goal-specific context and tool packages. |
+| **Agent Runs** | Improved planning chains, persistent state, pause/resume, crash recovery, cost budgets, tool evidence and verifiable completion reports. |
+| **Approvals** | Signed, argument-bound one-time approvals appear as global pop-ups — regardless of which UI area the user is in. |
+| **Provider System** | Central registry for Groq, OpenAI, DeepSeek, Gemini, Claude and local Ollama models. Only actually configured providers and available local models are shown. |
+| **Reasoning Control** | Provider- and model-specific reasoning levels, capability gates, context limits and output limits. |
+| **Provider Health** | Health checks, visible error states, fallback decisions and live model detection. |
+| **Groq Stability** | Payload normalization, correct tool-call sequences, protection against invalid assistant messages, robust registry fallback via Wails. |
+| **Personal Core** | Own identity, name, location, interests, consent, humor, honesty and proactivity. AETHEL greets the user personally and considers their local situation. |
+| **Personal Assistance** | Optional startup analysis with news, regional relevance, assessment and readable situation report. |
+| **Memory** | Encrypted personal profiles and memories, traceable origin, improved hybrid retrieval from TF-IDF, word overlap, recency and importance. |
+| **Sphere Workspace** | Desktop-like workspace with writer, internal browser, live run flow, media control, weather and market data widgets. |
+| **Writer** | AETHEL can create and edit documents via an explicit, provider-independent tool contract. |
+| **Code Cartography** | New agent mode that recursively analyzes code projects, describes files and documents architecture and dependencies as a Markdown map. |
+| **Global Watch** | Local, textured 3D globe with borders, events, cities, earthquakes, volcanoes, news, regional risks and automatic rotation. |
+| **Intelligence Layer** | News correlation, regional situation pictures, alerts, risk scoring, briefings, time windows, watchlists and AI-guided map focus. |
+| **Feeds & Reader** | Configurable and removable RSS/danger sources, strict time filters and internal reading mode for articles. |
+| **Cases & Evidence** | Cases, evidence capture, isolated case contexts, entities, relationships and controlled pseudonymization/re-identification. |
+| **Multilanguage** | UI foundation for German, English, Russian and Spanish; briefings can be generated in the selected language. |
+| **UI/UX** | Complete futuristic redesign, new loader with manual "Start", revised warning, Agent Tracker, Run Center and responsive Sphere window. |
+| **Status Truth** | Unreachable APIs, voices or providers are no longer falsely shown as "Active". Errors remain visible. |
+| **Performance** | GPU-intensive animations reduced. The globe uses time-based rotation and limited frame rate instead of continuous rendering. |
+| **Security** | Hardened path jails, mount limits, process execution, browser egress, mail, voice uploads, authority stores, approvals and audit persistence. |
+| **Release Engineering** | Beta-V2 versioning in loader, UI, backend, installer and CI; GitHub release workflow, signature hooks, diagnostic packages, checksums and pinned native dependencies. |
+| **Startup Stability** | Deterministic EXE workspace, core-readiness handshake and registry retries prevent empty model lists and wrong configurations at startup. |
 
 <img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/c225fff9-bfa4-47a5-9d42-775956af4add" />
 
+---
+
+## 🧠 Orchestration & Intent Routing
+
+Beta V2 introduces a dedicated **AI Orchestrator** that sits above the chat engine and coordinates all system components.
+
+```
+User Input
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│            INTENT ROUTER                │
+│  chat · agent · ui_control · writer     │
+│  global_watch · personal_assistance     │
+└───────────────┬─────────────────────────┘
+                │
+    ┌───────────┴───────────┐
+    │                       │
+    ▼                       ▼
+MAIN MODEL              ORCHESTRATOR
+(solution generation)   (tool/UI/execution control)
+```
+
+- **Chat** → normal conversational response, no tool invocation
+- **Agent Task** → persistent run with planning chain, budget and evidence
+- **UI Control** → Guard Kernel-gated computer control
+- **Writer** → provider-independent document creation/editing tool contract
+- **Global Watch** → intelligence layer, news correlation, globe focus
+- **Personal Assistance** → startup briefing, regional news, situation report
+
+The orchestrator receives compact, goal-specific context packets — not the entire system state on every call.
+
+---
 
 ## 🛡️ Guard Kernel — Security Policy Engine
 
@@ -165,12 +228,14 @@ Every tool call is risk-scored by `guard.go` **before** it reaches execution. Th
 | `FORBIDDEN_SHORTCUT` | `Alt+F4`, `Win+R`, `^ESC` |
 | `EXECUTABLE_WRITE` | Writing `.exe`, `.bat`, `.sh` files |
 
-### Permission Leases
+### Permission Leases (v2: Signed & Global)
 
 Operators can grant temporary, scoped permission unlocks:
 
 - Time-bound via `ExpiresAt` timestamp
 - Scope: app filter, action filter, forbidden targets
+- **v2: Signed, argument-bound one-time approvals**
+- **v2: Global pop-up — visible regardless of active UI area**
 - Persisted in sealed store (`active_leases`)
 - Revoked automatically on expiry
 
@@ -183,27 +248,19 @@ Entry N:   action + SHA-256(Entry N-1)
 Entry N+1: action + SHA-256(Entry N)
 ```
 
-`ValidateChain()` performs complete cryptographic verification of the entire log on every server start.
+`ValidateChain()` performs complete cryptographic verification of the entire log on every server start. Audit persistence hardened in v2.
 
 ---
 
 <img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/5bbad35d-3035-4fc1-b8f7-f3bbe3e416ca" />
 
-
-
-## 🔐 Security Architecture (Beta v1)
+## 🔐 Security Architecture (Beta V2)
 
 ### Windows DPAPI Key Store
 
-In v0.6.0, the AES vault master key was stored as plaintext `vault.key` on disk. Beta v1 replaces this entirely:
-
-- Master key is encrypted using **Windows Data Protection API (DPAPI)** via `key_store_windows.go`
-- The key (`config.key.dpapi`) is cryptographically bound to the logged-in Windows user
-- An automated one-time migration removes old plaintext keys
+Master key is encrypted using **Windows Data Protection API (DPAPI)** via `key_store_windows.go` — cryptographically bound to the logged-in Windows user. Nothing in `./vgt_workspace` is readable plaintext.
 
 ### Sealed Local Stores
-
-All local state — configuration, tasks, agent runs — is stored encrypted:
 
 ```
 Storage prefix:  AETHEL-SEAL-v1:
@@ -211,11 +268,15 @@ Encryption:      AES-256-GCM
 Implementation:  sealed_store.go
 ```
 
-Nothing in `./vgt_workspace` is readable plaintext.
+### v2 Security Hardening (new)
+
+- **Path Jails:** hardened mount limits, process execution controls, browser egress restrictions
+- **Voice Uploads:** sanitized and scope-limited
+- **Authority Stores:** hardened write controls
+- **Approval Persistence:** audit entries for signed one-time approvals stored and verifiable
+- **Mail Controls:** egress limits on mail actions
 
 ### Capability-Based Agent Profiles
-
-Four hard, data-driven agent profiles with predefined permission boundaries — not just prompt-level restrictions:
 
 | Profile | Permissions |
 |---|---|
@@ -230,44 +291,110 @@ Before any file modification, AETHEL automatically creates an encrypted in-memor
 
 ### Durable Agent Runs (`run_engine.go`)
 
-Agent runs are now a persistent state machine:
-
 ```
 queued → running → waiting_approval → completed
                 ↓                   ↓
               paused             failed
 ```
 
-- Each run has a unique ID and full trace log
-- Budget limit: configurable max token cost (USD) per run
-- Crash recovery: in-flight runs auto-pause on restart and can be explicitly resumed
+- Unique ID and full trace log per run
+- Configurable USD cost budget per run
+- Crash recovery: auto-pause on restart, explicit resume
+- **v2: Verifiable completion reports with tool evidence**
 
 ---
 
 <img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/8a217a5f-6792-499a-b37c-3c8727b52116" />
 
+## 🌍 Global Watch
+
+A **local, textured 3D globe** with real-time intelligence overlay — no cloud rendering required.
+
+| Feature | Detail |
+|---|---|
+| **Rendering** | Local WebGL, time-based rotation, capped frame rate |
+| **Data Layers** | Borders, cities, earthquakes, volcanoes, news events, regional risks |
+| **Intelligence Layer** | News correlation, risk scoring, alerts, watchlists, time windows |
+| **Briefings** | Multilingual AI-generated situation reports (DE/EN/RU/ES) |
+| **Feeds** | Configurable/removable RSS and danger sources, strict time filters |
+| **Reader** | Internal article reading mode — no external browser |
+| **Cases & Evidence** | Isolated case contexts, entities, relationships, pseudonymization |
+| **AI Map Focus** | Orchestrator-driven globe navigation based on active intelligence |
+
+---
+
+## 🔵 Sphere Workspace
+
+A **desktop-like workspace** embedded in AETHEL — replacing the need to switch between external applications.
+
+| Component | Detail |
+|---|---|
+| **Writer** | AI-assisted document creation/editing via provider-independent tool contract |
+| **Internal Browser** | Scoped web access within the AETHEL security perimeter |
+| **Live Run Flow** | Real-time agent step visualization |
+| **Media Control** | Playback and control widgets |
+| **Weather Widget** | Local weather based on Personal Core location |
+| **Market Data Widget** | Configurable financial data feeds |
+
+---
+
+## 🧬 Personal Core
+
+AETHEL now maintains a **persistent personal identity layer**:
+
+| Attribute | Detail |
+|---|---|
+| **Identity** | Name, location, language preference |
+| **Interests & Goals** | Stored in encrypted personal profile |
+| **Consent** | Explicit opt-in for proactive behaviors |
+| **Humor / Honesty / Proactivity** | Configurable sliders |
+| **Memory** | Encrypted, traceable, hybrid retrieval (TF-IDF + recency + importance) |
+| **Greeting** | Personalized startup greeting with local context |
+| **Startup Briefing** | Optional news analysis, regional relevance, AI-generated situation report |
+
+---
+
+## 🗺️ Code Cartography
+
+New agent mode for software project analysis:
+
+```
+Input: any local code project directory
+Output: structured Markdown map
+
+Covers:
+  - Recursive file traversal and description
+  - Architecture overview
+  - Dependency graph
+  - Module relationships
+  - Entry points and key interfaces
+```
+
+---
 
 ## 🔧 Skills & Tool Capabilities
 
 | Tool | Capability | Risk Level |
 |---|---|---|
-| `gui_control / move` | Move mouse cursor | 🟢 Low (autonomous) |
-| `gui_control / position` | Query mouse position | 🟢 Low (autonomous) |
+| `gui_control / move` | Move mouse cursor | 🟢 Low |
+| `gui_control / position` | Query mouse position | 🟢 Low |
 | `gui_control / click` | Left click | 🟡 Moderate |
 | `gui_control / right` | Right click | 🟡 Moderate |
 | `gui_control / double` | Double click | 🟡 Moderate |
 | `gui_control / type` | Type text input | 🔴 High |
 | `gui_control / press` | Key combination | 🔴 High |
-| `fs_read_file` | Read file | 🟢 Low (autonomous) |
-| `fs_list_dir` | List directory | 🟢 Low (autonomous) |
-| `fs_write_file` | Write file (with auto-snapshot) | 🟡 Moderate |
+| `fs_read_file` | Read file | 🟢 Low |
+| `fs_list_dir` | List directory | 🟢 Low |
+| `fs_write_file` | Write file (auto-snapshot) | 🟡 Moderate |
 | `fs_mount_folder` | Mount folder | 🟡 Moderate |
 | `sys_exec_cmd` | Execute system command | 🔴 High |
 | `web_browser` | Open browser | 🟡 Moderate |
-| `nexus_save` | Save to memory | ⚪ Safe (autonomous) |
-| `nexus_recall` | Recall from memory | ⚪ Safe (autonomous) |
+| `nexus_save` | Save to memory | ⚪ Safe |
+| `nexus_recall` | Recall from memory | ⚪ Safe |
 | `agent_handoff` | Hand off to ChatGPT / Gemini / Cursor | 🟡 Moderate |
-| `viewport_screenshot` | Desktop screenshot (cached JPEG) | ⚪ Safe (autonomous) |
+| `viewport_screenshot` | Desktop screenshot (cached JPEG) | ⚪ Safe |
+| `writer_tool` | Create/edit document (v2) | 🟡 Moderate |
+| `code_cartography` | Analyze and map code project (v2) | 🟢 Low |
 
 ---
 
@@ -299,29 +426,17 @@ queued → running → waiting_approval → completed
 
 ## 🔊 Sherpa-ONNX Integration Guide
 
-AETHEL uses Sherpa-ONNX for fully local, privacy-compliant text-to-speech output with no internet connection required. Follow these four steps to enable it.
-
 ### Step 1 — Configure CGO and Go Bindings
 
-Sherpa-ONNX uses native C++ libraries. A GCC compiler is required — on Windows, [w64devkit](https://github.com/skeeto/w64devkit) is recommended.
-
 ```bash
-# Enable CGO
 set CGO_ENABLED=1
-
-# Install Go bindings
 go get github.com/k2-fsa/sherpa-onnx-go/sherpa_onnx
 go mod tidy
 ```
 
 ### Step 2 — Place Native DLLs (Windows)
 
-The compiled C++ libraries must be placed next to `aethel.exe` at runtime.
-
-Download all `.dll` files from the official repository:
-**→ [Sherpa-ONNX Go Windows Native Libs (GNU)](https://github.com/k2-fsa/sherpa-onnx-go-windows/tree/master/lib/x86_64-pc-windows-gnu)**
-
-Copy **all DLLs** (not just the API DLL) into your build root directory:
+Download from: **[Sherpa-ONNX Go Windows Native Libs (GNU)](https://github.com/k2-fsa/sherpa-onnx-go-windows/tree/master/lib/x86_64-pc-windows-gnu)**
 
 ```
 aethel.exe
@@ -335,16 +450,10 @@ kaldi-native-fbank-core.dll
 
 ### Step 3 — Download TTS Models
 
-AETHEL does not download models at runtime for security reasons. Place models manually under `./vgt_workspace/models/sherpa/`.
-
-**Recommended models:**
-
 | Model | Language | Size | Download |
 |---|---|---|---|
 | **KittenTTS** | English | ~30 MB | [kitten-nano-en-v0_1-fp16.tar.bz2](https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kitten-nano-en-v0_1-fp16.tar.bz2) |
 | **Kokoro v1.0** | Multilingual | ~80 MB | [kokoro-multi-lang-v1_0.tar.bz2](https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-multi-lang-v1_0.tar.bz2) |
-
-**Required directory structure:**
 
 ```
 go-aethel/
@@ -356,7 +465,7 @@ go-aethel/
     └── models/
         └── sherpa/
             ├── kitten-nano-en-v0_1-fp16/
-            │   ├── model.fp16.onnx      ← filename must be preserved exactly
+            │   ├── model.fp16.onnx
             │   ├── voices.bin
             │   ├── tokens.txt
             │   └── espeak-ng-data/
@@ -369,19 +478,16 @@ go-aethel/
 
 ### Step 4 — Compile with CGO
 
-Always build with CGO enabled:
-
 ```bash
 set CGO_ENABLED=1
 go build -ldflags="-s -w" -o aethel.exe .
 ```
 
-> **Without CGO (`CGO_ENABLED=0`):** The stub module `voice_sherpa_stub.go` is compiled automatically. The application builds and runs, but local audio output will return an error at runtime. SAPI5 fallback remains active.
+> **Without CGO (`CGO_ENABLED=0`):** Stub module compiles automatically. SAPI5 fallback remains active.
 
 ---
 
 <img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/454c0eb7-2878-4fab-ba0b-160b0671ca40" />
-
 
 ## 🖥️ Live Operator (Viewport Control)
 
@@ -436,12 +542,22 @@ go build -ldflags="-s -w" -o aethel.exe .
 | `POST` | `/v1/chat/sessions/save` | Save session |
 | `DELETE` | `/v1/chat/sessions/delete` | Delete session |
 
+### Orchestrator & Intent (v2)
+
+| Method | Endpoint | Function |
+|---|---|---|
+| `POST` | `/v1/orchestrate` | Orchestrator entry point (intent routing) |
+| `GET` | `/v1/providers` | Provider registry status |
+| `GET` | `/v1/providers/health` | Live provider health check |
+
 ### Tools & Skills
 
 | Method | Endpoint | Function |
 |---|---|---|
 | `POST` | `/v1/tools/execute` | Execute skill (with security gate) |
 | `GET/POST/DELETE` | `/v1/kernel/tasks/` | Task engine CRUD |
+| `POST` | `/v1/tools/writer` | Writer tool contract (v2) |
+| `POST` | `/v1/tools/cartography` | Code cartography analysis (v2) |
 
 ### Audio
 
@@ -478,7 +594,24 @@ go build -ldflags="-s -w" -o aethel.exe .
 | `GET` | `/v1/viewport/screenshot` | Live desktop screenshot (JPEG, cached) |
 | `GET` | `/v1/viewport/status` | Viewport status |
 | `GET/POST/DELETE` | `/v1/memory` | Nexus memory CRUD |
-| `GET` | `/v1/memory/search` | Semantic search |
+| `GET` | `/v1/memory/search` | Hybrid semantic search (v2) |
+
+### Global Watch & Intelligence (v2)
+
+| Method | Endpoint | Function |
+|---|---|---|
+| `GET` | `/v1/watch/events` | Current globe events |
+| `GET` | `/v1/watch/alerts` | Active risk alerts |
+| `POST` | `/v1/watch/briefing` | Generate intelligence briefing |
+| `GET/POST/DELETE` | `/v1/watch/feeds` | Feed source management |
+| `GET/POST` | `/v1/watch/cases` | Cases and evidence |
+
+### Personal Core (v2)
+
+| Method | Endpoint | Function |
+|---|---|---|
+| `GET/POST` | `/v1/personal/profile` | Personal Core profile |
+| `GET` | `/v1/personal/briefing` | Startup situation briefing |
 
 ### Vault & Setup
 
@@ -490,26 +623,28 @@ go build -ldflags="-s -w" -o aethel.exe .
 
 ---
 
-## 🖥️ Frontend Modules (16 Modules)
+## 🖥️ Frontend Modules
 
-| Module | Size | Responsibility |
-|---|---|---|
-| `app.js` | — | Root bootstrap, import orchestrator |
-| `state.js` | 4.0 KB | Global reactive state store |
-| `api.js` | 2.6 KB | HTTP wrapper, fetch helpers |
-| `chat.js` | 24.3 KB | Chat terminal, Markdown rendering, tool approval UI |
-| `voice.js` | 21.9 KB | STT/TTS, wake-word, voice sphere, approval routing |
-| `control.js` | 3.8 KB | Live operator panel, screenshot polling |
-| `security.js` | 11.7 KB | Leases UI, audit log viewer, threat display |
-| `tasks.js` | 8.5 KB | Task manager UI, CRUD, status monitoring |
-| `memory.js` | 5.2 KB | Nexus memory UI, search |
-| `secrets.js` | 3.8 KB | Vault UI, key management |
-| `ui.js` | 6.7 KB | Navigation, panels, animations, themes |
-| `agent_builder.js` | — | Agent team configuration |
-| `personal_mode.js` | — | Persona, humor/initiative sliders, journal |
-| `approval_dialog.js` | — | Tool call approval dialogs |
-| `run_center.js` | — | Run state machine UI, trace logs, evidence screenshots |
-| `diagnostics.js` | — | Privacy-safe system report export |
+| Module | Responsibility |
+|---|---|
+| `app.js` | Root bootstrap, import orchestrator |
+| `state.js` | Global reactive state store |
+| `api.js` | HTTP wrapper, fetch helpers |
+| `chat.js` | Chat terminal, Markdown rendering, tool approval UI |
+| `voice.js` | STT/TTS, wake-word, voice sphere, approval routing |
+| `control.js` | Live operator panel, screenshot polling |
+| `security.js` | Leases UI, audit log viewer, threat display |
+| `tasks.js` | Task manager UI, CRUD, status monitoring |
+| `memory.js` | Nexus memory UI, hybrid search |
+| `secrets.js` | Vault UI, key management |
+| `ui.js` | Navigation, panels, animations, themes |
+| `agent_builder.js` | Agent team configuration |
+| `personal_mode.js` | Personal Core UI, sliders, journal |
+| `approval_dialog.js` | Global tool call approval dialogs (v2: always-on-top) |
+| `run_center.js` | Run state machine UI, trace logs, evidence screenshots |
+| `diagnostics.js` | Privacy-safe system report export |
+| `sphere.js` | Sphere Workspace (writer, browser, widgets) — v2 |
+| `global_watch.js` | 3D globe, intelligence overlay, feeds, cases — v2 |
 
 ---
 
@@ -526,10 +661,10 @@ go build -ldflags="-s -w" -o aethel.exe .
 
 # 3. Run
 ./aethel.exe
-# Wails desktop window opens automatically
+# New loader opens — click "Start" to initialize
 ```
 
-> Without CGO, build with `CGO_ENABLED=0` — Sherpa-ONNX is replaced by stub, SAPI5 fallback active.
+> Without CGO, build with `CGO_ENABLED=0` — Sherpa-ONNX replaced by stub, SAPI5 fallback active.
 
 ---
 
@@ -541,8 +676,8 @@ go build -ldflags="-s -w" -o aethel.exe .
 | **Framework** | Wails Desktop (WebView2 — embedded frontend) |
 | **External Dependencies** | Zero stdlib / CGO only for Sherpa-ONNX |
 | **Platform** | Windows 10/11 x64 (official) |
-| **Backend Source Files** | ~77 Go source files |
-| **Frontend Modules** | 16 JS modules (embedded via `go:embed`) |
+| **Backend Source Files** | ~77+ Go source files |
+| **Frontend Modules** | 18 JS modules (embedded via `go:embed`) |
 | **Vault Encryption** | AES-256-GCM |
 | **Key Storage** | Windows DPAPI (`config.key.dpapi`) |
 | **Local State** | `AETHEL-SEAL-v1:` sealed encrypted stores |
@@ -551,60 +686,91 @@ go build -ldflags="-s -w" -o aethel.exe .
 | **TTS Fallback** | Windows SAPI5 (local, no API key) |
 | **STT Primary** | Groq Whisper `whisper-large-v3-turbo` |
 | **Memory Persistence** | `./vgt_workspace` (sealed JSON / Sled DB) |
+| **Supported Languages** | DE, EN, RU, ES |
 | **License** | AGPLv3 |
 
 ---
 
 ## 📋 Changelog
 
-### v1.0.0-beta.1 — Native Desktop, DPAPI, Sealed Stores, Sherpa-ONNX *(Current)*
+### v2.0.0-beta.2 — Sovereign Intelligence OS *(Current)*
 
-#### Architecture & Framework
+#### Orchestration & Intelligence
 
-- **Wails Desktop (WebView2):** migrated from Go CLI + localhost:3000 webserver to a true native Windows desktop application. The frontend is compiled directly into the binary via `go:embed`. No browser required.
-- **Full Backend Modularization:** monolithic `skills.go` (~1,200 lines) and `main.go` (~1,450 lines) decomposed into ~77 dedicated source files. Skills split into functional modules: `skills_gui.go`, `skills_fs.go`, `skills_browser.go` and more.
-- **Frontend Expansion:** 10 → 16 JS modules with dedicated files for `agent_builder.js`, `personal_mode.js`, `approval_dialog.js`, `run_center.js` and `diagnostics.js`.
+- **AI Orchestrator (v2):** dedicated orchestrator layer separates solution generation (main model) from system coordination (orchestrator). Controls tools, UI state and execution.
+- **Intent Router:** deterministic classification of user input into `chat`, `agent_task`, `ui_control`, `writer`, `global_watch` and `personal_assistance`. A greeting no longer accidentally triggers computer control.
+- **Token Optimization:** compact, goal-specific context and tool packages per request instead of full system context on every call.
+- **Provider Registry:** central registry for Groq, OpenAI, DeepSeek, Gemini, Claude and Ollama. Health checks, visible error states, fallback decisions, live model detection.
+- **Reasoning Control:** per-provider and per-model reasoning levels, capability gates, context and output limits.
+- **Groq Stability:** payload normalization, correct tool-call sequences, invalid assistant message protection, registry fallback via Wails.
 
-#### Security Hardening
+#### Personal Core
 
-- **Windows DPAPI Key Store (`key_store_windows.go`):** master key for AES vault is now cryptographically bound to the logged-in Windows user via DPAPI. Plaintext `vault.key` is gone. Automated one-time migration removes old keys.
-- **Sealed Local Stores (`sealed_store.go`):** all local state — config, tasks, agent runs — stored under `AETHEL-SEAL-v1:` prefix with AES-256-GCM encryption. Nothing readable as plaintext in `./vgt_workspace`.
-- **Symlink-Resistant Path Jail:** switched from simple prefix check to `filepath.Rel` + `filepath.EvalSymlinks` — the only reliable method on Windows to block path traversal via symlinks.
-- **Shell Metacharacter Blocker:** regex filter `[;&|><` + "`" + `$]|$$|\r|\n` blocks shell injection before commands reach PowerShell/sh context.
-- **Blockchain Validation:** `ValidateChain()` performs complete SHA-256 cryptographic verification of the entire audit log chain on startup.
-- **Frontend XSS Protection:** `DOMParser`-based local HTML sanitization + `jsArg()` parameter escaping blocks malicious code injection via LLM Markdown responses.
-- **Secure File Permissions:** sensitive JSON databases created on Linux/macOS with `0600` (files) and `0700` (directories).
-- **Header Hardening & CORS:** `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY` set globally. Wildcard CORS (`*`) removed.
-- **Session-ID Whitelisting:** session IDs validated via `^session_[A-Za-z0-9_-]{1,80}$` — path traversal via manipulated IDs impossible.
-- **Upload Limits:** request bodies capped at 16 MB to prevent memory exhaustion.
+- **Identity & Profile:** name, location, interests, goals stored in encrypted personal profile.
+- **Consent & Sliders:** explicit opt-in for proactive behaviors; humor, honesty and initiative configurable.
+- **Startup Briefing:** optional AI-generated situation report with news, regional relevance and assessment.
+- **Memory v2:** encrypted personal memories with traceable origin; improved hybrid retrieval (TF-IDF + word overlap + recency + importance).
+- **Personalized Greeting:** AETHEL greets the user by name and incorporates local context on startup.
+
+#### Global Watch
+
+- **3D Globe:** local WebGL globe with textured surface, borders, cities and automatic time-based rotation. GPU-intensive animations removed, frame rate capped.
+- **Data Layers:** earthquakes, volcanoes, news events, regional risk overlays, watchlists.
+- **Intelligence Layer:** news correlation, risk scoring, alerts, briefings with time windows, AI-guided map focus.
+- **Feeds & Reader:** configurable/removable RSS and danger sources, strict time filters, internal article reading mode.
+- **Cases & Evidence:** isolated case contexts, entity and relationship tracking, controlled pseudonymization/re-identification.
+- **Multilingual Briefings:** intelligence reports generatable in DE, EN, RU, ES.
+
+#### Sphere Workspace
+
+- **Writer Tool:** document creation and editing via explicit, provider-independent tool contract.
+- **Internal Browser:** scoped web access inside the AETHEL security perimeter.
+- **Live Run Flow:** real-time agent step visualization in workspace.
+- **Widgets:** weather (location-aware), market data feeds, media control.
 
 #### Agent Runs
 
-- **Durable State Machine (`run_engine.go`):** persistent agent runs with unique IDs, lifecycle states (`queued → running → waiting_approval → completed / failed / paused`), configurable USD cost budget per run, and crash recovery (auto-pause + explicit resume).
-- **Capability-Based Profiles:** four hard permission profiles (Researcher / Developer / Browser Operator / Personal Assistant) — data-driven, not just prompt-level.
-- **File Snapshots (`file_snapshots.go`):** automatic encrypted snapshot (up to 5 MB) before any file modification. One-click restore on error.
+- **Improved Planning Chains:** multi-step planning with explicit reasoning traces.
+- **Verifiable Completion Reports:** signed reports with full tool evidence on run completion.
+- **Enhanced Crash Recovery:** deterministic EXE workspace, core-readiness handshake, registry retries.
 
-#### Voice & Audio
+#### Security
 
-- **Sherpa-ONNX TTS (`voice_sherpa_cgo.go`):** fully offline neural TTS via ONNX models — replaces cloud-dependent Edge TTS. CGO required; `voice_sherpa_stub.go` compiles without CGO (SAPI5 fallback active).
-- **SAPI5 Fallback:** Windows SAPI5 as local fallback if Sherpa-ONNX cannot initialize.
+- **Hardened Approvals:** signed, argument-bound one-time approvals as global pop-ups — visible regardless of active UI area.
+- **Path Jail v2:** hardened mount limits, process execution controls, browser egress restrictions.
+- **Voice Upload Sanitization:** scoped and sanitized.
+- **Audit Persistence:** hardened storage and verification of audit chain entries.
+- **Status Truth:** unreachable APIs, voices and providers no longer falsely shown as "Active".
 
-#### New Features
+#### New Agent Mode
 
-- **Run Center:** real-time agent step monitoring with cost display, tool calls, trace logs and visual before/after evidence screenshots.
-- **Personal Mode:** dedicated interface for humor, honesty and initiative sliders; interests, goals, journal and memory entries.
-- **Ledger-Based API Cost Tracker:** all token transactions logged to `api_costs.json`. Daily (TODAY) and monthly (MONTH) costs shown live in header HUD.
-- **Custom Personas (Aethel Gems):** user-defined system prompts configurable system-wide or per agent role (Orchestrator, Builder, Reviewer, etc.).
-- **Provider Registry & Health Checks:** automatic availability validation of connected LLMs (OpenAI, Gemini, Anthropic, DeepSeek, Groq, Ollama) with dynamic error signaling in GUI header.
-- **Privacy-Safe Diagnostics (`diagnostics.go`):** export system/performance report with strict filtering of prompts, paths, tokens, passwords and tool parameters.
-- **Updated Model Registry:** GPT-5.5, GPT-5.4, Gemini 3.5/3.1, Claude 4.5/4.6, DeepSeek v4 with per-1M-token pricing including cache-hit discounts.
-- **Unit Test Suite (`verify_security_test.go`):** native Go tests for jails, leases, ID conventions and tamper resistance.
+- **Code Cartography:** recursive project analysis, file description, architecture mapping and dependency documentation as structured Markdown output.
+
+#### UI/UX
+
+- **Full Redesign:** futuristic UI overhaul.
+- **New Loader:** manual "Start" trigger with initialization handshake.
+- **Agent Tracker:** live agent status indicator in header.
+- **Responsive Sphere Window:** adaptive layout for workspace panels.
+- **Revised Beta Warning:** updated for v2 scope.
+
+#### Release Engineering
+
+- Beta-V2 versioning consistent across loader, UI, backend, installer and CI.
+- GitHub release workflow with signature hooks, diagnostic packages and checksums.
+- Pinned native dependencies.
+
+---
+
+### v1.0.0-beta.1 — Native Desktop, DPAPI, Sealed Stores, Sherpa-ONNX *(archived)*
+
+Wails Desktop migration. DPAPI key store. Sealed local stores (`AETHEL-SEAL-v1:`). Sherpa-ONNX offline TTS. Durable agent runs. Capability-based profiles. File snapshots. 16-module frontend. Blockchain audit log. Frontend XSS protection. API cost tracker. Guard Kernel. Session ID whitelisting.
 
 ---
 
 ### v0.6.0-alpha — Security Hardening & Feature Expansion *(archived)*
 
-Path jail hardened via `filepath.Rel` + `filepath.EvalSymlinks`. Shell injection blocker added. Blockchain audit `ValidateChain()`. Frontend XSS protection. API cost tracker. Custom persona system. Model registry updated (GPT-5.5, Gemini 3.5, Claude 4.5, DeepSeek v4).
+Path jail via `filepath.Rel` + `filepath.EvalSymlinks`. Shell injection blocker. Blockchain audit `ValidateChain()`. Frontend XSS protection. API cost tracker. Custom personas. Model registry updated.
 
 ---
 
@@ -614,14 +780,15 @@ Go Cortex (pure stdlib). Guard Kernel. AES-256-GCM vault. Blockchain audit log. 
 
 ---
 
-## 🚧 Known Limitations (v1.0.0-beta.1)
+## 🚧 Known Limitations (v2.0.0-beta.2)
 
 - No automatic update system
 - Single-operator only — no multi-user support
 - Groq API key required for Whisper STT (offline fallback: Windows SAPI)
-- Sherpa-ONNX requires CGO + GCC compiler + manual DLL and model setup (see integration guide)
+- Sherpa-ONNX requires CGO + GCC compiler + manual DLL and model setup
 - Official platform focus: Windows 10/11 x64 (macOS/Linux builds possible without GUI control features)
 - No HTTPS (localhost only — TLS optionally upgradeable)
+- Global Watch data layers require external feed configuration
 
 ---
 
@@ -642,6 +809,14 @@ Go Cortex (pure stdlib). Guard Kernel. AES-256-GCM vault. Blockchain audit log. 
 | Sherpa-ONNX offline TTS | ✅ Done (beta.1) |
 | Durable agent runs | ✅ Done (beta.1) |
 | Capability-based profiles | ✅ Done (beta.1) |
+| AI Orchestrator + Intent Router | ✅ Done (beta.2) |
+| Personal Core | ✅ Done (beta.2) |
+| Global Watch (3D Globe + Intelligence Layer) | ✅ Done (beta.2) |
+| Sphere Workspace | ✅ Done (beta.2) |
+| Writer Tool | ✅ Done (beta.2) |
+| Code Cartography | ✅ Done (beta.2) |
+| Multilanguage UI (DE/EN/RU/ES) | ✅ Done (beta.2) |
+| Provider Registry & Health | ✅ Done (beta.2) |
 
 ---
 
@@ -649,7 +824,7 @@ Go Cortex (pure stdlib). Guard Kernel. AES-256-GCM vault. Blockchain audit log. 
 
 | Tool | Type | Purpose |
 |---|---|---|
-| 🧠 **VGT AETHEL** | **Sovereign AI Kernel** | Local AI agent runtime with operator governance — you are here |
+| 🧠 **VGT AETHEL** | **Sovereign AI OS** | Local AI intelligence OS with operator governance — you are here |
 | 🖥️ **[VGT WP-Desk](https://github.com/visiongaiatechnology/vgtdesk)** | **OS-Layer / UX** | Hardened WordPress operator workspace |
 | ⚔️ **[VGT Sentinel](https://github.com/visiongaiatechnology/sentinelcom)** | **WAF / IDS** | Zero-Trust WordPress WAF |
 | ⚡ **[VGT Auto-Punisher](https://github.com/visiongaiatechnology/vgt-auto-punisher)** | **IDS** | L4+L7 Hybrid IDS |
@@ -687,6 +862,6 @@ Enterprise deployments, TIER-0 audits (VGT SafetySys™) and commercial exceptio
 
 [![VGT](https://img.shields.io/badge/VisionGaia-Technology-cyan?style=for-the-badge)](https://visiongaiatechnology.de)
 
-*VGT AETHEL v1.0.0-beta.1 — Sovereign AI Kernel // Wails Native Desktop // Go Pure Stdlib // DPAPI Key Store // AES-256-GCM Sealed Stores // Guard Kernel // Blockchain Audit Log // Sherpa-ONNX Offline TTS // Durable Agent Runs // Capability Profiles // File Snapshots // 16-Module Frontend // AGPLv3 // Windows 10/11 x64*
+*VGT AETHEL v2.0.0-beta.2 — Sovereign AI OS // AI Orchestrator + Intent Router // Personal Core // Global Watch // Sphere Workspace // Writer Tool // Code Cartography // Wails Native Desktop // Go Pure Stdlib // DPAPI Key Store // AES-256-GCM Sealed Stores // Guard Kernel // Blockchain Audit Log // Sherpa-ONNX Offline TTS // Durable Agent Runs // Capability Profiles // File Snapshots // 18-Module Frontend // DE/EN/RU/ES // AGPLv3 // Windows 10/11 x64*
 
 </div>
