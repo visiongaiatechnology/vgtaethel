@@ -46,7 +46,8 @@ Found a vulnerability or have an improvement? **Open an issue or contact us.**
 
 ---
 
-<img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/5bbcd1a1-930e-4570-aa59-776180f12ccb" />
+<img width="1920" height="1009" alt="image" src="https://github.com/user-attachments/assets/a06c1a29-b807-44a4-a044-a6272958cf8c" />
+
 
 ---
 
@@ -86,7 +87,8 @@ AETHEL implements a **strict separation of intelligence, execution and communica
 
 > In Beta V1, many capabilities existed in isolation. In Beta V2, they are connected for the first time into a coherent system.
 
-<img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/9f36524d-4c74-4bfb-8eb3-ea3a375eba45" />
+<img width="1920" height="1009" alt="image" src="https://github.com/user-attachments/assets/e0ca45ac-7157-4317-bb4c-f28b490bbc59" />
+
 
 ---
 
@@ -131,7 +133,8 @@ AETHEL implements a **strict separation of intelligence, execution and communica
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-<img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/711672e6-59ef-4956-9a6a-7eeade41962f" />
+<img width="1920" height="1009" alt="image" src="https://github.com/user-attachments/assets/89b8377b-7336-4ceb-9cd7-47ac44ba979f" />
+
 
 ---
 
@@ -166,7 +169,8 @@ AETHEL implements a **strict separation of intelligence, execution and communica
 | **Release Engineering** | Beta-V2 versioning in loader, UI, backend, installer and CI; GitHub release workflow, signature hooks, diagnostic packages, checksums and pinned native dependencies. |
 | **Startup Stability** | Deterministic EXE workspace, core-readiness handshake and registry retries prevent empty model lists and wrong configurations at startup. |
 
-<img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/c225fff9-bfa4-47a5-9d42-775956af4add" />
+<img width="1920" height="1009" alt="image" src="https://github.com/user-attachments/assets/3b8d0cfe-7309-460c-a8f9-3c6dbace73c6" />
+
 
 ---
 
@@ -252,7 +256,8 @@ Entry N+1: action + SHA-256(Entry N)
 
 ---
 
-<img width="2560" height="1351" alt="image" src="https://github.com/user-attachments/assets/5bbad35d-3035-4fc1-b8f7-f3bbe3e416ca" />
+<img width="1920" height="1009" alt="image" src="https://github.com/user-attachments/assets/205df63b-2f8a-428f-bcb3-56fae9316e22" />
+
 
 ## 🔐 Security Architecture (Beta V2)
 
