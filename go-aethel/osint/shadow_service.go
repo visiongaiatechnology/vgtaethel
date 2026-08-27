@@ -55,7 +55,20 @@ type ShadowForecast struct {
 	Horizon     string   `json:"horizon"`
 	Prediction  string   `json:"prediction"`
 	Probability int      `json:"probability"`
+	Direction   string   `json:"direction,omitempty"`
+	Instruments []string `json:"instruments,omitempty"`
 	EvidenceIDs []string `json:"evidence_ids"`
+}
+
+type ShadowMarketPoint struct {
+	Symbol     string    `json:"symbol"`
+	Name       string    `json:"name"`
+	Category   string    `json:"category"`
+	Currency   string    `json:"currency"`
+	Price      float64   `json:"price"`
+	Change24H  float64   `json:"change_24h_percent"`
+	ObservedAt time.Time `json:"observed_at"`
+	Source     string    `json:"source"`
 }
 
 type ShadowConflictLink struct {
@@ -84,6 +97,7 @@ type ShadowReport struct {
 	Regions          []ShadowRegionAssessment `json:"regions"`
 	ConflictLinks    []ShadowConflictLink     `json:"conflict_links"`
 	Forecasts        []ShadowForecast         `json:"forecast_matrix"`
+	MarketSnapshot   []ShadowMarketPoint      `json:"market_snapshot,omitempty"`
 	EvidenceIDs      []string                 `json:"evidence_ids"`
 	ItemsAnalyzed    int                      `json:"items_analyzed"`
 	CreatedAt        time.Time                `json:"created_at"`
@@ -569,9 +583,19 @@ func validateShadowReport(report *ShadowReport, allowed map[string]bool) error {
 			}
 		}
 	}
-	for _, forecast := range report.Forecasts {
+	for index := range report.Forecasts {
+		forecast := &report.Forecasts[index]
+		forecast.Sector = strings.ToUpper(strings.TrimSpace(forecast.Sector))
+		forecast.Horizon = strings.TrimSpace(forecast.Horizon)
+		forecast.Direction = strings.ToUpper(strings.TrimSpace(forecast.Direction))
 		if forecast.Probability < 0 || forecast.Probability > 100 {
 			return errors.New("invalid SHADOW forecast probability")
+		}
+		if len([]rune(forecast.Sector)) > 80 || len([]rune(forecast.Horizon)) > 40 || len([]rune(forecast.Prediction)) < 10 || len([]rune(forecast.Prediction)) > 4000 || len(forecast.Instruments) > 20 {
+			return errors.New("invalid SHADOW forecast structure")
+		}
+		if forecast.Direction != "" && forecast.Direction != "UP" && forecast.Direction != "DOWN" && forecast.Direction != "SIDEWAYS" && forecast.Direction != "VOLATILE" && forecast.Direction != "ESCALATION" && forecast.Direction != "IMPROVEMENT" && forecast.Direction != "STABLE" {
+			return errors.New("invalid SHADOW forecast direction")
 		}
 		if len(forecast.EvidenceIDs) == 0 {
 			return errors.New("SHADOW forecast requires evidence")
@@ -582,7 +606,24 @@ func validateShadowReport(report *ShadowReport, allowed map[string]bool) error {
 			}
 		}
 	}
+	if len(report.MarketSnapshot) > 32 {
+		return errors.New("SHADOW market snapshot boundary exceeded")
+	}
+	for _, point := range report.MarketSnapshot {
+		if !validShadowMarketSymbol(point.Symbol) || point.Price <= 0 || point.ObservedAt.IsZero() || len([]rune(point.Name)) > 120 || len([]rune(point.Source)) > 120 {
+			return errors.New("invalid SHADOW market snapshot")
+		}
+	}
 	return nil
+}
+
+func validShadowMarketSymbol(symbol string) bool {
+	switch strings.ToUpper(strings.TrimSpace(symbol)) {
+	case "BTC", "ETH", "GOLD", "BRENT", "WTI", "SP500", "NASDAQ", "DAX", "EURUSD", "GBPUSD", "USDJPY":
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *ShadowService) LatestRegions() []ShadowRegionAssessment {

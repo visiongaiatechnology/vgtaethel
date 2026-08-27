@@ -65,7 +65,7 @@ func TestShadowV3ConflictContractCannotBeRemovedByEditableDoctrine(t *testing.T)
 		t.Fatal(err)
 	}
 	prompt := service.AnalysisPrompt()
-	for _, required := range []string{"BETA V3 MANDATORY CONFLICT CONTRACT", "attacker_name", "target_name", "evidence_id"} {
+	for _, required := range []string{"BETA V3 MANDATORY CONFLICT CONTRACT", "attacker_name", "target_name", "evidence_id", "market_pulse", "BTC", "BRENT", "72h"} {
 		if !strings.Contains(prompt, required) {
 			t.Fatalf("mandatory runtime contract missing %q", required)
 		}
@@ -146,6 +146,20 @@ func TestShadowConflictLinkRequiresDirectionAndBatchEvidence(t *testing.T) {
 	report.ConflictLinks[0].Action = "TENSION"
 	if err := validateShadowReport(&report, allowed); err == nil {
 		t.Fatal("non-directional tension was accepted as a conflict action")
+	}
+}
+
+func TestShadowMarketSnapshotAndForecastDirectionsAreBounded(t *testing.T) {
+	report := validShadowTestReport("evidence-1")
+	report.Forecasts[0].Direction = "ESCALATION"
+	report.Forecasts[0].Instruments = []string{"BRENT"}
+	report.MarketSnapshot = []ShadowMarketPoint{{Symbol: "BRENT", Name: "Brent", Category: "commodity", Currency: "USD", Price: 81.5, ObservedAt: time.Now().UTC(), Source: "Market Pulse"}}
+	if err := validateShadowReport(&report, map[string]bool{"evidence-1": true}); err != nil {
+		t.Fatal(err)
+	}
+	report.MarketSnapshot[0].Symbol = "UNTRUSTED"
+	if err := validateShadowReport(&report, map[string]bool{"evidence-1": true}); err == nil {
+		t.Fatal("untrusted market symbol was accepted")
 	}
 }
 
