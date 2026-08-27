@@ -1,3 +1,4 @@
+// STATUS: DIAMANT VGT SUPREME
 // VGT AETHEL // MAIN ENTRYPOINT MODULE (ES6)
 
 import { state } from './modules/state.js';
@@ -15,11 +16,16 @@ import { startGlobalIntelligenceAlertMonitor } from './modules/intelligence_aler
 import { setupUIModernization } from './modules/ui_modernization.js';
 import { setupI18n } from './modules/i18n.js';
 import { speakPersonalizedStartupGreeting } from './modules/startup_greeting.js';
+import { startSentinelMonitor } from './modules/emergency_overlay.js';
+import { initSpaceDashboard } from './modules/space_dashboard.js';
+import { startPersonalOperationsMonitor } from './modules/personal_operations.js';
+import { initMailWorkspace } from './modules/mail_workspace.js';
+import { initOperatorWorkbench } from './modules/operator_workbench.js';
+import { initShadowOSINT } from './modules/shadow_osint.js';
 
 // Initialize Application
 
 async function init() {
-    // Map view panels
     state.views = {
         core: document.getElementById("view-core"),
         chat: document.getElementById("view-chat"),
@@ -34,10 +40,13 @@ async function init() {
         settings: document.getElementById("view-settings"),
         archive: document.getElementById("view-archive"),
         globalWatch: document.getElementById("view-global-watch"),
+        shadow: document.getElementById("view-shadow"),
         case: document.getElementById("view-case"),
+        workbench: document.getElementById("view-workbench"),
+        space: document.getElementById("view-space"),
+        mail: document.getElementById("view-mail"),
     };
 
-    // Map navigation buttons
     state.navButtons = {
         core: document.getElementById("nav-btn-core"),
         chat: document.getElementById("nav-btn-chat"),
@@ -52,29 +61,59 @@ async function init() {
         settings: document.getElementById("nav-btn-settings"),
         archive: document.getElementById("nav-btn-archive"),
         globalWatch: document.getElementById("nav-btn-global-watch"),
+        shadow: document.getElementById("nav-btn-shadow"),
         case: document.getElementById("nav-btn-case"),
+        workbench: document.getElementById("nav-btn-workbench"),
+        space: document.getElementById("nav-btn-space"),
+        mail: document.getElementById("nav-btn-mail"),
     };
 
-    // Setup and trigger splash screen status updates
     const splash = document.getElementById("startup-splash-screen");
     const splashStatus = document.getElementById("splash-status-text");
+    const splashStartButton = document.getElementById("splash-start-button");
     const splashStartedAt = Date.now();
     const minimumSplashDuration = 3200;
-    
+
     let splashDismissed = false;
+    let splashReady = false;
+
     const dismissSplash = () => {
         if (splashDismissed) return;
+        // Operator must press START — never auto-enter the app.
+        if (!splashReady) return;
         splashDismissed = true;
-        if (splashStatus) splashStatus.textContent = "SYSTEM BOOT READY // OPERATOR LINK ESTABLISHED";
-        const remaining = Math.max(0, minimumSplashDuration - (Date.now() - splashStartedAt));
-        setTimeout(() => {
-            if (splash) {
-                splash.classList.add("startup-splash-exit");
-                splash.style.opacity = "0";
-                setTimeout(() => splash.remove(), 800);
-            }
-        }, remaining + 450);
+        if (splashStatus) splashStatus.textContent = "OPERATOR LINK ESTABLISHED // ENTERING CORE";
+        if (splash) {
+            splash.classList.add("startup-splash-exit");
+            splash.style.opacity = "0";
+            setTimeout(() => splash.remove(), 800);
+        }
+        // Only after the operator enters: personal startup briefing (if configured).
+        window.setTimeout(() => {
+            import('./modules/startup_briefing.js')
+                .then(m => m.runConfiguredStartupBriefing())
+                .catch(e => console.error('Startup briefing failed', e));
+        }, 900);
     };
+
+    const markSplashReady = () => {
+        if (splashReady || splashDismissed) return;
+        const remaining = Math.max(0, minimumSplashDuration - (Date.now() - splashStartedAt));
+        window.setTimeout(() => {
+            if (splashDismissed) return;
+            splashReady = true;
+            if (splashStatus) splashStatus.textContent = "SYSTEM BOOT READY // PRESS START";
+            if (splashStartButton) {
+                splashStartButton.hidden = false;
+                splashStartButton.removeAttribute("hidden");
+                try { splashStartButton.focus(); } catch (_) { /* ignore */ }
+            }
+        }, remaining);
+    };
+
+    if (splashStartButton) {
+        splashStartButton.addEventListener("click", dismissSplash);
+    }
 
     if (splash && splashStatus) {
         setTimeout(() => { if (!splashDismissed) splashStatus.textContent = "INITIALIZING POLICY LEASES..."; }, 650);
@@ -94,18 +133,17 @@ async function init() {
         setupControlUIEvents();
         setupSettingsUIEvents();
         setupUIModernization();
-        // Collapsible sidebar sections
+        startSentinelMonitor();
+        startPersonalOperationsMonitor();
+
         document.querySelectorAll(".nav-section-header").forEach(header => {
             const section = header.getAttribute("data-section");
             const content = document.getElementById(`nav-section-${section}`);
-            
-            // Restore state from localStorage
             const isCollapsed = localStorage.getItem(`aethel_sidebar_collapsed_${section}`) === "true";
             if (isCollapsed) {
                 header.classList.add("collapsed");
                 content?.classList.add("collapsed");
             }
-            
             header.addEventListener("click", () => {
                 header.classList.toggle("collapsed");
                 content?.classList.toggle("collapsed");
@@ -113,89 +151,36 @@ async function init() {
             });
         });
 
-        // Initialize OSINT Global Watch View
-        import('./modules/osint_watch.js').then(m => m.initGlobalWatch()).catch(e => console.error("Global Watch initialization failed", e));
-        import('./modules/case_workspace.js').then(m => m.initCaseWorkspace()).catch(e => console.error("Case Workspace initialization failed", e));
-
-        // Wire UI events early (no data fetch yet — hydration runs after core READY).
-        import('./modules/personal_mode.js').then(m => m.setupPersonalModeUIEvents()).catch(error => console.error('Personal Mode disabled during boot', error));
-        import('./modules/agent_builder.js').then(m => m.setupAgentBuilder()).catch(error => console.error('Agent Builder disabled during boot', error));
-        import('./modules/sphere.js').then(m => m.setupSphereWorkspace()).catch(error => console.error('Sphere Workspace disabled during boot', error));
+        import('./modules/osint_watch.js').then(m => m.initGlobalWatch()).catch(e => console.error("Global Watch init failed", e));
+        import('./modules/case_workspace.js').then(m => m.initCaseWorkspace()).catch(e => console.error("Case Workspace init failed", e));
+        import('./modules/personal_mode.js').then(m => m.setupPersonalModeUIEvents()).catch(e => console.error('Personal Mode UI failed', e));
+        import('./modules/agent_builder.js').then(m => m.setupAgentBuilder()).catch(e => console.error('Agent Builder UI failed', e));
+        import('./modules/sphere.js').then(m => m.setupSphereWorkspace()).catch(e => console.error('Sphere Workspace UI failed', e));
+        initSpaceDashboard();
+        initMailWorkspace();
+        initOperatorWorkbench();
+        initShadowOSINT();
 
         await checkSystemStatus();
-        // After core is READY: hydrate Personal Core + Neural Core greeting so
-        // saved profile/config are not empty until the user opens the view.
-        await import('./modules/personal_mode.js')
-            .then(m => m.hydratePersonalModeAtBoot())
-            .catch(error => console.error('Personal Core boot hydrate failed', error));
-        await refreshAPICosts().catch(error => console.error('API costs unavailable at boot', error));
-        await loadCustomPersonasSettings().catch(error => console.error('Personas unavailable at boot', error));
-        window.setTimeout(() => {
-            import('./modules/startup_briefing.js')
-                .then(module => module.runConfiguredStartupBriefing())
-                .catch(error => console.error('Startup briefing unavailable', error));
-        }, 1800);
+        await import('./modules/personal_mode.js').then(m => m.hydratePersonalModeAtBoot()).catch(e => console.error('Personal Core boot hydrate failed', e));
+        await refreshAPICosts().catch(e => console.error('API costs unavailable', e));
+        await loadCustomPersonasSettings().catch(e => console.error('Personas unavailable', e));
 
-        // Update version badge dynamically from backend ProductVersion (1.0.0-beta.2 -> BETA V2).
-        // Robust retries to ensure visibility even if bindings load late (addresses prior "not visible" reports).
-        // BETA V2 · PRODUCTION CANDIDATE
-        function updateVersionBadge(attempt = 0) {
-            const maxAttempts = 6;
-            const badge = document.querySelector('.release-badge');
-            if (window.go && window.go.main && window.go.main.App && window.go.main.App.GetVersion) {
-                window.go.main.App.GetVersion().then(v => {
-                    if (badge && v) {
-                        if (v.includes('beta')) {
-                            const betaPart = v.split('-beta.')[1] || '';
-                            badge.textContent = betaPart ? 'BETA V' + betaPart : 'BETA V2';
-                        } else {
-                            badge.textContent = v;
-                        }
-                        // Also sync status-sub if present
-                        const sub = document.querySelector('.status-sub');
-                        if (sub && sub.textContent.includes('BETA')) {
-                            const release = v.includes('beta') ? (v.split('-beta.')[1] ? 'BETA V' + v.split('-beta.')[1] : 'BETA V2') : v;
-                            const mode = document.createElement('span');
-                            mode.id = 'current-mode-label';
-                            mode.className = 'cyan-text';
-                            mode.textContent = 'NEURAL CORE';
-                            sub.replaceChildren(document.createTextNode(release + ' :: '), mode);
-                        }
-                    }
-                }).catch(() => {
-                    if (attempt < maxAttempts) setTimeout(() => updateVersionBadge(attempt + 1), 250 * (attempt + 1));
-                });
-                return;
-            }
-            if (attempt < maxAttempts) {
-                setTimeout(() => updateVersionBadge(attempt + 1), 250 * (attempt + 1));
-            }
-        }
-        updateVersionBadge();
-        // Additional late retries (more attempts for robustness on slow binding)
-        setTimeout(() => updateVersionBadge(1), 800);
-        setTimeout(() => updateVersionBadge(2), 1600);
-        setTimeout(() => updateVersionBadge(3), 2500);
-
-        // Default view is core HUD
         switchMode("core");
     } catch (e) {
         console.error("Boot execution failed", e);
     } finally {
-        if (splashStatus) splashStatus.textContent = "SYSTEM BOOT READY // OPERATOR LINK ESTABLISHED";
+        // Reveal START button only — splash stays until operator confirms.
+        markSplashReady();
     }
 
-    // Freigaben sind ein globaler Sicherheitszustand, kein Run-Center-Detail.
     startGlobalRunApprovalMonitor();
-    // High-confidence Global Watch observations must be visible from every view.
     startGlobalIntelligenceAlertMonitor();
 
-    // Periodic polling for status bar HUD and active viewport logs
     setInterval(() => {
         refreshSecurityHUD();
         refreshAPICosts();
         const activeView = Object.keys(state.views).find(key => state.views[key] && !state.views[key].classList.contains("hidden"));
-        
         if (activeView === "core") {
             import('./modules/security.js').then(m => m.fetchKernelLogs());
             import('./modules/voice.js').then(m => m.refreshVoiceHealthHUD());
@@ -208,7 +193,6 @@ async function init() {
     }, 3000);
 }
 
-// Setup Tab Switching Navigation
 function setupViewNavigation() {
     Object.keys(state.navButtons).forEach(key => {
         if (state.navButtons[key]) {
@@ -219,8 +203,20 @@ function setupViewNavigation() {
     });
 }
 
-// Setup UI Event Listeners
 function setupEventListeners() {
+    const warningAccept = document.getElementById('startup-warning-btn-accept');
+    warningAccept?.addEventListener('click', () => document.getElementById('startup-warning-modal')?.classList.add('hidden'));
+    const copyTargets = Object.freeze({
+        'donation-copy-paypal': 'paypal.me/dergoldenelotus',
+        'donation-copy-bitcoin': 'bc1q3ue5gq822tddmkdrek79adlkm36fatat3lz0dm',
+        'donation-copy-ethereum': '0xD37DEfb09e07bD775EaaE9ccDaFE3a5b2348Fe85',
+    });
+    for (const [id, value] of Object.entries(copyTargets)) {
+        document.getElementById(id)?.addEventListener('click', async () => {
+            try { await navigator.clipboard.writeText(value); window.showAethelToast?.('Adresse kopiert.', 'success'); }
+            catch (error) { console.warn('Clipboard write unavailable', error); }
+        });
+    }
     const elBtnInitiate = document.getElementById("btn-initiate");
     const elApiKey = document.getElementById("api-key");
     const elBtnSend = document.getElementById("btn-send");

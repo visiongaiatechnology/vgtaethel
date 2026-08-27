@@ -324,7 +324,14 @@ export function showCameraDetails(cam, p) {
 
     const svgPreview = document.createElement('div');
     svgPreview.style.cssText = 'margin-top:8px; border:1px solid #444; background:#112; height:48px; position:relative; font-size:9px; color:#ff0; overflow:hidden; border-radius:4px;';
-    svgPreview.innerHTML = `<svg width="100%" height="48" style="position:absolute;left:0;top:0;"><rect width="100%" height="100%" fill="#112"/><circle cx="50%" cy="50%" r="6" fill="#334" stroke="#ff0"/><text x="50%" y="38" font-size="8" fill="#ff0" text-anchor="middle">PUBLIC CAM</text></svg><div style="position:absolute; left:6px; bottom:4px; opacity:0.6; font-size:8px;">${Number(cam.lat).toFixed(1)}, ${Number(cam.lon).toFixed(1)}</div><div style="position:absolute; right:6px; top:6px; width:6px; height:6px; background:#0f0; border-radius:50%; box-shadow:0 0 3px #0f0;"></div>`;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '100%'); svg.setAttribute('height', '48'); svg.classList.add('vgt-inline-5a5a123c');
+    const rect = document.createElementNS(svg.namespaceURI, 'rect'); rect.setAttribute('width', '100%'); rect.setAttribute('height', '100%'); rect.setAttribute('fill', '#112');
+    const marker = document.createElementNS(svg.namespaceURI, 'circle'); marker.setAttribute('cx', '50%'); marker.setAttribute('cy', '50%'); marker.setAttribute('r', '6'); marker.setAttribute('fill', '#334'); marker.setAttribute('stroke', '#ff0');
+    const label = document.createElementNS(svg.namespaceURI, 'text'); label.setAttribute('x', '50%'); label.setAttribute('y', '38'); label.setAttribute('font-size', '8'); label.setAttribute('fill', '#ff0'); label.setAttribute('text-anchor', 'middle'); label.textContent = 'PUBLIC CAM';
+    const coordinates = document.createElement('div'); coordinates.className = 'vgt-inline-d4a17506'; coordinates.textContent = `${Number(cam.lat).toFixed(1)}, ${Number(cam.lon).toFixed(1)}`;
+    const indicator = document.createElement('div'); indicator.className = 'vgt-inline-f4bd64bf';
+    svg.append(rect, marker, label); svgPreview.append(svg, coordinates, indicator);
 
     pop.append(close, name, coordinateText, policyText, actions, previewBox, svgPreview);
 

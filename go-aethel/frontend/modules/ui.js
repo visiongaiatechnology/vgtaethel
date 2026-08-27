@@ -1,3 +1,4 @@
+// STATUS: DIAMANT VGT SUPREME
 import { state } from './state.js';
 import * as api from './api.js';
 import { refreshVoiceHealthHUD, speak } from './voice.js';
@@ -16,6 +17,7 @@ export function switchMode(mode) {
     });
     
     state.views[mode].classList.remove("hidden");
+	document.body.classList.toggle('shadow-osint-active', mode === 'shadow');
     if (state.navButtons[mode]) state.navButtons[mode].classList.add("active");
     
     const label = document.getElementById("current-mode-label");
@@ -73,8 +75,12 @@ export function switchMode(mode) {
                 setTimeout(() => m.forceGlobeResize(), 50);
             }
         });
+    } else if (mode === "shadow") {
+        import('./shadow_osint.js').then(m => m.refreshShadowOSINT && m.refreshShadowOSINT());
     } else if (mode === "case") {
         import('./case_workspace.js').then(m => m.refreshCaseWorkspace && m.refreshCaseWorkspace());
+    } else if (mode === "workbench") {
+        import('./operator_workbench.js').then(m => m.refreshOperatorWorkbench && m.refreshOperatorWorkbench());
     }
 }
 window.switchMode = switchMode;

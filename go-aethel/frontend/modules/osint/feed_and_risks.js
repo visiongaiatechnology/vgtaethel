@@ -3,6 +3,7 @@ import {
   activeFeedEvents, setActiveFeedEvents,
   globalWatchPreferences,
   cachedRiskMarkers, setCachedRiskMarkers,
+  setCachedRiskDetails,
   REGION_GEO,
   globalWatchCommandStream, setGlobalWatchCommandStream,
   localGlobeRotY, localGlobeRotX, localGlobeScale, localGlobeCanvas,
@@ -68,6 +69,61 @@ export function stableGlobeEventID(event) {
     return String(event?.id || event?.ID || `${event?.source || ''}|${event?.title || ''}|${eventTimestampMs(event)}`);
 }
 
+function renderNaturalHazards(showSelectionDetailsFn, openGwReportReaderFn) {
+    const list = document.getElementById('gw-hazard-list');
+    const count = document.getElementById('gw-hazard-count');
+    if (!list) return;
+    list.replaceChildren();
+
+    const hours = getGwTimeWindowHours();
+    const visible = activeFeedEvents.map((event, index) => ({ event, index })).filter(({ event }) => {
+        if (!isEarthquakeEvent(event) && !isVolcanoEvent(event)) return false;
+        if (!eventMatchesRegion(event, window.__gwRegionFilter || 'global')) return false;
+        if (hours <= 0) return true;
+        const timestamp = eventTimestampMs(event);
+        return timestamp && timestamp >= Date.now() - hours * 3600 * 1000 && timestamp <= Date.now() + 10 * 60 * 1000;
+    });
+
+    if (count) count.textContent = String(visible.length);
+    if (visible.length === 0) {
+        appendTextElement(list, 'div', 'Keine Naturereignisse im aktiven Zeitfenster.', 'gw-risk-empty');
+        return;
+    }
+
+    visible.forEach(({ event, index }) => {
+        const earthquake = isEarthquakeEvent(event);
+        const card = document.createElement('article');
+        card.className = 'gw-event-card gw-hazard-card';
+        card.dataset.hazard = earthquake ? 'earthquake' : 'volcano';
+        card.dataset.idx = String(index);
+        card.setAttribute('role', 'listitem');
+        card.tabIndex = 0;
+
+        const header = document.createElement('div');
+        header.className = 'gw-event-meta-row';
+        const magnitude = earthquake ? parseMagnitudeFromEvent(event) : null;
+        appendTextElement(header, 'span', earthquake ? (magnitude != null ? `ERDBEBEN M${Number(magnitude).toFixed(1)}` : 'ERDBEBEN') : 'VULKAN', 'gw-event-badge layer-raw');
+        appendTextElement(header, 'span', event.source || 'Hazard source', 'gw-event-source');
+        const dateTime = formatArticleDateTime(event.timestamp || event.observed_at);
+        appendTextElement(header, 'span', `${dateTime.date} ${dateTime.time}`, 'gw-event-time font-mono');
+        card.append(header, appendTextElement(document.createElement('div'), 'span', event.title || 'Unbenanntes Naturereignis', 'gw-event-title'));
+
+        const activate = () => {
+            setLocalGlobeSelectedIndex(index);
+            if (event.lat != null && event.lon != null) focusGlobeOnLonLat(event.lon, event.lat);
+            if (showSelectionDetailsFn) showSelectionDetailsFn(event, null);
+            if (openGwReportReaderFn) openGwReportReaderFn(event);
+        };
+        card.addEventListener('click', activate);
+        card.addEventListener('keydown', keyboardEvent => {
+            if (keyboardEvent.key !== 'Enter' && keyboardEvent.key !== ' ') return;
+            keyboardEvent.preventDefault();
+            activate();
+        });
+        list.appendChild(card);
+    });
+}
+
 export async function refreshOSINTFeed(domain = "all", triggerBackendCollect = false, showSelectionDetailsFn = showSelectionDetails, openGwReportReaderFn = openGwReportReader) {
     const feedList = document.getElementById("gw-feed-list");
     const feedCount = document.getElementById("gw-feed-count");
@@ -77,7 +133,7 @@ export async function refreshOSINTFeed(domain = "all", triggerBackendCollect = f
 
     try {
 		const strictHours = getGwTimeWindowHours();
-		let url = `${state.API_BASE}/v1/osint/feeds?domain=${encodeURIComponent(domain)}&hours=${encodeURIComponent(strictHours)}`;
+		let url = `${state.API_BASE}/v1/osint/feeds?domain=${encodeURIComponent(domain)}&hours=${encodeURIComponent(strictHours)}&category=all`;
         if (triggerBackendCollect) {
             refreshInfo.textContent = "COLLECTING FRESH INTELLIGENCE...";
         }
@@ -150,12 +206,13 @@ export async function refreshOSINTFeed(domain = "all", triggerBackendCollect = f
             }
         } catch (_) {}
 
-        if (activeFeedEvents.length > globalWatchPreferences.feedLimit) {
-            setActiveFeedEvents(activeFeedEvents.slice(0, globalWatchPreferences.feedLimit));
-        }
+        const newsEvents = activeFeedEvents.filter(event => !isEarthquakeEvent(event) && !isVolcanoEvent(event)).slice(0, globalWatchPreferences.feedLimit);
+        const hazardEvents = activeFeedEvents.filter(event => isEarthquakeEvent(event) || isVolcanoEvent(event)).slice(0, globalWatchPreferences.feedLimit);
+        setActiveFeedEvents(newsEvents.concat(hazardEvents));
         const timeFilteredEvents = filterEventsByTimeWindow(activeFeedEvents, getGwTimeWindowHours());
         const regionFilteredEvents = filterEventsByRegion(timeFilteredEvents, window.__gwRegionFilter || 'global');
-        if (feedCount) feedCount.textContent = `${regionFilteredEvents.length} / ${activeFeedEvents.length} sichtbar`;
+        const regionNewsEvents = regionFilteredEvents.filter(event => !isEarthquakeEvent(event) && !isVolcanoEvent(event));
+        if (feedCount) feedCount.textContent = `${regionNewsEvents.length} / ${newsEvents.length} sichtbar`;
 
         for (const ie of (idata && idata.events ? idata.events : [])) {
           if (ie.title && ie.title.includes("Focus request") && ie.latitude != null && ie.longitude != null) {
@@ -168,9 +225,10 @@ export async function refreshOSINTFeed(domain = "all", triggerBackendCollect = f
         feedList.replaceChildren();
         clearPins();
 
-        if (activeFeedEvents.length === 0) {
-            const empty = appendTextElement(feedList, 'div', 'NO ACTIVE OBSERVATIONS FOUND', 'gw-risk-empty');
+        if (newsEvents.length === 0) {
+            const empty = appendTextElement(feedList, 'div', 'KEINE NACHRICHTEN IM AKTIVEN ZEITFENSTER', 'gw-risk-empty');
             empty.style.padding = '20px';
+            renderNaturalHazards(showSelectionDetailsFn, openGwReportReaderFn);
             requestGlobeRender();
             return;
         }
@@ -182,6 +240,7 @@ export async function refreshOSINTFeed(domain = "all", triggerBackendCollect = f
 
         let rendered = 0;
         activeFeedEvents.forEach((ev, idx) => {
+            if (isEarthquakeEvent(ev) || isVolcanoEvent(ev)) return;
             if (!eventMatchesRegion(ev, window.__gwRegionFilter || 'global')) return;
             if (timeHours > 0) {
                 const ms = eventTimestampMs(ev);
@@ -330,15 +389,16 @@ export async function refreshOSINTFeed(domain = "all", triggerBackendCollect = f
             feedList.appendChild(card);
         });
 
-        if (feedCount) feedCount.textContent = `${rendered} / ${activeFeedEvents.length} sichtbar`;
+        if (feedCount) feedCount.textContent = `${rendered} / ${newsEvents.length} sichtbar`;
         const metricObs = document.getElementById('gw-metric-obs');
-        if (metricObs) metricObs.textContent = `OBS ${activeFeedEvents.length}`;
+        if (metricObs) metricObs.textContent = `NEWS ${newsEvents.length} · HAZ ${hazardEvents.length}`;
 
         if (rendered === 0) {
             appendTextElement(feedList, 'div', 'Keine Meldungen für Filter. RAW/INFERENCE/VERIFIED trennen.', 'gw-risk-empty');
         }
 
         void loadAndRenderRegionalRisks();
+        renderNaturalHazards(showSelectionDetailsFn, openGwReportReaderFn);
         requestGlobeRender();
 
     } catch (e) {
@@ -350,30 +410,246 @@ export async function refreshOSINTFeed(domain = "all", triggerBackendCollect = f
 }
 
 const REGION_FOCUS_LON = {
-    GERMANY: 10, FRANCE: 2, USA: -95, UKRAINE: 31, UK: -3, BERLIN: 13.4
+    GERMANY: 10, FRANCE: 2, USA: -95, UKRAINE: 31, UK: -3, BERLIN: 13.4,
+    RUSSIA: 90, IRAN: 53, CHINA: 104, ISRAEL: 35, TAIWAN: 121, POLAND: 19, BALTICS: 25
 };
+
+/**
+ * Merge reference lists by title. Later entries with a real URL upgrade title-only rows
+ * so API title-only refs do not block live feed HTTPS links (same title).
+ */
+export function mergeRiskReferences(capN, ...lists) {
+    const max = Number.isFinite(capN) && capN > 0 ? capN : 12;
+    const byTitle = new Map();
+    let order = 0;
+    lists.forEach((list) => {
+        (list || []).forEach((r) => {
+            const title = String(r?.title || r?.Title || '').trim();
+            if (!title) return;
+            const key = title.toLowerCase();
+            const url = String(r?.url || r?.URL || '').trim();
+            const source = String(r?.source || r?.Source || '').trim();
+            if (byTitle.has(key)) {
+                const existing = byTitle.get(key);
+                if (!existing.url && url) existing.url = url;
+                if (!existing.source && source) existing.source = source;
+                return;
+            }
+            byTitle.set(key, {
+                title: title.slice(0, 160),
+                url: url.slice(0, 1024),
+                source: source.slice(0, 80),
+                _order: order++
+            });
+        });
+    });
+    return Array.from(byTitle.values())
+        .sort((a, b) => a._order - b._order)
+        .slice(0, max)
+        .map(({ title, url, source }) => ({ title, url, source }));
+}
+
+/** Merge feed events in catalog bbox as supplemental references (real URLs only). */
+function referencesFromFeedForRegion(regionId) {
+    const geo = REGION_GEO[String(regionId || '').toUpperCase()];
+    if (!geo || geo.minLat == null) return [];
+    const out = [];
+    (activeFeedEvents || []).forEach((ev) => {
+        const lat = Number(ev.lat != null ? ev.lat : ev.latitude);
+        const lon = Number(ev.lon != null ? ev.lon : ev.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+        if (lat < geo.minLat || lat > geo.maxLat || lon < geo.minLon || lon > geo.maxLon) return;
+        const title = String(ev.title || ev.summary || '').trim();
+        if (!title) return;
+        const url = safeExternalURL(ev.source_url || ev.url || ev.link || '');
+        out.push({
+            title: title.slice(0, 160),
+            url: url ? url.toString() : '',
+            source: String(ev.source || ev.domain || '').slice(0, 80)
+        });
+    });
+    return mergeRiskReferences(12, out);
+}
+
+/**
+ * Single-click detail popup for Regionales Risiko: narrative, drivers, references.
+ * Uses showAethelModal when available; falls back to explain drawer body content.
+ */
+export function openRegionalRiskDetailPopup(risk) {
+    const rid = String(risk?.region_id || risk?.region_name || '').toUpperCase();
+    const name = risk?.region_name || rid || 'Region';
+    const overall = Number(risk?.overall_risk) || 0;
+    const src = String(risk?.evaluation_source || '').toLowerCase();
+    const srcLabel = src === 'ai' ? 'KI' : src === 'hybrid' ? 'KI+Det' : src === 'deterministic' ? 'Deterministisch' : (src || '—');
+    const narrative = String(risk?.ai_narrative || risk?.AINarrative || '').trim();
+    const drivers = Array.isArray(risk?.primary_drivers) ? risk.primary_drivers : (risk?.PrimaryDrivers || []);
+    const apiRefs = Array.isArray(risk?.references) ? risk.references.slice() : [];
+    // URL-upgrade merge: feed HTTPS links win over same-title API title-only refs.
+    const feedRefs = referencesFromFeedForRegion(rid);
+    let refs = mergeRiskReferences(14, apiRefs, feedRefs);
+
+    const root = document.createElement('div');
+    root.className = 'gw-risk-detail-popup';
+    root.setAttribute('data-region-id', rid);
+
+    const meta = document.createElement('div');
+    meta.className = 'gw-risk-detail-meta';
+    meta.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;font-size:11px;';
+    const scoreEl = document.createElement('span');
+    scoreEl.style.cssText = 'color:var(--vgt-cyan,#0ff);font-weight:700;';
+    scoreEl.textContent = `Risiko ${overall.toFixed(1)} / 100`;
+    const srcEl = document.createElement('span');
+    srcEl.textContent = `Quelle: ${srcLabel}`;
+    const modelEl = document.createElement('span');
+    modelEl.style.opacity = '0.75';
+    modelEl.textContent = risk?.ai_model_id ? `Modell: ${risk.ai_model_id}` : '';
+    meta.append(scoreEl, srcEl);
+    if (risk?.ai_model_id) meta.appendChild(modelEl);
+    root.appendChild(meta);
+
+    const narrHead = document.createElement('div');
+    narrHead.style.cssText = 'font-size:10px;letter-spacing:0.08em;color:rgba(0,240,255,0.85);margin:8px 0 4px;font-weight:700;';
+    narrHead.textContent = 'KI-NARRATIV / BEWERTUNG';
+    root.appendChild(narrHead);
+    const narrBody = document.createElement('p');
+    narrBody.className = 'gw-risk-detail-narrative';
+    narrBody.style.cssText = 'margin:0 0 12px;white-space:pre-wrap;color:rgba(255,255,255,0.92);line-height:1.5;';
+    narrBody.textContent = narrative || 'Kein KI-Text für diese Region (deterministische Baseline oder leere Antwort).';
+    root.appendChild(narrBody);
+
+    const drvHead = document.createElement('div');
+    drvHead.style.cssText = narrHead.style.cssText;
+    drvHead.textContent = 'PRIMARY DRIVERS';
+    root.appendChild(drvHead);
+    if (drivers.length) {
+        const ul = document.createElement('ul');
+        ul.className = 'gw-risk-detail-drivers';
+        ul.style.cssText = 'margin:0 0 12px;padding-left:16px;';
+        drivers.slice(0, 8).forEach((d) => {
+            const li = document.createElement('li');
+            li.textContent = String(d);
+            ul.appendChild(li);
+        });
+        root.appendChild(ul);
+    } else {
+        const emptyD = document.createElement('p');
+        emptyD.style.cssText = 'opacity:0.7;margin:0 0 12px;font-size:10px;';
+        emptyD.textContent = 'Keine Drivers gemeldet.';
+        root.appendChild(emptyD);
+    }
+
+    const refHead = document.createElement('div');
+    refHead.style.cssText = narrHead.style.cssText;
+    refHead.textContent = 'REFERENZEN';
+    root.appendChild(refHead);
+    if (refs.length) {
+        const list = document.createElement('div');
+        list.className = 'gw-risk-detail-references';
+        list.style.cssText = 'display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto;';
+        refs.forEach((ref) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'padding:6px 8px;background:rgba(0,240,255,0.06);border:1px solid rgba(0,240,255,0.15);border-radius:4px;';
+            const t = document.createElement('div');
+            t.textContent = String(ref.title || ref.Title || '—');
+            t.style.fontWeight = '600';
+            row.appendChild(t);
+            const srcLine = String(ref.source || ref.Source || '').trim();
+            if (srcLine) {
+                const s = document.createElement('div');
+                s.style.cssText = 'font-size:9px;opacity:0.7;margin-top:2px;';
+                s.textContent = srcLine;
+                row.appendChild(s);
+            }
+            const rawUrl = ref.url || ref.URL || '';
+            const safe = safeExternalURL(rawUrl);
+            if (safe) {
+                const a = document.createElement('a');
+                a.href = safe.toString();
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.textContent = safe.hostname + safe.pathname.slice(0, 40);
+                a.style.cssText = 'display:inline-block;margin-top:3px;font-size:9px;color:#0ff;';
+                row.appendChild(a);
+            }
+            list.appendChild(row);
+        });
+        root.appendChild(list);
+    } else {
+        const emptyR = document.createElement('p');
+        emptyR.className = 'gw-risk-detail-refs-empty';
+        emptyR.style.cssText = 'opacity:0.7;margin:0;font-size:10px;';
+        emptyR.textContent = 'Keine Referenzen für diese Region (keine geo-matchenden Events/Observations).';
+        root.appendChild(emptyR);
+    }
+
+    if (typeof window.showAethelModal === 'function') {
+        window.showAethelModal({
+            title: `Regionales Risiko · ${name}`,
+            contentNode: root,
+            onSave: async (close) => { close(); }
+        });
+        // Widen modal body for narrative readability
+        const card = document.querySelector('#aethel-custom-modal .glass-card');
+        if (card) {
+            card.style.maxWidth = '560px';
+            card.style.width = '92%';
+        }
+        const submit = document.getElementById('aethel-modal-submit');
+        if (submit) submit.textContent = 'SCHLIESSEN';
+        const cancel = document.getElementById('aethel-modal-cancel');
+        if (cancel) cancel.style.display = 'none';
+    } else {
+        // Fallback: explain drawer
+        void openExplainDrawer(rid || 'GERMANY');
+        const body = document.getElementById('gw-explain-body');
+        if (body) {
+            body.replaceChildren();
+            body.appendChild(root);
+        }
+    }
+}
 
 export async function loadAndRenderRegionalRisks() {
     const listEl = document.getElementById("gw-risk-hud-list");
     if (!listEl) return;
 
     try {
-        let res = await fetch(`${state.API_BASE}/v1/intelligence/risk`);
+        const modelQ = state.currentModel ? `?model_id=${encodeURIComponent(state.currentModel)}` : '';
+        let res = await fetch(`${state.API_BASE}/v1/intelligence/risk${modelQ}`);
         if (!res.ok) {
-            res = await fetch(`${state.API_BASE}/v1/intelligence/risks`);
+            res = await fetch(`${state.API_BASE}/v1/intelligence/risks${modelQ}`);
         }
         if (!res.ok) throw new Error("Failed to fetch risk values");
         let payload = await res.json();
         let risks = Array.isArray(payload) ? payload : [];
+        if (!risks.length && payload && Array.isArray(payload.risks)) {
+            risks = payload.risks;
+        }
         if (!risks.length && payload && payload.risks && typeof payload.risks === 'object' && !Array.isArray(payload.risks)) {
             risks = Object.entries(payload.risks).map(([id, rs]) => ({
                 region_id: id,
                 region_name: id,
                 overall_risk: rs.overall_risk != null ? rs.overall_risk : rs.OverallRisk,
                 primary_drivers: rs.primary_drivers || rs.PrimaryDrivers || [],
-                trend: rs.trend || rs.Trend || 'stable'
+                trend: rs.trend || rs.Trend || 'stable',
+                evaluation_source: rs.evaluation_source || rs.EvaluationSource || '',
+                ai_narrative: rs.ai_narrative || rs.AINarrative || '',
+                cache_age_hours: rs.cache_age_hours,
+                references: rs.references || rs.References || []
             }));
         }
+
+        // Publish only explicit AI assessments. Unknown, deterministic, and
+        // legacy hybrid values must never color the globe.
+        const byId = new Map();
+        risks.forEach((r) => {
+            const id = String(r.region_id || r.region_name || '').toUpperCase();
+            const source = String(r.evaluation_source || '').toLowerCase();
+            if (!id || source !== 'ai') return;
+            byId.set(id, { ...r, region_id: id, region_name: r.region_name || id });
+        });
+        risks = Array.from(byId.values());
+        setCachedRiskDetails(risks);
 
         listEl.replaceChildren();
         const metricRisk = document.getElementById('gw-metric-risk');
@@ -387,14 +663,17 @@ export async function loadAndRenderRegionalRisks() {
                 overall_risk: Number(r.overall_risk) || 0,
                 trend: r.trend || 'stable',
                 lat: geo.lat,
-                lon: geo.lon
+                lon: geo.lon,
+                ring: geo.ring || null,
+                minLat: geo.minLat, maxLat: geo.maxLat, minLon: geo.minLon, maxLon: geo.maxLon
             };
         }).filter((m) => m.lat != null);
         setCachedRiskMarkers(markers);
 
         if (!risks.length) {
             setCachedRiskMarkers([]);
-            appendTextElement(listEl, 'div', 'NO REGIONS ACTIVE', 'gw-risk-empty');
+            setCachedRiskDetails([]);
+            appendTextElement(listEl, 'div', 'AWAITING AI ASSESSMENT', 'gw-risk-empty');
             requestGlobeRender();
             return;
         }
@@ -406,15 +685,21 @@ export async function loadAndRenderRegionalRisks() {
                 const overall = Number(r.overall_risk) || 0;
                 const item = document.createElement('div');
                 item.className = 'gw-risk-item';
-                item.title = 'Click to focus map · double-click for explain score';
+                item.setAttribute('data-region-id', String(r.region_id || '').toUpperCase());
+                const src = String(r.evaluation_source || '').toLowerCase();
+                const ageH = Number(r.cache_age_hours);
+                const ageLabel = Number.isFinite(ageH) ? (ageH < 0.1 ? 'frisch' : `vor ${ageH.toFixed(1)}h`) : '';
+                const srcLabel = src === 'ai' ? 'KI' : '';
+                item.title = `Klick: Detail (KI-Text + Referenzen) · Dblclick: Explain-Score · ${srcLabel || 'Score'} ${ageLabel}`.trim();
 
                 item.addEventListener('click', () => {
                     const rid = String(r.region_id || r.region_name || '').toUpperCase();
                     const geo = REGION_GEO[rid] || { lat: 20, lon: REGION_FOCUS_LON[rid] != null ? REGION_FOCUS_LON[rid] : 0 };
                     focusGlobeOnLonLat(geo.lon, geo.lat);
-                    if (window.showAethelToast) window.showAethelToast(`Fokus: ${r.region_name || rid}`, 'info');
+                    openRegionalRiskDetailPopup(r);
                 });
-                item.addEventListener('dblclick', async () => {
+                item.addEventListener('dblclick', async (ev) => {
+                    ev.preventDefault();
                     const rid = r.region_id || r.region_name || 'GERMANY';
                     await openExplainDrawer(rid);
                 });
@@ -431,7 +716,7 @@ export async function loadAndRenderRegionalRisks() {
                 name.textContent = r.region_name || r.region_id || 'region';
                 const score = document.createElement('span');
                 score.style.color = color;
-                score.textContent = `${overall.toFixed(1)}% ${trendChar}`;
+                score.textContent = `${overall.toFixed(1)}% ${trendChar}${srcLabel ? ' · ' + srcLabel : ''}`;
                 top.append(name, score);
 
                 const bar = document.createElement('div');
@@ -450,6 +735,13 @@ export async function loadAndRenderRegionalRisks() {
                     d.className = 'gw-risk-driver';
                     d.textContent = 'DRIVER: ' + String(drivers[0]);
                     item.appendChild(d);
+                }
+                if (r.ai_narrative) {
+                    const n = document.createElement('div');
+                    n.className = 'gw-risk-driver';
+                    n.style.opacity = '0.85';
+                    n.textContent = String(r.ai_narrative).slice(0, 160);
+                    item.appendChild(n);
                 }
                 listEl.appendChild(item);
             });

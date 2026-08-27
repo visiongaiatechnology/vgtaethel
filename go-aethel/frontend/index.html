@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VGT AETHEL // BETA V2 · PRODUCTION CANDIDATE</title>
+    <title>VGT AETHEL // BETA V3 · STRATEGIC COMMAND BUILD</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="aethel-ui-production.css">
+    <link rel="stylesheet" href="inline-extracted.css">
+    <link rel="stylesheet" href="space-dashboard.css">
     <link rel="stylesheet" href="vgt-components.css">
+    <link rel="stylesheet" href="operator-workbench.css">
+    <link rel="stylesheet" href="shadow-osint.css">
     <!-- sidebar expand + settings layout live in aethel-ui-production.css -->
 
     <script defer src="marked.min.js"></script>
@@ -22,7 +26,7 @@
     <!-- Onboarding / Setup Wizard -->
     <div id="setup-wizard" class="modal-overlay hidden">
         <div class="glass-card setup-card">
-            <label class="aethel-language-control"><span data-i18n="language.label">Sprache</span><select class="aethel-language-select" aria-label="Interface language"><option value="de">Deutsch</option><option value="en">English</option><option value="ru">Русский</option><option value="es">Español</option></select></label>
+            <label class="aethel-language-control"><span data-i18n="language.label">Sprache</span><select class="aethel-language-select" aria-label="Interface language"><option value="de">Deutsch</option><option value="en">English</option><option value="es">Español</option><option value="fr">Français</option><option value="ru">Русский</option></select></label>
             <div class="logo-animation">
                 <svg viewBox="0 0 24 24" width="48" height="48" stroke="var(--vgt-cyan)" stroke-width="1.5" fill="none" class="pulse-icon">
                     <rect x="2" y="2" width="20" height="20" rx="4" />
@@ -41,32 +45,32 @@
                 <input type="password" id="api-key" placeholder="gsk_..." autocomplete="off">
             </div>
 
-            <div class="input-group" style="margin-bottom: 12px;">
-                <label for="deepseek-api-key" style="color: #00c8ff;">
+            <div class="input-group vgt-inline-d02f232d">
+                <label for="deepseek-api-key" class="vgt-inline-f55b5c15">
                     <svg viewBox="0 0 24 24" width="12" height="12" stroke="#00c8ff" stroke-width="2" fill="none"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
                     DEEPSEEK KEY (sk-...) — Optional
                 </label>
                 <input type="password" id="deepseek-api-key" placeholder="sk-..." autocomplete="off">
             </div>
 
-            <div class="input-group" style="margin-bottom: 12px;">
-                <label for="openai-api-key" style="color: var(--vgt-purple);">
+            <div class="input-group vgt-inline-d02f232d">
+                <label for="openai-api-key" class="vgt-inline-69faa395">
                     <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--vgt-purple)" stroke-width="2" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     OPENAI KEY (sk-...) — Optional (Premium Voice + GPT-4o)
                 </label>
                 <input type="password" id="openai-api-key" placeholder="sk-..." autocomplete="off">
             </div>
 
-            <div class="input-group" style="margin-bottom: 12px;">
-                <label for="gemini-api-key" style="color: #4285f4;">
+            <div class="input-group vgt-inline-d02f232d">
+                <label for="gemini-api-key" class="vgt-inline-e5ccd515">
                     <svg viewBox="0 0 24 24" width="12" height="12" stroke="#4285f4" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
                     GOOGLE GEMINI KEY (AIza...) — Optional
                 </label>
                 <input type="password" id="gemini-api-key" placeholder="AIza..." autocomplete="off">
             </div>
 
-            <div class="input-group" style="margin-bottom: 20px;">
-                <label for="claude-api-key" style="color: #d97757;">
+            <div class="input-group vgt-inline-086a8b26">
+                <label for="claude-api-key" class="vgt-inline-6ed1eccf">
                     <svg viewBox="0 0 24 24" width="12" height="12" stroke="#d97757" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                     ANTHROPIC CLAUDE KEY (sk-ant-...) — Optional
                 </label>
@@ -82,7 +86,7 @@
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M9 18l6-6-6-6"/></svg>
             </button>
 
-            <button id="btn-use-local" class="cyber-button hidden" style="margin-top: 10px; background: rgba(0, 240, 255, 0.08); border: 1.5px solid var(--vgt-cyan); color: var(--vgt-cyan); box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);">
+            <button id="btn-use-local" class="cyber-button hidden vgt-inline-2de6a370">
                 <span data-i18n="setup.local">LOKALE KI STARTEN (OLLAMA)</span>
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M9 9h6v6H9z" /><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3" /></svg>
             </button>
@@ -98,10 +102,10 @@
     </div>
 
     <!-- Permission Gate Modal -->
-    <div id="permission-gate-modal" class="modal-overlay hidden" style="z-index: 110;">
+    <div id="permission-gate-modal" class="modal-overlay hidden vgt-inline-08b0b30d">
         <div class="glass-card security-gate-card permission-command-center">
             <div class="permission-emblem">
-                <svg viewBox="0 0 24 24" width="40" height="40" stroke="var(--vgt-orange)" stroke-width="1.5" fill="none" class="pulse-icon" style="animation-duration: 1.5s;">
+                <svg viewBox="0 0 24 24" width="40" height="40" stroke="var(--vgt-orange)" stroke-width="1.5" fill="none" class="pulse-icon vgt-inline-701385ce">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                     <line x1="12" y1="9" x2="12" y2="13"/>
                     <line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -112,16 +116,16 @@
             <p class="permission-copy">Aethel wartet auf deine explizite Freigabe, bevor die angeforderte Capability ausgeführt wird.</p>
             
             <div class="permission-details font-mono text-xs">
-                <div style="margin-bottom: 8px;"><span style="color: var(--vgt-text-dim);">TOOL:</span> <span id="gate-tool-name" style="color: var(--vgt-cyan);">sys_exec_cmd</span></div>
-                <div style="margin-bottom: 8px;"><span style="color: var(--vgt-text-dim);">BENÖTIGTE CAPABILITY:</span> <span id="gate-capability" style="color: var(--vgt-purple);">system.exec</span></div>
-                <div style="margin-bottom: 8px;"><span style="color: var(--vgt-text-dim);">RISK LEVEL:</span> <span id="gate-risk-level" style="color: var(--vgt-red);">HIGH</span></div>
-                <div style="margin-bottom: 8px;"><span style="color: var(--vgt-text-dim);">ARGUMENTE:</span></div>
-                <pre id="gate-arguments" style="background: rgba(0,0,0,0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.03); max-height: 120px; overflow-y: auto; white-space: pre-wrap; font-size: 9px; color: var(--vgt-text);"></pre>
+                <div class="vgt-inline-4940bcce"><span class="vgt-inline-67f22013">TOOL:</span> <span id="gate-tool-name" class="vgt-inline-425b87cc">sys_exec_cmd</span></div>
+                <div class="vgt-inline-4940bcce"><span class="vgt-inline-67f22013">BENÖTIGTE CAPABILITY:</span> <span id="gate-capability" class="vgt-inline-69faa395">system.exec</span></div>
+                <div class="vgt-inline-4940bcce"><span class="vgt-inline-67f22013">RISK LEVEL:</span> <span id="gate-risk-level" class="vgt-inline-6e41cdda">HIGH</span></div>
+                <div class="vgt-inline-4940bcce"><span class="vgt-inline-67f22013">ARGUMENTE:</span></div>
+                <pre id="gate-arguments" class="vgt-inline-60918125"></pre>
             </div>
 
-            <div id="gate-threat-warning" class="hidden" style="border: 1px solid var(--vgt-red); background: rgba(255, 0, 79, 0.05); padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: left;">
-                <h5 style="color: var(--vgt-red); font-size: 10px; font-family: var(--font-mono); margin-bottom: 6px; font-weight: 700; letter-spacing: 0.05em;">⚠️ GEFAHR ERKANNT (FIREWALL WARNUNG)</h5>
-                <ul id="gate-threat-list" style="font-size: 9px; color: var(--vgt-text-dim); padding-left: 15px; line-height: 1.4;"></ul>
+            <div id="gate-threat-warning" class="hidden vgt-inline-30dbb3a7">
+                <h5 class="vgt-inline-043408dc">⚠️ GEFAHR ERKANNT (FIREWALL WARNUNG)</h5>
+                <ul id="gate-threat-list" class="vgt-inline-7ae08450"></ul>
             </div>
 
             <div class="tool-actions permission-actions">
@@ -136,27 +140,27 @@
     </div>
 
     <!-- Handoff Modal -->
-    <div id="handoff-modal" class="modal-overlay hidden" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
-        <div class="glass-card" style="width: 90%; max-width: 600px; max-height: 85vh; padding: 30px; display: flex; flex-direction: column; gap: 20px; border: 1px solid var(--vgt-cyan); box-shadow: 0 0 30px rgba(0, 240, 255, 0.25);">
-            <div style="border-bottom: 1px solid rgba(0, 240, 255, 0.3); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="font-family: var(--font-mono); font-size: 14px; color: var(--vgt-cyan); margin: 0; display: flex; align-items: center; gap: 8px;">
+    <div id="handoff-modal" class="modal-overlay hidden vgt-inline-de824b36">
+        <div class="glass-card vgt-inline-2bb5f0f6">
+            <div class="vgt-inline-c9025623">
+                <h3 class="vgt-inline-cbefcea1">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     EXTERNAL AGENT HANDOFF PROMPT
                 </h3>
-                <span id="handoff-agent-badge" style="font-family: var(--font-mono); font-size: 9px; padding: 2px 8px; background: rgba(0,240,255,0.2); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan); border-radius: 4px;">CURSOR</span>
+                <span id="handoff-agent-badge" class="vgt-inline-7951138b">CURSOR</span>
             </div>
             
-            <div style="flex-grow: 1; overflow-y: auto; background: rgba(0,0,0,0.6); border: 1px solid rgba(0,240,255,0.15); border-radius: 6px; padding: 15px; font-family: var(--font-mono); font-size: 11px; color: #fff; line-height: 1.5; white-space: pre-wrap;" id="handoff-modal-content">
+            <div id="handoff-modal-content" class="vgt-inline-d058ffb1">
                 Lade Übergabe-Protokoll...
             </div>
             
-            <p style="font-family: var(--font-mono); font-size: 9px; color: var(--vgt-text-dim); margin: 0; line-height: 1.4;">
+            <p class="vgt-inline-ba462aa7">
                 * Hinweis: Dieser Prompt wird in <code class="cyan-text">./vgt_workspace/handoff_payload.md</code> gespeichert. Sie können ihn kopieren und direkt in das externe Tool einfügen.
             </p>
 
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button id="handoff-btn-copy" class="cyber-button font-mono" style="width: auto; padding: 10px 20px; font-size: 10px; background: rgba(0,240,255,0.1); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan);">PROMPT KOPIEREN</button>
-                <button id="handoff-btn-close" class="cyber-button font-mono" style="width: auto; padding: 10px 20px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: #fff;">SCHLIESSEN</button>
+            <div class="vgt-inline-9c508343">
+                <button id="handoff-btn-copy" class="cyber-button font-mono vgt-inline-92dcefc9">PROMPT KOPIEREN</button>
+                <button id="handoff-btn-close" class="cyber-button font-mono vgt-inline-dcbb85cb">SCHLIESSEN</button>
             </div>
         </div>
     </div>
@@ -169,7 +173,7 @@
                 <img class="brand-mark" src="aethel.webp" alt="Aethel Emblem">
                 <div>
                     <h1>VGT <span class="white-text">AETHEL</span></h1>
-                    <p class="status-sub">BETA V2 :: <span id="current-mode-label" class="cyan-text">NEURAL CORE</span></p>
+                    <p class="status-sub">BETA V3 :: <span id="current-mode-label" class="cyan-text">NEURAL CORE</span></p>
                 </div>
             </div>
             
@@ -182,13 +186,13 @@
                     <span class="label">LEASES:</span>
                     <span id="hud-leases-count" class="value font-mono">0</span>
                 </div>
-                <div class="hud-item" style="border-left: 1.5px solid rgba(255,255,255,0.08); padding-left: 10px; margin-left: 2px;">
-                    <span class="label" style="color: var(--vgt-cyan);">COSTS TODAY:</span>
-                    <span id="hud-costs-today" class="value font-mono" style="color: var(--vgt-cyan);">$0.00</span>
+                <div class="hud-item vgt-inline-fe931d44">
+                    <span class="label vgt-inline-425b87cc">COSTS TODAY:</span>
+                    <span id="hud-costs-today" class="value font-mono vgt-inline-425b87cc">$0.00</span>
                 </div>
                 <div class="hud-item">
-                    <span class="label" style="color: var(--vgt-purple);">MONTH:</span>
-                    <span id="hud-costs-month" class="value font-mono" style="color: var(--vgt-purple);">$0.00</span>
+                    <span class="label vgt-inline-69faa395">MONTH:</span>
+                    <span id="hud-costs-month" class="value font-mono vgt-inline-69faa395">$0.00</span>
                 </div>
                 <div class="hud-item">
                     <span class="label">VOICE CALL:</span>
@@ -243,6 +247,10 @@
                             <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                             <span data-i18n="nav.operator">Live-Operator</span>
                         </button>
+                        <button id="nav-btn-mail" class="nav-menu-btn">
+                            <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                            <span>E-Mail Command</span>
+                        </button>
                     </div>
 
                     <!-- ── WORKSPACE SECTION ── -->
@@ -275,6 +283,14 @@
                             <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                             <span data-i18n="nav.globe">Live-Globus &amp; Feeds</span>
                         </button>
+                        <button id="nav-btn-shadow" class="nav-menu-btn shadow-nav-button">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2l8 4v6c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6z"/><path d="M8 12h8M12 8v8"/></svg>
+                            <span>SHADOW OSINT</span>
+                        </button>
+                        <button id="nav-btn-space" class="nav-menu-btn">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0 0 20M2 12h20"/></svg>
+                            <span>🌌 Weltraum Dashboard</span>
+                        </button>
                         <button id="nav-btn-tasks" class="nav-menu-btn">
                             <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                             <span data-i18n="nav.runs">Run Center</span>
@@ -290,6 +306,10 @@
                         <button id="nav-btn-case" class="nav-menu-btn">
                             <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><path d="M12 11v6M9 14h6"/></svg>
                             <span data-i18n="nav.cases">Cases &amp; Evidenz</span>
+                        </button>
+                        <button id="nav-btn-workbench" class="nav-menu-btn">
+                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 3h18v18H3z"/><path d="M3 9h18M9 9v12"/></svg>
+                            <span>Intelligence Workbench</span>
                         </button>
                         <button id="nav-btn-security" class="nav-menu-btn">
                             <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -323,23 +343,23 @@
                         </div>
                     </div>
 
-                    <button id="btn-new-chat" class="cyber-button font-mono" style="width: 100%;" data-i18n="sidebar.newChat">+ Neuer Chat</button>
+                    <button id="btn-new-chat" class="cyber-button font-mono vgt-inline-913dd9e8" data-i18n="sidebar.newChat">+ Neuer Chat</button>
 
-                    <div class="sidebar-info font-mono" style="width: 100%;">
+                    <div class="sidebar-info font-mono vgt-inline-913dd9e8">
                         <h4>Systemstatus</h4>
                         <div class="info-row"><span>SANDBOX:</span> <span class="green-text">ENABLED</span></div>
                         <div class="info-row"><span>FIREWALL:</span> <span class="green-text">ACTIVE</span></div>
-                        <div class="info-row" style="cursor: pointer; user-select: none;" id="sidebar-full-machine-row" title="Klicke hier, um den vollautonomen Modus zu steuern">
-                            <span>FULL AUTONOMY:</span> <span class="red-text" id="full-machine-status" style="font-weight: bold; color: var(--vgt-red);">DISABLED</span>
+                        <div class="info-row vgt-inline-1cecbfda" id="sidebar-full-machine-row" title="Klicke hier, um den vollautonomen Modus zu steuern">
+                            <span>FULL AUTONOMY:</span> <span class="red-text vgt-inline-0f09dfde" id="full-machine-status">DISABLED</span>
                         </div>
                         <div class="info-row"><span>MEMORY:</span> <span class="cyan-text" id="memory-count">0 Einträge</span></div>
 						<div class="info-row"><span>CONTEXT:</span> <span class="cyan-text" id="context-utilization">0 / —</span></div>
-                        <div style="margin-top: 12px; width: 100%; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px; display: flex; flex-direction: column; gap: 8px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: var(--vgt-text-dim);">
+                        <div class="vgt-inline-0d8b38c2">
+                            <div class="vgt-inline-564a99b3">
                                 <span>SYSTEM VERSION:</span>
-                                <span class="release-badge">BETA V2</span> <!-- dynamically synchronized with ProductVersion=1.0.0-beta.2 -->
+                                <span class="release-badge">BETA V3</span> <!-- synchronized with ProductVersion=1.0.0-beta.3 -->
                             </div>
-                            <button id="btn-donation" class="cyber-button font-mono" style="width: 100%; font-size: 9px; letter-spacing: 0.1em; padding: 8px; background: rgba(157, 78, 221, 0.08); border: 1px solid var(--vgt-purple); color: var(--vgt-purple); cursor: pointer; border-radius: 4px; transition: all 0.2s;">❤️ UNTERSTÜTZEN</button>
+                            <button id="btn-donation" class="cyber-button font-mono vgt-inline-24a44af3">❤️ UNTERSTÜTZEN</button>
                         </div>
                     </div>
                 </div>
@@ -354,7 +374,7 @@
             </aside>
 
             <!-- Dynamic Viewport Area (Takes 1fr) -->
-            <div class="console-container main-viewport" style="flex: 1 1 auto; display: flex; flex-direction: column; overflow: hidden; position: relative; min-height: 0;">
+            <div class="console-container main-viewport vgt-inline-1d688432">
 
                 <!-- 1. VIEW PANEL: NEURAL CORE command center -->
                 <div id="view-core" class="viewport-panel neural-core-view">
@@ -422,6 +442,8 @@
                         <div class="neural-table-wrap"><table class="neural-table"><thead><tr><th>Time</th><th>Operation</th><th>Target</th><th>Status</th></tr></thead><tbody id="core-logs-tbody"><tr><td colspan="4" class="neural-table-empty">Lade Logbuch-Einträge...</td></tr></tbody></table></div>
                     </section>
                 </div>
+
+                <div id="view-shadow" class="viewport-panel hidden shadow-osint-view" aria-label="SHADOW OSINT Operations Mode"></div>
 
                 <!-- OSINT GLOBAL WATCH — VGT command center (UX inspired by modern geospatial HUDs; original code) -->
                 <div id="view-global-watch" class="viewport-panel hidden">
@@ -558,7 +580,7 @@
                                         <div id="gw-risk-hud-list" class="gw-risk-hud-list">
                                             <div class="gw-risk-empty">Wird geladen…</div>
                                         </div>
-                                        <button type="button" id="gw-risk-explain-hint" class="gw-risk-hint">Region anklicken · erklären</button>
+                                        <button type="button" id="gw-risk-explain-hint" class="gw-risk-hint">Klick: KI-Text + Referenzen · Dblclick: Explain-Score</button>
                                     </div>
                                 </div>
                                 <div id="gw-selection-panel" class="gw-selection-panel hidden" role="dialog" aria-label="Ausgewählte Meldung">
@@ -604,12 +626,12 @@
                             </div>
                         </div>
 
-                        <!-- RIGHT: docked Meldungsfeed (Data Config + Alerts live in Settings) -->
-                        <aside class="gw-right-rail gw-feed-dock" id="gw-feed-panel" aria-label="Meldungsfeed">
+                        <!-- RIGHT: news and natural hazards are isolated presentation domains -->
+                        <aside class="gw-right-rail gw-feed-dock" id="gw-feed-panel" aria-label="Nachrichten und Naturereignisse">
                             <div class="gw-feed-header">
                                 <div class="gw-feed-header-left">
-                                    <span class="gw-feed-title" data-i18n="gw.feed">Meldungsfeed</span>
-                                    <span class="gw-feed-subtitle">Aktuelle Beobachtungen · Zeitfenster aktiv</span>
+                                    <span class="gw-feed-title" data-i18n="gw.feed">Nachrichtenfeed</span>
+                                    <span class="gw-feed-subtitle">Nur Nachrichten · Naturereignisse ausgeschlossen</span>
                                 </div>
                                 <span id="gw-feed-count" class="gw-feed-count font-mono">0</span>
                             </div>
@@ -630,6 +652,20 @@
                                 <span class="gw-feed-refresh-info" id="gw-feed-poll-label">AUTO-SYNC</span>
                                 <span class="gw-feed-src-label">HTTPS · LOKAL</span>
                             </div>
+                            <section class="gw-hazard-panel" aria-labelledby="gw-hazard-title">
+                                <div class="gw-feed-header gw-hazard-header">
+                                    <div class="gw-feed-header-left">
+                                        <span id="gw-hazard-title" class="gw-feed-title">Naturereignisse</span>
+                                        <span class="gw-feed-subtitle">Erdbeben und Vulkane · separater KI-Kontext</span>
+                                    </div>
+                                    <span id="gw-hazard-count" class="gw-feed-count font-mono">0</span>
+                                </div>
+                                <div id="gw-hazard-list" class="gw-feed-list gw-hazard-list" role="list"></div>
+                                <div class="gw-feed-footer font-mono">
+                                    <span>NUR AUF EXPLIZITE ANFRAGE AN AETHEL</span>
+                                    <span>USGS · EONET</span>
+                                </div>
+                            </section>
                         </aside>
                     </div>
 
@@ -856,6 +892,9 @@
                         </main>
                     </div>
                 </div>
+
+                <!-- INTELLIGENCE OPERATOR WORKBENCH -->
+                <div id="view-workbench" class="viewport-panel hidden operator-workbench-view" aria-label="Intelligence Operator Workbench"></div>
 
                 <!-- 2. VIEW PANEL: CHAT CONSOLE -->
                 <div id="view-chat" class="viewport-panel chat-workspace hidden">
@@ -1251,6 +1290,45 @@
                                 <div class="personal-core-trait"><label for="personal-initiative">PROAKTIVE INITIATIVE <output id="personal-initiative-value">60%</output></label><input id="personal-initiative" type="range" min="0" max="100" value="60"></div>
                             </div>
                             <p class="personal-core-note">Loyaler Arbeitskollege: trocken im Ton, eindeutig bei Risiken, proaktiv bei sinnvollen nächsten Schritten. Sicherheits- und Freigabegrenzen bleiben unverändert.</p>
+                             <!-- Intelligent Alarm Clock & Wake-Up Routine -->
+                             <div class="personal-alarm-card glass-card">
+                                 <h4 class="personal-alarm-title">
+                                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                     ⏰ INTELLIGENTER WECKER &amp; MORGEN-ROUTINE
+                                 </h4>
+                                 <div class="personal-alarm-options">
+                                     <label class="personal-alarm-option personal-alarm-time-label">WECKZEIT: 
+                                         <input id="personal-alarm-time" type="time" value="07:00" class="cyber-input font-mono personal-alarm-time">
+                                     </label>
+                                     <label class="personal-alarm-option">
+                                         <input id="personal-alarm-enabled" type="checkbox"> WECKER AKTIV
+                                     </label>
+                                     <label class="personal-alarm-option">
+                                         <input id="personal-alarm-read-aloud" type="checkbox" checked> MORGEN-BRIEFING VORLESEN
+                                     </label>
+                                     <label class="personal-alarm-option">
+                                         <input id="personal-daily-plan-enabled" type="checkbox"> TAGESPLAN AUTOMATISCH
+                                     </label>
+                                     <label class="personal-alarm-option">
+                                         <input id="personal-weather-updates" type="checkbox"> STANDORT-WETTER
+                                     </label>
+                                 </div>
+                                 <div class="personal-quiet-hours">
+                                     <span>RUHEZEIT</span>
+                                     <input id="personal-quiet-start" type="time" value="22:30" class="cyber-input font-mono">
+                                     <span>—</span>
+                                     <input id="personal-quiet-end" type="time" value="07:00" class="cyber-input font-mono">
+                                     <small>Normale Hinweise werden gesammelt; Alarme und kritische Meldungen bleiben aktiv.</small>
+                                 </div>
+                                 <div class="personal-alarm-actions">
+                                     <button id="personal-btn-test-alarm" type="button" class="cyber-button font-mono personal-alarm-test">
+                                         🔔 WECKER JETZT TESTEN
+                                     </button>
+                                     <button id="personal-btn-weather-now" type="button" class="cyber-button font-mono personal-alarm-action">WETTER JETZT</button>
+                                     <button id="personal-btn-plan-now" type="button" class="cyber-button font-mono personal-alarm-action">TAGESPLAN JETZT</button>
+                                 </div>
+                             </div>
+
                             <input id="personal-wake-word" type="text" placeholder="Wake Word, z.B. Aethel">
                             <select id="personal-primary-model" class="cyber-select font-mono"></select>
                             <select id="personal-fallback-model" class="cyber-select font-mono"></select>
@@ -1296,7 +1374,7 @@
                 </div>
 
                 <!-- 7b. VIEW PANEL: SPHERE WORKSPACE -->
-                <div id="view-sphere" class="viewport-panel hidden" style="position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column;">
+                <div id="view-sphere" class="viewport-panel hidden vgt-inline-c919fced">
                     <header class="sphere-topbar">
                         <div class="sphere-brand"><span class="sphere-brand-mark">◈</span><span>SPHERE DESKTOP</span><small>SHARED AETHEL WORKSPACE</small></div>
                         <div class="sphere-topbar-actions">
@@ -1307,47 +1385,47 @@
                     </header>
                     
                     <!-- Background Animated Sphere Container -->
-                    <div class="sphere-background-container" style="position: absolute; inset: 0; z-index: 1; pointer-events: none; display: flex; justify-content: center; align-items: center; overflow: hidden;">
-                        <div class="sphere-canvas idle" id="workspace-sphere" style="width: 700px; height: 700px; border-radius: 50%; filter: blur(40px); transition: all 1s ease;"></div>
+                    <div class="sphere-background-container vgt-inline-a4fbdce0">
+                        <div class="sphere-canvas idle vgt-inline-a66e9148" id="workspace-sphere"></div>
                     </div>
 
                     <!-- Virtual Desktop Workspace Area -->
-                    <div class="sphere-desktop" style="position: relative; flex-grow: 1; z-index: 2; overflow: hidden; padding: 20px; box-sizing: border-box;">
+                    <div class="sphere-desktop vgt-inline-8d3a7b26">
                         
                         <!-- Floating Window 1: Word-like Document Editor (opens on demand via dock — not auto-open) -->
-                        <div class="sphere-window glass-card hidden" id="sphere-window-editor" style="position: absolute; width: 520px; height: 400px; left: 48px; top: 36px; display: flex; flex-direction: column; z-index: 100; border-color: rgba(0, 240, 255, 0.2);">
+                        <div class="sphere-window glass-card hidden vgt-inline-2efb360a" id="sphere-window-editor">
                             <!-- Window Header -->
-                            <div class="sphere-window-header" id="sphere-window-editor-header" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--vgt-border); cursor: move; user-select: none; background: rgba(0,0,0,0.4); border-top-left-radius: 15px; border-top-right-radius: 15px;">
-                                <span class="window-title font-mono" style="font-size: 10px; color: var(--vgt-cyan); letter-spacing: 0.1em; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                            <div class="sphere-window-header vgt-inline-d86a15d0" id="sphere-window-editor-header">
+                                <span class="window-title font-mono vgt-inline-d99ae20c">
                                     <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                     AETHEL WRITER // DOCUMENT CANVAS
                                 </span>
-                                <div class="window-controls" style="display: flex; gap: 6px;">
-                                    <button class="win-btn" id="win-editor-min" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ffbd2e; cursor: pointer;" title="Minimieren"></button>
-                                    <button class="win-btn" id="win-editor-max" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #27c93f; cursor: pointer;" title="Maximieren"></button>
-                                    <button class="win-btn" id="win-editor-close" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ff5f56; cursor: pointer;" title="Schließen"></button>
+                                <div class="window-controls vgt-inline-295a61e8">
+                                    <button class="win-btn vgt-inline-edadf6b6" id="win-editor-min" title="Minimieren"></button>
+                                    <button class="win-btn vgt-inline-bf74bb83" id="win-editor-max" title="Maximieren"></button>
+                                    <button class="win-btn vgt-inline-5cb322dd" id="win-editor-close" title="Schließen"></button>
                                 </div>
                             </div>
                             <!-- Format Toolbar (WYSIWYG + export) -->
-                            <div class="sphere-editor-toolbar font-mono" style="padding: 6px 12px; display: flex; gap: 6px; flex-wrap: wrap; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--vgt-border); align-items: center;">
-                                <button class="toolbar-btn" id="editor-btn-bold" title="Fett" style="padding: 4px 8px; font-size: 10px; font-weight: bold; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">B</button>
-                                <button class="toolbar-btn" id="editor-btn-italic" title="Kursiv" style="padding: 4px 8px; font-size: 10px; font-style: italic; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">I</button>
-                                <button class="toolbar-btn" id="editor-btn-underline" title="Unterstreichen" style="padding: 4px 8px; font-size: 10px; text-decoration: underline; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">U</button>
-                                <span style="width: 1px; height: 14px; background: rgba(255,255,255,0.1); margin: 0 4px;"></span>
-                                <button class="toolbar-btn" id="editor-btn-h1" title="H1" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">H1</button>
-                                <button class="toolbar-btn" id="editor-btn-h2" title="H2" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">H2</button>
-                                <button class="toolbar-btn" id="editor-btn-h3" title="H3" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">H3</button>
-                                <button class="toolbar-btn" id="editor-btn-p" title="Text" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">P</button>
-                                <span style="width: 1px; height: 14px; background: rgba(255,255,255,0.1); margin: 0 4px;"></span>
-                                <button class="toolbar-btn" id="editor-btn-ul" title="Liste" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">• List</button>
-                                <button class="toolbar-btn" id="editor-btn-ol" title="Nummerierung" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">1. List</button>
-                                <span style="width: 1px; height: 14px; background: rgba(255,255,255,0.1); margin: 0 4px;"></span>
-                                <button class="toolbar-btn" id="editor-btn-left" title="Links" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">Align L</button>
-                                <button class="toolbar-btn" id="editor-btn-center" title="Zentriert" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">Align C</button>
-                                <button class="toolbar-btn" id="editor-btn-right" title="Rechts" style="padding: 4px 6px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; border-radius: 3px; cursor: pointer;">Align R</button>
-                                <span style="width: 1px; height: 14px; background: rgba(255,255,255,0.1); margin: 0 4px;"></span>
-                                <button class="toolbar-btn" id="editor-btn-export-html" title="Als HTML exportieren" style="padding: 4px 8px; font-size: 9px; background: rgba(0,240,255,0.1); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan); border-radius: 3px; cursor: pointer;">↓ HTML</button>
-                                <button class="toolbar-btn" id="editor-btn-export-md" title="Als Markdown exportieren" style="padding: 4px 8px; font-size: 9px; background: rgba(157,78,221,0.12); border: 1px solid var(--vgt-purple); color: var(--vgt-purple); border-radius: 3px; cursor: pointer;">↓ MD</button>
+                            <div class="sphere-editor-toolbar font-mono vgt-inline-dcee2dcc">
+                                <button class="toolbar-btn vgt-inline-5be7ae72" id="editor-btn-bold" title="Fett">B</button>
+                                <button class="toolbar-btn vgt-inline-73c28880" id="editor-btn-italic" title="Kursiv">I</button>
+                                <button class="toolbar-btn vgt-inline-48a597a5" id="editor-btn-underline" title="Unterstreichen">U</button>
+                                <span class="vgt-inline-4da66bd2"></span>
+                                <button class="toolbar-btn vgt-inline-65c2d792" id="editor-btn-h1" title="H1">H1</button>
+                                <button class="toolbar-btn vgt-inline-65c2d792" id="editor-btn-h2" title="H2">H2</button>
+                                <button class="toolbar-btn vgt-inline-65c2d792" id="editor-btn-h3" title="H3">H3</button>
+                                <button class="toolbar-btn vgt-inline-65c2d792" id="editor-btn-p" title="Text">P</button>
+                                <span class="vgt-inline-4da66bd2"></span>
+                                <button class="toolbar-btn vgt-inline-65c2d792" id="editor-btn-ul" title="Liste">• List</button>
+                                <button class="toolbar-btn vgt-inline-65c2d792" id="editor-btn-ol" title="Nummerierung">1. List</button>
+                                <span class="vgt-inline-4da66bd2"></span>
+                                <button class="toolbar-btn vgt-inline-65c2d792" id="editor-btn-left" title="Links">Align L</button>
+                                <button class="toolbar-btn vgt-inline-65c2d792" id="editor-btn-center" title="Zentriert">Align C</button>
+                                <button class="toolbar-btn vgt-inline-65c2d792" id="editor-btn-right" title="Rechts">Align R</button>
+                                <span class="vgt-inline-4da66bd2"></span>
+                                <button class="toolbar-btn vgt-inline-865eadfd" id="editor-btn-export-html" title="Als HTML exportieren">↓ HTML</button>
+                                <button class="toolbar-btn vgt-inline-5ef99b08" id="editor-btn-export-md" title="Als Markdown exportieren">↓ MD</button>
                             </div>
                             <div class="sphere-writer-documentbar">
                                 <input id="sphere-writer-title" type="text" maxlength="120" value="Aethel Document" aria-label="Dokumenttitel">
@@ -1357,7 +1435,7 @@
                                 <span id="sphere-writer-save-state" class="sphere-writer-save-state">BEREIT</span>
                             </div>
                             <!-- Editable Document Body -->
-                            <div class="sphere-window-body sphere-editor-body" style="flex-grow: 1; overflow-y: auto; background: rgba(8, 6, 20, 0.6); padding: 18px; color: #f8fafc; font-size: 13px; line-height: 1.6; outline: none; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;" contenteditable="true" id="sphere-editor-area" placeholder="Beginne mit dem Schreiben oder lass Aethel ein Dokument erstellen...">
+                            <div class="sphere-window-body sphere-editor-body vgt-inline-7f5db6b6" contenteditable="true" id="sphere-editor-area" placeholder="Beginne mit dem Schreiben oder lass Aethel ein Dokument erstellen...">
                                 <h1>Aethel Document</h1>
                                 <p>Willkommen im interaktiven Rich-Text-Workspace. Du kannst diesen Text editieren oder formatieren.</p>
                             </div>
@@ -1370,66 +1448,66 @@
                         </div>
 
                         <!-- Floating Window 2: Headless Web Browser Monitor (on demand) -->
-                        <div class="sphere-window glass-card hidden" id="sphere-window-browser" style="position: absolute; width: 480px; height: 360px; left: 420px; top: 56px; display: flex; flex-direction: column; z-index: 10; border-color: rgba(157, 78, 221, 0.2);">
+                        <div class="sphere-window glass-card hidden vgt-inline-d1f8ced1" id="sphere-window-browser">
                             <!-- Window Header -->
-                            <div class="sphere-window-header" id="sphere-window-browser-header" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--vgt-border); cursor: move; user-select: none; background: rgba(0,0,0,0.4); border-top-left-radius: 15px; border-top-right-radius: 15px;">
-                                <span class="window-title font-mono" style="font-size: 10px; color: var(--vgt-purple); letter-spacing: 0.1em; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                            <div class="sphere-window-header vgt-inline-d86a15d0" id="sphere-window-browser-header">
+                                <span class="window-title font-mono vgt-inline-79abc611">
                                     <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
                                     AETHEL BROWSER // LIVE FEED
                                 </span>
-                                <div class="window-controls" style="display: flex; gap: 6px;">
-                                    <button class="win-btn" id="win-browser-min" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ffbd2e; cursor: pointer;" title="Minimieren"></button>
-                                    <button class="win-btn" id="win-browser-max" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #27c93f; cursor: pointer;" title="Maximieren"></button>
-                                    <button class="win-btn" id="win-browser-close" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ff5f56; cursor: pointer;" title="Schließen"></button>
+                                <div class="window-controls vgt-inline-295a61e8">
+                                    <button class="win-btn vgt-inline-edadf6b6" id="win-browser-min" title="Minimieren"></button>
+                                    <button class="win-btn vgt-inline-bf74bb83" id="win-browser-max" title="Maximieren"></button>
+                                    <button class="win-btn vgt-inline-5cb322dd" id="win-browser-close" title="Schließen"></button>
                                 </div>
                             </div>
                             <!-- Mock Browser URL bar -->
-                            <div style="padding: 6px 12px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--vgt-border); display: flex; align-items: center; gap: 8px;">
-                                <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--vgt-green);" id="sphere-browser-status-dot"></span>
-                                <input type="text" id="sphere-browser-url" readonly value="https://www.google.de" class="font-mono" style="flex-grow: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--vgt-border); color: var(--vgt-cyan); padding: 4px 8px; font-size: 9px; outline: none; border-radius: 3px;">
+                            <div class="vgt-inline-936efba1">
+                                <span id="sphere-browser-status-dot" class="vgt-inline-62f3ab06"></span>
+                                <input type="text" id="sphere-browser-url" readonly value="https://www.google.de" class="font-mono vgt-inline-31300655">
                             </div>
                             <!-- Browser Viewport with screenshot -->
-                            <div class="sphere-window-body" style="flex-grow: 1; overflow: hidden; background: #060412; display: flex; justify-content: center; align-items: center; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;">
-                                <div id="sphere-browser-placeholder" class="font-mono" style="text-align: center; color: var(--vgt-text-dim); font-size: 10px;">
+                            <div class="sphere-window-body vgt-inline-bed45ced">
+                                <div id="sphere-browser-placeholder" class="font-mono vgt-inline-5f9b0da5">
                                     <p>Warte auf Browser-Aktivität...</p>
-                                    <span style="font-size: 8px; opacity: 0.5;">(Befehle wie "Öffne die Website X" steuern diesen Feed)</span>
+                                    <span class="vgt-inline-1d253248">(Befehle wie "Öffne die Website X" steuern diesen Feed)</span>
                                 </div>
-                                <img id="sphere-browser-screenshot" class="hidden" style="width: 100%; height: 100%; object-fit: contain;">
+                                <img id="sphere-browser-screenshot" class="hidden vgt-inline-787ffdfa">
                             </div>
                         </div>
 
                         <!-- Floating Window 3: Aethel Terminal -->
-                        <div class="sphere-window glass-card hidden" id="sphere-window-terminal" style="position: absolute; width: 520px; height: 350px; left: 300px; top: 120px; display: flex; flex-direction: column; z-index: 50; border-color: rgba(255, 123, 0, 0.2);">
+                        <div class="sphere-window glass-card hidden vgt-inline-f3517169" id="sphere-window-terminal">
                             <!-- Window Header -->
-                            <div class="sphere-window-header" id="sphere-window-terminal-header" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--vgt-border); cursor: move; user-select: none; background: rgba(0,0,0,0.4); border-top-left-radius: 15px; border-top-right-radius: 15px;">
-                                <span class="window-title font-mono" style="font-size: 10px; color: var(--vgt-orange); letter-spacing: 0.1em; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                            <div class="sphere-window-header vgt-inline-d86a15d0" id="sphere-window-terminal-header">
+                                <span class="window-title font-mono vgt-inline-0a21930d">
                                     <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
                                     AETHEL RUN ENGINE // TERMINAL
                                 </span>
-                                <div class="window-controls" style="display: flex; gap: 6px;">
-                                    <button class="win-btn" id="win-terminal-min" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ffbd2e; cursor: pointer;" title="Minimieren"></button>
-                                    <button class="win-btn" id="win-terminal-max" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #27c93f; cursor: pointer;" title="Maximieren"></button>
-                                    <button class="win-btn" id="win-terminal-close" style="width: 12px; height: 12px; border-radius: 50%; border: none; background: #ff5f56; cursor: pointer;" title="Schließen"></button>
+                                <div class="window-controls vgt-inline-295a61e8">
+                                    <button class="win-btn vgt-inline-edadf6b6" id="win-terminal-min" title="Minimieren"></button>
+                                    <button class="win-btn vgt-inline-bf74bb83" id="win-terminal-max" title="Maximieren"></button>
+                                    <button class="win-btn vgt-inline-5cb322dd" id="win-terminal-close" title="Schließen"></button>
                                 </div>
                             </div>
                             <!-- Terminal Controls -->
-                            <div style="padding: 6px 12px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--vgt-border); display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                                <div style="display: flex; gap: 6px;">
-                                    <button id="sphere-term-btn-tasks" class="cyber-button font-mono" style="padding: 4px 8px; font-size: 8px; width: auto; background: rgba(255,123,0,0.08); border: 1px solid var(--vgt-orange); color: var(--vgt-orange);">BACKGROUND TASKS</button>
-                                    <button id="sphere-term-btn-runs" class="cyber-button font-mono" style="padding: 4px 8px; font-size: 8px; width: auto; background: rgba(157,78,221,0.08); border: 1px solid var(--vgt-purple); color: var(--vgt-purple);">AGENT RUNS</button>
+                            <div class="vgt-inline-e28943c7">
+                                <div class="vgt-inline-295a61e8">
+                                    <button id="sphere-term-btn-tasks" class="cyber-button font-mono vgt-inline-d3f661b6">BACKGROUND TASKS</button>
+                                    <button id="sphere-term-btn-runs" class="cyber-button font-mono vgt-inline-38e4e509">AGENT RUNS</button>
                                 </div>
-                                <span style="font-size: 8px; color: var(--vgt-text-dim);" id="sphere-term-status">READY // LOCAL HOST UPLINK</span>
+                                <span id="sphere-term-status" class="vgt-inline-dff64c31">READY // LOCAL HOST UPLINK</span>
                             </div>
                             <!-- Terminal Console Viewport -->
-                            <div class="sphere-window-body" style="flex-grow: 1; overflow: hidden; background: #04030a; display: flex; flex-direction: column; padding: 12px; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;">
-                                <div id="sphere-terminal-output" class="font-mono" style="flex-grow: 1; overflow-y: auto; color: #39ff14; font-size: 10px; line-height: 1.4; white-space: pre-wrap; margin-bottom: 8px;">
+                            <div class="sphere-window-body vgt-inline-04da290d">
+                                <div id="sphere-terminal-output" class="font-mono vgt-inline-276cab9d">
                                     Aethel Autonomous Exec Engine. Type command or choose query...
                                 </div>
                                 <!-- Stdin Input -->
-                                <div style="display: flex; gap: 6px; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
-                                    <span style="color: var(--vgt-orange); font-size: 10px; font-weight: bold; font-family: var(--font-mono);">$</span>
-                                    <input type="text" id="sphere-terminal-input" placeholder="Execute command in shell..." class="font-mono" style="flex-grow: 1; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 4px 8px; font-size: 10px; outline: none; border-radius: 3px;">
-                                    <button id="sphere-terminal-run-btn" class="cyber-button font-mono" style="width: auto; padding: 4px 10px; font-size: 9px; background: rgba(0,255,0,0.1); border: 1px solid #39ff14; color: #39ff14;">RUN</button>
+                                <div class="vgt-inline-310f1481">
+                                    <span class="vgt-inline-c0348dc8">$</span>
+                                    <input type="text" id="sphere-terminal-input" placeholder="Execute command in shell..." class="font-mono vgt-inline-2eefc287">
+                                    <button id="sphere-terminal-run-btn" class="cyber-button font-mono vgt-inline-1c67af7f">RUN</button>
                                 </div>
                             </div>
                         </div>
@@ -1454,6 +1532,7 @@
                         <button type="button" data-sphere-app="notes" class="sphere-dock-app" title="Scratch Notes"><span>✎</span>NOTES</button>
                         <button type="button" data-sphere-app="weather" class="sphere-dock-app" title="Wetter"><span>☼</span>WETTER</button>
                         <button type="button" data-sphere-app="market" class="sphere-dock-app" title="Marktkurse"><span>◇</span>MÄRKTE</button>
+                        <button type="button" data-sphere-app="tasks" class="sphere-dock-app" title="Automationen & Tasks"><span>⏰</span>TASKS</button>
                         <button type="button" data-sphere-app="media" class="sphere-dock-app" title="Media Steuerung"><span>▶</span>MEDIA</button>
                     </nav>
 
@@ -1476,6 +1555,46 @@
                 </div>
 
                 <!-- 8. VIEW PANEL: TASK ENGINE -->
+                <div id="view-mail" class="viewport-panel mail-workspace hidden">
+                    <header class="mail-command-header">
+                        <div>
+                            <span class="mail-kicker">AETHEL // ENCRYPTED COMMUNICATION COMMAND</span>
+                            <h2>E-Mail Command</h2>
+                            <p>IMAP-Arbeitsplatz · AES-256-GCM · ML-DSA-65 Integrität · Versand nur nach Freigabe</p>
+                        </div>
+                        <div class="mail-header-actions">
+                            <span id="mail-security-state" class="mail-security-state">STORE VERIFY</span>
+                            <button id="mail-policy-button" class="gw-tool-btn" type="button">ANTWORTREGELN</button>
+                            <button id="mail-sync-button" class="gw-tool-btn" type="button">SYNCHRONISIEREN</button>
+                        </div>
+                    </header>
+                    <div class="mail-command-grid">
+                        <aside class="mail-folders-panel">
+                            <div class="mail-panel-heading"><span>ORDNER</span><button id="mail-create-folder" type="button" aria-label="Ordner erstellen">+</button></div>
+                            <nav id="mail-folder-list" class="mail-folder-list" aria-label="E-Mail-Ordner"></nav>
+                        </aside>
+                        <section class="mail-list-panel">
+                            <div class="mail-list-toolbar">
+                                <input id="mail-search" type="search" placeholder="Absender oder Betreff filtern …" autocomplete="off">
+                                <select id="mail-class-filter"><option value="all">ALLE</option><option value="unread">UNGELESEN</option><option value="suspicious">VERDÄCHTIG</option><option value="spam">SPAM</option></select>
+                            </div>
+                            <div id="mail-message-list" class="mail-message-list"><div class="mail-empty">Postfach wird geladen …</div></div>
+                        </section>
+                        <article id="mail-reader" class="mail-reader-panel">
+                            <div class="mail-reader-empty"><span>◈</span><strong>Keine E-Mail ausgewählt</strong><small>Wähle eine Nachricht, um den verifizierten lokalen Reader zu öffnen.</small></div>
+                        </article>
+                    </div>
+                    <div id="mail-policy-overlay" class="mail-policy-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="mail-policy-title">
+                        <section class="mail-policy-dialog">
+                            <header><div><span>RECIPIENT GOVERNANCE</span><h3 id="mail-policy-title">Antwortregeln &amp; Systemprompts</h3></div><button id="mail-policy-close" type="button">×</button></header>
+                            <p>Regeln werden lokal verschlüsselt und ML-DSA-signiert. Sie beeinflussen Entwürfe; der Versand bleibt immer manuell freigabepflichtig.</p>
+                            <div id="mail-policy-list" class="mail-policy-list"></div>
+                            <button id="mail-policy-add" class="gw-tool-btn" type="button">+ REGEL</button>
+                            <footer><button id="mail-policy-save" class="gw-tool-btn" type="button">REGELN VERSCHLÜSSELT SPEICHERN</button></footer>
+                        </section>
+                    </div>
+                </div>
+
                 <div id="view-tasks" class="viewport-panel run-workspace hidden">
                     <!-- Tasks creation card -->
                     <section class="run-panel run-create-panel font-mono">
@@ -1701,34 +1820,56 @@
                     </section>
                 </div>
 
+                <!-- 10. VIEW PANEL: WELTRAUM DASHBOARD (Solarcommander layout · Aethel skin) -->
+                <div id="view-space" class="viewport-panel hidden space-dashboard-view">
+                    <header class="vgt-view-header space-dashboard-header">
+                        <div class="vgt-view-header-copy">
+                            <span class="vgt-view-kicker">SOLAR COMMAND · NASA SDO · NOAA SWPC · OVATION</span>
+                            <h2 class="vgt-view-title">Weltraum Dashboard</h2>
+                            <p class="vgt-view-description">Volles Solarcommander-Layout: SDO-Imager, Aurora-Oval, R/S/G, Kp/Dst, IMF/Wind, Flare-Historie, Forecast &amp; Graphen — manuell synchronisiert.</p>
+                        </div>
+                        <div class="vgt-view-state" title="Live uplink">
+                            <span class="vgt-view-state-dot"></span>
+                            LIVE UPLINK
+                        </div>
+                    </header>
+
+                    <div id="space-dashboard-content" class="space-dashboard-root">
+                        <div class="space-panel accent-cyan space-dashboard-loading-panel">
+                            <span class="space-eyebrow">BOOTING SOLAR UPLINK…</span>
+                            <p class="space-panel-note space-dashboard-loading-note">Lade NOAA SWPC Telemetrie und NASA SDO Imager…</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
         </div>
     </div>
 
     <!-- Full Machine Activation Modal -->
-    <div id="full-machine-modal" class="modal-overlay hidden" style="z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center;">
-        <div class="glass-card" style="max-width: 480px; padding: 25px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--vgt-red); background: rgba(18, 5, 10, 0.95); box-shadow: 0 0 30px rgba(255,0,79,0.25); border-radius: 8px;">
-            <div style="display: flex; align-items: center; gap: 10px; color: var(--vgt-red); font-family: var(--font-mono);">
+    <div id="full-machine-modal" class="modal-overlay hidden vgt-inline-e059695a">
+        <div class="glass-card vgt-inline-52bf8cbb">
+            <div class="vgt-inline-149ae2ba">
                 <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></svg>
-                <h3 style="margin: 0; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 800; color: var(--vgt-red);">⚠️ SYSTEM WARNUNG: VOLLAUTONOMER MODUS</h3>
+                <h3 class="vgt-inline-6b611916">⚠️ SYSTEM WARNUNG: VOLLAUTONOMER MODUS</h3>
             </div>
             
-            <p style="font-size: 11px; line-height: 1.5; color: var(--vgt-text-dim); margin: 0; font-family: var(--font-mono);">
-                Du bist im Begriff, den <strong style="color: var(--vgt-red);">Full Machine Modus (Vollautonomie)</strong> zu aktivieren. 
-                In diesem Modus darf Aethel alle Systembefehle, Dateizugriffe und GUI-Interaktionen <strong style="color: #fff;">ohne vorherige Rückfrage oder Bestätigung</strong> direkt auf deinem PC ausführen.
+            <p class="vgt-inline-19fc89e5">
+                Du bist im Begriff, den <strong class="vgt-inline-6e41cdda">Full Machine Modus (Vollautonomie)</strong> zu aktivieren. 
+                In diesem Modus darf Aethel alle Systembefehle, Dateizugriffe und GUI-Interaktionen <strong class="vgt-inline-24e2c294">ohne vorherige Rückfrage oder Bestätigung</strong> direkt auf deinem PC ausführen.
             </p>
             
-            <div style="background: rgba(255, 0, 79, 0.05); border: 1px solid rgba(255,0,79,0.2); border-radius: 4px; padding: 12px; font-size: 10px; color: var(--vgt-red); font-family: var(--font-mono); line-height: 1.4;">
+            <div class="vgt-inline-bbd68a75">
                 <strong>RISIKOHINWEIS:</strong><br>
                 Die KI kann selbstständig Programme starten, Dateien manipulieren, das Internet nutzen und Steuerungseingaben simulieren. Missbrauch, Fehler oder unvorhergesehene Handlungen des Modells können zu Datenverlust oder Systeminstabilitäten führen.
             </div>
             
-            <div style="display: flex; gap: 10px; font-family: var(--font-mono); margin-top: 10px;">
-                <button id="full-machine-btn-confirm" class="cyber-button" style="flex: 1; font-size: 9px; padding: 10px; background: rgba(255,0,79,0.15); border: 1px solid var(--vgt-red); color: var(--vgt-red); font-weight: bold; cursor: pointer; border-radius: 4px;">
+            <div class="vgt-inline-6c5319eb">
+                <button id="full-machine-btn-confirm" class="cyber-button vgt-inline-e11d6e41">
                     AKZEPTIEREN & AKTIVIEREN
                 </button>
-                <button id="full-machine-btn-cancel" class="cyber-button" style="flex: 1; font-size: 9px; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff; cursor: pointer; border-radius: 4px;">
+                <button id="full-machine-btn-cancel" class="cyber-button vgt-inline-a5a9284f">
                     ABBRECHEN
                 </button>
             </div>
@@ -1736,106 +1877,98 @@
     </div>
 
     <!-- New Chat Mount Modal -->
-    <div id="new-chat-mount-modal" class="modal-overlay hidden" style="z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center;">
-        <div class="glass-card" style="max-width: 480px; width: 90%; padding: 25px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--vgt-cyan); background: rgba(8, 8, 18, 0.95); box-shadow: 0 0 30px rgba(0,240,255,0.15); border-radius: 8px;">
-            <div style="display: flex; align-items: center; gap: 10px; color: var(--vgt-cyan); font-family: var(--font-mono);">
+    <div id="new-chat-mount-modal" class="modal-overlay hidden vgt-inline-e059695a">
+        <div class="glass-card vgt-inline-d9f09f81">
+            <div class="vgt-inline-3a05df28">
                 <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                <h3 style="margin: 0; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 800; color: var(--vgt-cyan);">📁 Ordner für Aethel freigeben</h3>
+                <h3 class="vgt-inline-4f27e7a7">📁 Ordner für Aethel freigeben</h3>
             </div>
             
-            <p style="font-size: 11px; line-height: 1.5; color: var(--vgt-text-dim); margin: 0; font-family: var(--font-mono);">
+            <p class="vgt-inline-19fc89e5">
                 Wähle ein Projekt- oder Arbeitsverzeichnis auf deinem PC aus, auf das Aethel zugreifen und Modifikationen vornehmen darf. Du kannst diesen Schritt auch überspringen.
             </p>
 
-            <div style="display: flex; gap: 8px; font-family: var(--font-mono);">
+            <div class="vgt-inline-752b3ba0">
                 <input type="text" id="new-chat-mount-input" placeholder="Wähle einen Pfad..." 
-                    style="flex-grow: 1; background: rgba(0,0,0,0.6); border: 1px solid var(--vgt-border); border-radius: 4px; color: #fff; padding: 10px; font-size: 11px; outline: none;">
-                <button id="new-chat-btn-browse" class="cyber-button" style="width: auto; padding: 0 15px; font-size: 10px; background: rgba(0,240,255,0.08); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan);">DURCHSUCHEN</button>
+                    class="vgt-inline-5629bef6">
+                <button id="new-chat-btn-browse" class="cyber-button vgt-inline-4d45730b">DURCHSUCHEN</button>
             </div>
 
-            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px; font-family: var(--font-mono);">
-                <button id="new-chat-btn-skip" class="cyber-button" style="width: auto; padding: 10px 20px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff;">ÜBERSPRINGEN</button>
-                <button id="new-chat-btn-confirm" class="cyber-button" style="width: auto; padding: 10px 24px; font-size: 10px; background: rgba(0,240,255,0.12); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan);">FREIGEBEN</button>
+            <div class="modal-actions vgt-inline-57c95015">
+                <button id="new-chat-btn-skip" class="cyber-button vgt-inline-e719ce38">ÜBERSPRINGEN</button>
+                <button id="new-chat-btn-confirm" class="cyber-button vgt-inline-0a87877b">FREIGEBEN</button>
             </div>
         </div>
     </div>
 
     <!-- Startup Warning Modal -->
-    <div id="startup-warning-modal" class="modal-overlay" style="z-index: 20000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(3,2,6,0.95); display: flex; justify-content: center; align-items: center;">
+    <div id="startup-warning-modal" class="modal-overlay vgt-inline-4e626bd3">
         <div class="glass-card runtime-disclosure-card">
-            <div style="display: flex; align-items: center; gap: 12px; color: var(--vgt-orange);">
+            <div class="vgt-inline-33901091">
                 <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></svg>
-                <h3 style="margin: 0; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 800; color: var(--vgt-orange);">BETA V2 RUNTIME DISCLOSURE</h3>
+                <h3 data-i18n="disclosure.title" class="vgt-inline-ac9f7ebc">BETA V3 RUNTIME DISCLOSURE</h3>
             </div>
             
-            <div style="display: flex; flex-direction: column; gap: 14px; font-size: 11px; line-height: 1.5; color: var(--vgt-text-dim);">
-                <div>
-                    <strong style="color: #fff; text-transform: uppercase;">[DE] WICHTIGER HINWEIS:</strong><br>
-                    Dies ist <strong style="color: var(--vgt-cyan);">VGT AETHEL Beta V2</strong> — ein souveränes Personal Intelligence OS im Production-Candidate-Stadium, entwickelt von <strong style="color: var(--vgt-purple);">VisionGaiaTechnology</strong>.
-                    Die Nutzung der Software erfolgt vollständig auf eigene Verantwortung. Aethel besitzt weitreichende Berechtigungen (Shell-Befehle, Dateisystem-Zugriff, Tastatur- & Maus-Simulation). Unerwartete Aktionen oder Fehlfunktionen können Datenverlust oder Systeminstabilitäten verursachen.
-                </div>
-                
-                <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
-                    <strong style="color: #fff; text-transform: uppercase;">[EN] IMPORTANT NOTICE:</strong><br>
-                    This is <strong style="color: var(--vgt-cyan);">VGT AETHEL Beta V2</strong> — a sovereign Personal Intelligence OS at Production Candidate stage, developed by <strong style="color: var(--vgt-purple);">VisionGaiaTechnology</strong>.
-                    Use of this software is entirely at your own risk. Aethel holds low-level host capabilities (terminal execution, filesystem write, GUI simulation). Unintended model behaviors or bugs may result in data loss or host instability.
-                </div>
+            <div id="startup-disclosure-body" data-i18n="disclosure.body" class="vgt-inline-a21e66d6">
+                Dies ist VGT AETHEL Beta V3 — ein souveränes strategisches Intelligence OS, entwickelt von VisionGaiaTechnology.
+
+Die Nutzung der Software erfolgt vollständig auf eigene Verantwortung. Aethel besitzt weitreichende Berechtigungen (Shell-Befehle, Dateisystem-Zugriff, Tastatur- & Maus-Simulation). Unerwartete Aktionen oder Fehlfunktionen können Datenverlust oder Systeminstabilitäten verursachen.
             </div>
             
-            <button id="startup-warning-btn-accept" class="cyber-button" onclick="document.getElementById('startup-warning-modal').style.setProperty('display','none','important')" style="font-size: 10px; padding: 14px; background: rgba(255,123,0,0.15); border: 1px solid var(--vgt-orange); color: var(--vgt-orange); font-weight: bold; cursor: pointer; border-radius: 4px; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 10px; height: auto;">
-                I UNDERSTAND & AGREE // VERSTANDEN & BESTÄTIGEN
+            <button id="startup-warning-btn-accept" class="cyber-button vgt-inline-7c4567f6" data-i18n="disclosure.accept">
+                VERSTANDEN & BESTÄTIGEN
             </button>
         </div>
     </div>
 
     <!-- Donation Modal -->
-    <div id="donation-modal" class="modal-overlay hidden" style="z-index: 20000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center;">
-        <div class="glass-card" style="max-width: 520px; width: 90%; padding: 25px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--vgt-purple); background: rgba(8, 5, 18, 0.96); box-shadow: 0 0 35px rgba(157,78,221,0.2); border-radius: 10px; font-family: var(--font-mono);">
-            <div style="display: flex; align-items: center; gap: 10px; color: var(--vgt-purple);">
+    <div id="donation-modal" class="modal-overlay hidden vgt-inline-112d9729">
+        <div class="glass-card vgt-inline-bfb74f2c">
+            <div class="vgt-inline-9bfd831f">
                 <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                <h3 style="margin: 0; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 800;">❤️ Aethel Unterstützen</h3>
+                <h3 class="vgt-inline-d73a87cb">❤️ Aethel Unterstützen</h3>
             </div>
             
-            <p style="font-size: 11px; line-height: 1.5; color: var(--vgt-text-dim); margin: 0;">
+            <p class="vgt-inline-2f939cb5">
                 Wenn dir VGT Aethel gefällt und du die Weiterentwicklung dieses autonomen Agentensystems unterstützen möchtest, freuen wir uns über eine Spende:
             </p>
 
-            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 5px;">
+            <div class="vgt-inline-eb4149a1">
                 <!-- PayPal -->
-                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 4px; display: flex; flex-direction: column; gap: 4px;">
-                    <div style="font-size: 9px; color: var(--vgt-cyan); font-weight: bold; letter-spacing: 0.05em;">PAYPAL</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
-                        <a href="https://paypal.me/dergoldenelotus" target="_blank" style="color: #fff; text-decoration: underline;">paypal.me/dergoldenelotus</a>
-                        <button onclick="navigator.clipboard.writeText('paypal.me/dergoldenelotus'); alert('PayPal-Link kopiert!');" class="cyber-button" style="width: auto; padding: 2px 8px; font-size: 8px; background: rgba(0,240,255,0.05); border: 1px solid var(--vgt-cyan); color: var(--vgt-cyan);">KOPIEREN</button>
+                <div class="vgt-inline-13e0dd9d">
+                    <div class="vgt-inline-d49696f5">PAYPAL</div>
+                    <div class="vgt-inline-30de9d71">
+                        <a href="https://paypal.me/dergoldenelotus" target="_blank" class="vgt-inline-0aec081b">paypal.me/dergoldenelotus</a>
+                        <button id="donation-copy-paypal" class="cyber-button vgt-inline-259f923f">KOPIEREN</button>
                     </div>
                 </div>
 
                 <!-- Bitcoin -->
-                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 4px; display: flex; flex-direction: column; gap: 4px;">
-                    <div style="font-size: 9px; color: #ff9f1c; font-weight: bold; letter-spacing: 0.05em;">BITCOIN (BTC)</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px;">
-                        <span style="color: #fff; word-break: break-all; max-width: 320px;">bc1q3ue5gq822tddmkdrek79adlkm36fatat3lz0dm</span>
-                        <button onclick="navigator.clipboard.writeText('bc1q3ue5gq822tddmkdrek79adlkm36fatat3lz0dm'); alert('Bitcoin-Adresse kopiert!');" class="cyber-button" style="width: auto; padding: 2px 8px; font-size: 8px; background: rgba(255,159,28,0.05); border: 1px solid #ff9f1c; color: #ff9f1c; margin-left: 10px;">KOPIEREN</button>
+                <div class="vgt-inline-13e0dd9d">
+                    <div class="vgt-inline-82ba5696">BITCOIN (BTC)</div>
+                    <div class="vgt-inline-4e0cdc50">
+                        <span class="vgt-inline-2a71c9c7">bc1q3ue5gq822tddmkdrek79adlkm36fatat3lz0dm</span>
+                        <button id="donation-copy-bitcoin" class="cyber-button vgt-inline-11949ece">KOPIEREN</button>
                     </div>
                 </div>
 
                 <!-- ETH / USDT -->
-                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 4px; display: flex; flex-direction: column; gap: 4px;">
-                    <div style="font-size: 9px; color: var(--vgt-purple); font-weight: bold; letter-spacing: 0.05em;">ETH / USDT (ERC-20)</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px;">
-                        <span style="color: #fff; word-break: break-all; max-width: 320px;">0xD37DEfb09e07bD775EaaE9ccDaFE3a5b2348Fe85</span>
-                        <button onclick="navigator.clipboard.writeText('0xD37DEfb09e07bD775EaaE9ccDaFE3a5b2348Fe85'); alert('Ethereum-Adresse kopiert!');" class="cyber-button" style="width: auto; padding: 2px 8px; font-size: 8px; background: rgba(157,78,221,0.05); border: 1px solid var(--vgt-purple); color: var(--vgt-purple); margin-left: 10px;">KOPIEREN</button>
+                <div class="vgt-inline-13e0dd9d">
+                    <div class="vgt-inline-30d9a5aa">ETH / USDT (ERC-20)</div>
+                    <div class="vgt-inline-4e0cdc50">
+                        <span class="vgt-inline-2a71c9c7">0xD37DEfb09e07bD775EaaE9ccDaFE3a5b2348Fe85</span>
+                        <button id="donation-copy-ethereum" class="cyber-button vgt-inline-e837bc96">KOPIEREN</button>
                     </div>
                 </div>
             </div>
 
-            <div class="modal-actions" style="display: flex; justify-content: flex-end; font-family: var(--font-mono); margin-top: 5px;">
-                <button id="donation-btn-close" class="cyber-button" style="width: auto; padding: 10px 24px; font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--vgt-border); color: #fff;">SCHLIESSEN</button>
+            <div class="modal-actions vgt-inline-ec2dd041">
+                <button id="donation-btn-close" class="cyber-button vgt-inline-c2153c34">SCHLIESSEN</button>
             </div>
         </div>
     </div>
 
-    <!-- Beta V2 Production Candidate Boot Sequence -->
+    <!-- Beta V3 Strategic Command Boot Sequence -->
     <div id="startup-splash-screen" class="startup-splash">
         <div class="splash-grid"></div>
         <div class="splash-scanline"></div>
@@ -1844,40 +1977,22 @@
             <img class="splash-emblem" src="aethel.webp" alt="Aethel emblem">
             <p class="splash-kicker">VisionGaia Technology / Sovereign Runtime</p>
             <h1>AETHEL</h1>
-            <p class="splash-release">BETA V2 <span></span> PRODUCTION CANDIDATE</p>
+            <p class="splash-release">BETA V3 <span></span> STRATEGIC COMMAND BUILD</p>
             <div class="splash-progress"><div class="splash-progress-value"></div></div>
             <div class="splash-readout"><span class="readout-dot"></span><span id="splash-status-text">BOOTING CORE KERNEL...</span></div>
             <p class="splash-note">POLICY GATE · NEXUS MEMORY · OPERATOR CONTROL</p>
-            <button id="splash-start-button" class="splash-start-button" type="button" hidden>STARTEN <span>›</span></button>
+            <button id="splash-start-button" class="splash-start-button" type="button" hidden><span data-i18n="splash.start">STARTEN</span> <span>›</span></button>
+            <div class="splash-language-control vgt-inline-974f8f7e">
+                <span class="vgt-inline-693118be">🌐 <span data-i18n="language.label">SPRACHE</span>:</span>
+                <select class="aethel-language-select cyber-select vgt-inline-520b672d" aria-label="Interface language">
+                    <option value="de">Deutsch (DE)</option>
+                    <option value="en">English (EN)</option>
+                    <option value="es">Español (ES)</option>
+                    <option value="fr">Français (FR)</option>
+                    <option value="ru">Русский (RU)</option>
+                </select>
+            </div>
         </section>
     </div>
-    <script>
-        (function () {
-            var splash = document.getElementById('startup-splash-screen');
-            var status = document.getElementById('splash-status-text');
-            var button = document.getElementById('splash-start-button');
-            var warning = document.getElementById('startup-warning-modal');
-            var acceptWarning = document.getElementById('startup-warning-btn-accept');
-            function ready() { if (status) status.textContent = 'SYSTEM BOOT READY // OPERATOR LINK ESTABLISHED'; if (button) { button.hidden = false; button.focus(); } }
-            function dismiss() { if (!splash) return; splash.classList.add('startup-splash-exit'); splash.style.opacity = '0'; setTimeout(function () { splash.remove(); }, 800); }
-            if (button) button.addEventListener('click', dismiss);
-            if (acceptWarning && warning) acceptWarning.addEventListener('click', function () {
-                warning.classList.add('hidden');
-                warning.style.display = 'none';
-                warning.setAttribute('aria-hidden', 'true');
-            });
-            ['core','chat','personas','agent','control','security','memory','personal','tasks','settings','archive'].forEach(function (name) {
-                var nav = document.getElementById('nav-btn-' + name);
-                var view = document.getElementById('view-' + name);
-                if (!nav || !view) return;
-                nav.addEventListener('click', function () {
-                    document.querySelectorAll('.viewport-panel').forEach(function (panel) { panel.classList.add('hidden'); });
-                    document.querySelectorAll('.nav-menu-btn').forEach(function (item) { item.classList.remove('active'); });
-                    view.classList.remove('hidden'); view.style.display = 'flex'; nav.classList.add('active');
-                });
-            });
-            setTimeout(ready, 3600);
-        }());
-    </script>
 </body>
 </html>

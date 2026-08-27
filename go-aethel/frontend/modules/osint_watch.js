@@ -59,6 +59,7 @@ export {
   activeGlobalWatchDomain,
   stableGlobeEventID,
   subscribeGlobalWatchCommands,
+  openRegionalRiskDetailPopup,
 } from './osint/feed_and_risks.js';
 
 export {

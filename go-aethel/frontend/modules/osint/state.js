@@ -163,14 +163,43 @@ export const cableData = [
   [[-70,40], [-30,40], [10,35], [100,20]]
 ];
 
+// Shared regional-risk geo (mirrors intelligence.RegionalRiskCatalog).
+// ring: closed [lon, lat] pairs for semi-transparent risk overlay fill/outline.
+function regionBox(minLat, maxLat, minLon, maxLon) {
+  const lat = (minLat + maxLat) / 2;
+  const lon = (minLon + maxLon) / 2;
+  return {
+    lat, lon,
+    minLat, maxLat, minLon, maxLon,
+    ring: [
+      [minLon, minLat], [maxLon, minLat], [maxLon, maxLat], [minLon, maxLat], [minLon, minLat]
+    ]
+  };
+}
+
 export const REGION_GEO = {
-  GERMANY: { lat: 51.2, lon: 10.5 },
-  BERLIN: { lat: 52.52, lon: 13.405 },
-  FRANCE: { lat: 46.6, lon: 2.2 },
-  USA: { lat: 39.5, lon: -98.3 },
-  UKRAINE: { lat: 48.4, lon: 31.2 },
-  UK: { lat: 54.0, lon: -2.5 }
+  GERMANY: regionBox(47.2, 55.0, 5.8, 15.0),
+  BERLIN: { lat: 52.52, lon: 13.405, minLat: 52.3, maxLat: 52.7, minLon: 13.0, maxLon: 13.8, ring: [[13.0, 52.3], [13.8, 52.3], [13.8, 52.7], [13.0, 52.7], [13.0, 52.3]] },
+  FRANCE: regionBox(42.3, 51.1, -5.0, 9.5),
+  USA: regionBox(24.5, 49.0, -125.0, -66.9),
+  UKRAINE: regionBox(44.3, 52.4, 22.0, 40.2),
+  UK: regionBox(49.9, 60.8, -8.6, 1.7),
+  RUSSIA: regionBox(41.2, 77.7, 19.6, 180.0),
+  IRAN: regionBox(25.0, 39.8, 44.0, 63.3),
+  CHINA: regionBox(18.2, 53.6, 73.5, 134.8),
+  ISRAEL: regionBox(29.4, 33.4, 34.2, 35.9),
+  TAIWAN: regionBox(21.8, 25.4, 119.3, 122.1),
+  POLAND: regionBox(49.0, 54.9, 14.1, 24.2),
+  BALTICS: regionBox(53.9, 59.7, 20.9, 28.3),
 };
+
+/** Catalog IDs expected in Regionales Risiko HUD (must match backend catalog). */
+export const REGIONAL_RISK_CATALOG_IDS = Object.freeze([
+  'GERMANY', 'FRANCE', 'USA', 'UKRAINE', 'UK',
+  'RUSSIA', 'IRAN', 'CHINA', 'ISRAEL', 'TAIWAN', 'POLAND', 'BALTICS'
+]);
 
 export let cachedRiskMarkers = [];
 export function setCachedRiskMarkers(val) { cachedRiskMarkers = val; }
+export let cachedRiskDetails = [];
+export function setCachedRiskDetails(val) { cachedRiskDetails = Array.isArray(val) ? val : []; }

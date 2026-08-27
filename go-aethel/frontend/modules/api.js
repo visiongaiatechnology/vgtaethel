@@ -258,6 +258,20 @@ export async function savePersonalProfile(profile) {
     return res.json();
 }
 
+export async function getPersonalOperations() {
+    const res = await fetch(`${state.API_BASE}/v1/personal/operations`, { cache: 'no-store' });
+    return jsonResponse(res, 'Personal Operations');
+}
+
+export async function personalOperationAction(action, payload = {}) {
+    const res = await fetch(`${state.API_BASE}/v1/personal/operations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...payload })
+    });
+    return jsonResponse(res, 'Personal Operations action');
+}
+
 export async function getPersonalMemories() {
     const res = await fetch(`${state.API_BASE}/v1/personal/memories`);
     return res.json();

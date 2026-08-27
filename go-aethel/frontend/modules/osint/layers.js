@@ -86,27 +86,86 @@ export const globeLayers = {
   risks: {
     visible: true,
     draw(ctx, cw, ch, rotY, rotX, scale) {
+      const cx = cw / 2;
+      const cy = ch / 2;
+      const globeR = Math.min(cw, ch) * 0.42 * scale;
+      const riskBand = (risk) => {
+        if (risk > 60) {
+          return { fill: 'rgba(255,0,79,0.28)', stroke: 'rgba(255,0,79,0.72)', pin: 'rgba(255,0,79,0.55)' };
+        }
+        if (risk > 25) {
+          return { fill: 'rgba(255,123,0,0.26)', stroke: 'rgba(255,123,0,0.70)', pin: 'rgba(255,123,0,0.52)' };
+        }
+        return { fill: 'rgba(57,255,20,0.22)', stroke: 'rgba(57,255,20,0.65)', pin: 'rgba(57,255,20,0.48)' };
+      };
+
+      // Primary representation: semi-transparent region polygon fill + outline.
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, globeR, 0, Math.PI * 2);
+      ctx.clip();
+      (cachedRiskMarkers || []).forEach((m) => {
+        const risk = Math.max(0, Math.min(100, Number(m.overall_risk) || 0));
+        const band = riskBand(risk);
+        const ring = Array.isArray(m.ring) && m.ring.length >= 3 ? m.ring : null;
+        if (ring) {
+          let started = false;
+          let frontCount = 0;
+          ctx.beginPath();
+          for (let i = 0; i < ring.length; i++) {
+            const lon = Number(ring[i][0]);
+            const lat = Number(ring[i][1]);
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+            const p = projectLatLon(lat, lon, rotY, rotX, scale, cw, ch);
+            if (!p.visible) {
+              // Break path when wrapping behind the globe so fill does not smear.
+              if (started && frontCount >= 2) {
+                ctx.closePath();
+                ctx.fillStyle = band.fill;
+                ctx.fill();
+                ctx.strokeStyle = band.stroke;
+                ctx.lineWidth = Math.max(0.8, 1.1 * scale);
+                ctx.stroke();
+                ctx.beginPath();
+                started = false;
+                frontCount = 0;
+              }
+              continue;
+            }
+            if (!started) {
+              ctx.moveTo(p.x, p.y);
+              started = true;
+            } else {
+              ctx.lineTo(p.x, p.y);
+            }
+            frontCount++;
+          }
+          if (started && frontCount >= 3) {
+            ctx.closePath();
+            ctx.fillStyle = band.fill;
+            ctx.fill();
+            ctx.strokeStyle = band.stroke;
+            ctx.lineWidth = Math.max(0.8, 1.15 * scale);
+            ctx.stroke();
+          }
+        }
+      });
+      ctx.restore();
+
+      // Secondary cue: small score pin at centroid (does not replace polygon).
       (cachedRiskMarkers || []).forEach((m) => {
         if (m.lat == null || m.lon == null) return;
         const p = projectLatLon(m.lat, m.lon, rotY, rotX, scale, cw, ch);
         if (!p.visible) return;
         const risk = Math.max(0, Math.min(100, Number(m.overall_risk) || 0));
-        const rad = 3.2 + (risk / 100) * 5.5;
-        let fill = 'rgba(57,255,20,0.45)';
-        let stroke = 'rgba(57,255,20,0.9)';
-        if (risk > 60) {
-          fill = 'rgba(255,0,79,0.5)';
-          stroke = 'rgba(255,0,79,0.95)';
-        } else if (risk > 25) {
-          fill = 'rgba(255,123,0,0.48)';
-          stroke = 'rgba(255,123,0,0.95)';
-        }
+        const band = riskBand(risk);
+        const rad = 2.4 + (risk / 100) * 3.2;
         ctx.save();
         ctx.beginPath();
         ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
-        ctx.fillStyle = fill;
+        ctx.fillStyle = band.pin;
         ctx.fill();
-        ctx.strokeStyle = stroke;
+        ctx.strokeStyle = band.stroke;
         ctx.lineWidth = 1;
         ctx.stroke();
         if (scale >= 1.0) {

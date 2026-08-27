@@ -1664,7 +1664,7 @@ h2 {
     white-space: pre-wrap;
 }
 
-/* ── Beta V2 Production Candidate Visual System ────────────────────────── */
+/* ── Beta V3 Strategic Command Visual System ───────────────────────────── */
 body::before {
     content: '';
     position: fixed;
@@ -2839,6 +2839,16 @@ body::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:
     overflow: hidden;
     text-overflow: ellipsis;
 }
+.gw-risk-detail-popup {
+  max-height: min(70vh, 520px);
+  overflow: auto;
+}
+.gw-risk-detail-narrative {
+  word-break: break-word;
+}
+.gw-risk-detail-references a:hover {
+  text-decoration: underline;
+}
 .gw-risk-hint {
     margin-top: 8px;
     width: 100%;
@@ -3497,6 +3507,28 @@ body::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:
     color: var(--vgt-text-dark);
     letter-spacing: 0.08em;
 }
+.gw-hazard-panel {
+    flex: 0 1 38%;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-top: 1px solid rgba(244, 63, 94, 0.28);
+    background: linear-gradient(180deg, rgba(244, 63, 94, 0.055), rgba(8, 12, 24, 0.96));
+}
+.gw-hazard-panel .gw-hazard-header {
+    padding: 10px 14px 8px;
+    background: linear-gradient(180deg, rgba(244, 63, 94, 0.08), transparent);
+}
+.gw-hazard-panel .gw-feed-title { color: #ff9a72; }
+.gw-hazard-panel .gw-feed-count { color: rgba(255, 154, 114, 0.78); }
+.gw-feed-dock .gw-hazard-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding-top: 4px;
+}
+.gw-hazard-card { border-left-color: rgba(255, 123, 0, 0.58); }
+.gw-hazard-card[data-hazard="volcano"] { border-left-color: rgba(244, 63, 94, 0.72); }
 .gw-feed-title {
     font-size: 13px;
     font-weight: 700;

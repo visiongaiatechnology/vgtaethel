@@ -1,3 +1,4 @@
+// STATUS: DIAMANT VGT SUPREME
 import { state } from './state.js';
 import * as api from './api.js';
 import { requestRunApproval } from './approval_dialog.js';

@@ -1,3 +1,4 @@
+// STATUS: DIAMANT VGT SUPREME
 import { state } from './state.js';
 
 function renderMemoryState(container, message, error = false) {

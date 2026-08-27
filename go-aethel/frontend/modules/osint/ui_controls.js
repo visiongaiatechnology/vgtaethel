@@ -448,10 +448,10 @@ export function injectOSINTControls() {
 
     document.getElementById("btn-add-source").onclick = () => {
         const addSrcHtml = `
-            <div style="display:flex; flex-direction:column; gap:12px;">
+            <div class="vgt-inline-8be747c9">
                 <div>
-                    <label style="display:block; font-size:9px; color:#0ff; margin-bottom:4px; font-weight:700;">SOURCE TYPE</label>
-                    <select id="modal-src-type" style="width:100%; font-size:11px; background:#111; border:1px solid rgba(0,240,255,0.3); border-radius:4px; color:#fff; padding:8px; font-family:var(--font-mono);">
+                    <label class="vgt-inline-ffce2e26">SOURCE TYPE</label>
+                    <select id="modal-src-type" class="vgt-inline-74ffe575">
                         <option value="rss">RSS / ATOM NEWS</option>
 						<option value="telegram">TELEGRAM PUBLIC CHANNEL</option>
                         <option value="earthquake-geojson">EARTHQUAKE GEOJSON (USGS SCHEMA)</option>
@@ -459,16 +459,16 @@ export function injectOSINTControls() {
                     </select>
                 </div>
                 <div>
-                    <label style="display:block; font-size:9px; color:#0ff; margin-bottom:4px; font-weight:700;">SOURCE NAME</label>
-                    <input id="modal-src-name" placeholder="Name (e.g. Spiegel Top News)" style="width:100%; font-size:11px; background:#111; border:1px solid rgba(0,240,255,0.3); border-radius:4px; color:#fff; padding:8px; font-family:var(--font-mono);">
+                    <label class="vgt-inline-ffce2e26">SOURCE NAME</label>
+                    <input id="modal-src-name" placeholder="Name (e.g. Spiegel Top News)" class="vgt-inline-74ffe575">
                 </div>
                 <div>
-                    <label style="display:block; font-size:9px; color:#0ff; margin-bottom:4px; font-weight:700;">SOURCE URL (HTTPS)</label>
-                    <input id="modal-src-url" placeholder="RSS: https://domain/rss.xml · Telegram: https://t.me/s/channel" style="width:100%; font-size:11px; background:#111; border:1px solid rgba(0,240,255,0.3); border-radius:4px; color:#fff; padding:8px; font-family:var(--font-mono);">
+                    <label class="vgt-inline-ffce2e26">SOURCE URL (HTTPS)</label>
+                    <input id="modal-src-url" placeholder="RSS: https://domain/rss.xml · Telegram: https://t.me/s/channel" class="vgt-inline-74ffe575">
                 </div>
                 <div>
-                    <label style="display:block; font-size:9px; color:#0ff; margin-bottom:4px; font-weight:700;">CLASSIFICATION DOMAIN</label>
-                    <select id="modal-src-domain" style="width:100%; font-size:11px; background:#111; border:1px solid rgba(0,240,255,0.3); border-radius:4px; color:#fff; padding:8px; font-family:var(--font-mono);">
+                    <label class="vgt-inline-ffce2e26">CLASSIFICATION DOMAIN</label>
+                    <select id="modal-src-domain" class="vgt-inline-74ffe575">
                         <option value="general">general</option>
                         <option value="geo">geo</option>
                         <option value="cyber">cyber</option>
@@ -512,10 +512,10 @@ export function injectOSINTControls() {
         const existing = window.__osintCustomPrompt || currentDefault;
         
         const editPromptHtml = `
-            <div style="display:flex; flex-direction:column; gap:8px;">
-                <label style="display:block; font-size:9px; color:#9d4edd; font-weight:700;">SYSTEM INSTRUCTIONS FOR BRIEFING GENERATION</label>
-                <textarea id="modal-prompt-text" style="width:100%; height:130px; font-size:11px; background:#111; border:1px solid rgba(157,78,221,0.4); border-radius:4px; color:#fff; padding:8px; font-family:var(--font-mono); resize:vertical; line-height:1.4;">${existing}</textarea>
-                <span style="opacity:0.5; font-size:9px; line-height:1.3;">These instructions govern how Aethel synthesizes global observations into briefings. Stored locally.</span>
+            <div class="vgt-inline-2e78b2c2">
+                <label class="vgt-inline-88cd8715">SYSTEM INSTRUCTIONS FOR BRIEFING GENERATION</label>
+                <textarea id="modal-prompt-text" class="vgt-inline-5d72e1ea">${existing}</textarea>
+                <span class="vgt-inline-fce7093c">These instructions govern how Aethel synthesizes global observations into briefings. Stored locally.</span>
             </div>
         `;
 
@@ -1003,6 +1003,7 @@ window.AETHEL_NAVIGATE_VIEW = function(viewKey) {
         globe: 'nav-btn-global-watch',
         sphere: 'nav-btn-sphere',
         personal: 'nav-btn-personal',
+        mail: 'nav-btn-mail',
         case: 'nav-btn-case',
         tasks: 'nav-btn-tasks',
         settings: 'nav-btn-settings',
@@ -1120,24 +1121,24 @@ export async function initGlobalWatch() {
     }
     addCamBtn.onclick = () => {
         const modalHtml = `
-            <div style="display:flex; flex-direction:column; gap:12px;">
+            <div class="vgt-inline-8be747c9">
                 <div>
-                    <label style="display:block; font-size:9px; color:#0ff; margin-bottom:4px; font-weight:700;">CAMERA NAME</label>
-                    <input id="modal-cam-name" placeholder="Camera Name (e.g. London Traffic)" style="width:100%; font-size:11px; background:#111; border:1px solid rgba(0,240,255,0.3); border-radius:4px; color:#fff; padding:8px; font-family:var(--font-mono);">
+                    <label class="vgt-inline-ffce2e26">CAMERA NAME</label>
+                    <input id="modal-cam-name" placeholder="Camera Name (e.g. London Traffic)" class="vgt-inline-74ffe575">
                 </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div class="vgt-inline-6eecb81c">
                     <div>
-                        <label style="display:block; font-size:9px; color:#0ff; margin-bottom:4px; font-weight:700;">LATITUDE</label>
-                        <input id="modal-cam-lat" placeholder="e.g. 51.5074" style="width:100%; font-size:11px; background:#111; border:1px solid rgba(0,240,255,0.3); border-radius:4px; color:#fff; padding:8px; font-family:var(--font-mono);">
+                        <label class="vgt-inline-ffce2e26">LATITUDE</label>
+                        <input id="modal-cam-lat" placeholder="e.g. 51.5074" class="vgt-inline-74ffe575">
                     </div>
                     <div>
-                        <label style="display:block; font-size:9px; color:#0ff; margin-bottom:4px; font-weight:700;">LONGITUDE</label>
-                        <input id="modal-cam-lon" placeholder="e.g. -0.1278" style="width:100%; font-size:11px; background:#111; border:1px solid rgba(0,240,255,0.3); border-radius:4px; color:#fff; padding:8px; font-family:var(--font-mono);">
+                        <label class="vgt-inline-ffce2e26">LONGITUDE</label>
+                        <input id="modal-cam-lon" placeholder="e.g. -0.1278" class="vgt-inline-74ffe575">
                     </div>
                 </div>
                 <div>
-                    <label style="display:block; font-size:9px; color:#0ff; margin-bottom:4px; font-weight:700;">STREAM URL (HTTPS, Optional)</label>
-                    <input id="modal-cam-url" placeholder="https://domain.com/cam.jpg" style="width:100%; font-size:11px; background:#111; border:1px solid rgba(0,240,255,0.3); border-radius:4px; color:#fff; padding:8px; font-family:var(--font-mono);">
+                    <label class="vgt-inline-ffce2e26">STREAM URL (HTTPS, Optional)</label>
+                    <input id="modal-cam-url" placeholder="https://domain.com/cam.jpg" class="vgt-inline-74ffe575">
                 </div>
             </div>
         `;

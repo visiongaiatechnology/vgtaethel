@@ -74,9 +74,10 @@ export function focusGlobeOnLonLat(lon, lat, opts) {
 
 export function highlightEventInList(idx, showSelectionDetailsFn) {
     const feedList = document.getElementById("gw-feed-list");
-    if (!feedList || !activeFeedEvents[idx]) return;
+    const hazardList = document.getElementById("gw-hazard-list");
+    if ((!feedList && !hazardList) || !activeFeedEvents[idx]) return;
 
-    const cards = feedList.querySelectorAll(".gw-event-card");
+    const cards = document.querySelectorAll("#gw-feed-list .gw-event-card, #gw-hazard-list .gw-event-card");
     cards.forEach((c) => c.classList.remove("highlighted"));
     let targetCard = null;
     cards.forEach((c) => {
@@ -90,6 +91,7 @@ export function highlightEventInList(idx, showSelectionDetailsFn) {
     }
 
     const ev = activeFeedEvents[idx];
+    if (showSelectionDetailsFn) showSelectionDetailsFn(ev, null);
     if (ev && (ev.lat != null || ev.lon != null)) {
         focusGlobeOnLonLat(ev.lon, ev.lat);
     }

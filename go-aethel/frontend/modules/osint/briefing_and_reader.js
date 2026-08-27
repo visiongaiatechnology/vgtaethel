@@ -31,6 +31,62 @@ export function downloadTextFile(filename, text, mime) {
     setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
+export function renderIntelligenceMarkdown(mdText) {
+    if (!mdText) return "";
+    let rawHtml = typeof formatMarkdown === 'function' ? formatMarkdown(mdText) : String(mdText);
+    
+    try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(`<div>${rawHtml}</div>`, "text/html");
+        const container = doc.body.firstElementChild;
+        if (!container) return rawHtml;
+
+        // 1. Post-process tables: priority column badges (P1, P2, etc.)
+        container.querySelectorAll("table").forEach((table) => {
+            table.classList.add("intel-table");
+            const rows = table.querySelectorAll("tbody tr");
+            rows.forEach((row) => {
+                const firstTd = row.querySelector("td:first-child");
+                if (firstTd) {
+                    const txt = firstTd.textContent.trim();
+                    const num = parseInt(txt, 10);
+                    if (!isNaN(num)) {
+                        let pClass = "p-normal";
+                        if (num === 1) pClass = "p-critical";
+                        else if (num === 2) pClass = "p-high";
+                        else if (num === 3) pClass = "p-medium";
+                        const badge = document.createElement('span');
+                        badge.className = `vgt-p-badge ${pClass}`;
+                        badge.textContent = `P${num}`;
+                        firstTd.replaceChildren(badge);
+                        firstTd.classList.add("cell-priority");
+                    }
+                }
+            });
+        });
+
+        // 2. Post-process list items into signal cards
+        container.querySelectorAll("ul").forEach((ul) => {
+            ul.classList.add("intel-signal-list");
+            ul.querySelectorAll("li").forEach((li) => {
+                li.classList.add("intel-signal-item");
+            });
+        });
+
+        // 3. Post-process dossier metadata paragraphs
+        container.querySelectorAll("p").forEach((p) => {
+            const txt = p.textContent.trim();
+            if (txt.includes("Lagebriefing – OSINT-Analyse") || txt.includes("Erstellt für:")) {
+                p.classList.add("intel-dossier-meta-card");
+            }
+        });
+
+        return container.innerHTML;
+    } catch (e) {
+        return rawHtml;
+    }
+}
+
 export function openGwReportReader(titleOrEvent, markdownBody) {
     const panel = document.getElementById('gw-report-reader');
     const body = document.getElementById('gw-report-reader-body');
@@ -101,12 +157,7 @@ export function openGwReportReader(titleOrEvent, markdownBody) {
         setTxt('gw-reader-domain', isEruptingVolcano(ev) ? 'VULKAN · AKTIV' : 'VULKAN');
     }
 
-    body.innerHTML = '';
-    if (typeof formatMarkdown === 'function') {
-        body.innerHTML = formatMarkdown(md);
-    } else {
-        body.textContent = md;
-    }
+    body.innerHTML = renderIntelligenceMarkdown(md);
     panel.dataset.exportMd = `# ${title}\n\n- Quelle: ${ev ? (ev.source || '—') : '—'}\n- Datum: ${dt.date}\n- Uhrzeit: ${dt.time}\n- Domain: ${ev ? (ev.domain || '') : ''}\n\n${md}`;
     panel.classList.remove('hidden');
     try { body.focus?.(); } catch (_) {}
@@ -144,7 +195,7 @@ export async function triggerAIBriefing() {
     const briefingController = new AbortController();
     const briefingDeadline = window.setTimeout(() => briefingController.abort(), 120000);
     try {
-		const body = { model_id: state.currentModel, language, hours: getGwTimeWindowHours() };
+        const body = { model_id: state.currentModel, language, hours: getGwTimeWindowHours() };
         if (window.__osintCustomPrompt) {
             body.system_prompt = window.__osintCustomPrompt;
         }
@@ -191,7 +242,7 @@ export async function triggerAIBriefing() {
                     }
 
                     markdownText += data.replaceAll("[VGT_NL]", "\n");
-                    content.innerHTML = formatMarkdown(markdownText);
+                    content.innerHTML = renderIntelligenceMarkdown(markdownText);
                     overlay.scrollTop = overlay.scrollHeight;
                 }
             }

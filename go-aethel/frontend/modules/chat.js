@@ -1,3 +1,4 @@
+// STATUS: DIAMANT VGT SUPREME
 import { state } from './state.js';
 import { speak, resetMicButton, stopSpeaking } from './voice.js';
 import { openPermissionGate, fetchKernelLogs, refreshSecurityHUD } from './security.js';
@@ -52,18 +53,61 @@ function sanitizeHtml(html) {
     return doc.body.firstElementChild ? doc.body.firstElementChild.innerHTML : "";
 }
 
+function postProcessChatMessage(html) {
+    if (!html) return "";
+    try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");
+        const container = doc.body.firstElementChild;
+        if (!container) return html;
+
+        // 1. Process list items: distinguish numbered section headers from regular bullet items
+        container.querySelectorAll("li").forEach((li) => {
+            const txt = li.textContent.trim();
+            const firstChild = li.firstElementChild;
+            const firstTxt = firstChild ? firstChild.textContent.trim() : "";
+            const startsWithNum = /^\d+\.\s/.test(txt) || /^\d+\.\s/.test(firstTxt);
+            
+            if (startsWithNum) {
+                li.classList.add("is-numbered-header");
+            } else {
+                li.classList.add("chat-bullet-item");
+            }
+        });
+
+        // 2. Process focus/callout lines (e.g. 📍 FOKUS: DEUTSCHLAND)
+        container.querySelectorAll("p, li, strong").forEach((el) => {
+            const txt = el.textContent.trim();
+            if (txt.includes("FOKUS:") || txt.includes("📍")) {
+                el.classList.add("chat-focus-banner");
+            }
+        });
+
+        // 3. Format tables in chat messages
+        container.querySelectorAll("table").forEach((table) => {
+            table.classList.add("cyber-table");
+        });
+
+        return container.innerHTML;
+    } catch (e) {
+        return html;
+    }
+}
+
 export function formatMarkdown(text) {
     if (!text) return "";
+    let rawHtml = "";
     if (typeof window.marked !== "undefined") {
         try {
-            // GFM explizit einschalten für Tabellen-Unterstützung
-            return sanitizeHtml(window.marked.parse(text, { gfm: true }));
+            rawHtml = sanitizeHtml(window.marked.parse(text, { gfm: true }));
         } catch(e) {
             console.error("marked error", e);
+            rawHtml = simpleTableFallback(text);
         }
+    } else {
+        rawHtml = simpleTableFallback(text);
     }
-    // Fallback: Einfache Markdown-Tabellen & Formatierung manuell rendern
-    return simpleTableFallback(text);
+    return postProcessChatMessage(rawHtml);
 }
 window.formatMarkdown = formatMarkdown;
 
@@ -134,7 +178,7 @@ function renderSimpleTable(rows) {
     const headerCells = splitRow(rows[0]);
     html += '<thead><tr>';
     for (const cell of headerCells) {
-        html += `<th>${cell.trim()}</th>`;
+        html += `<th>${escapeHtml(cell.trim())}</th>`;
     }
     html += '</tr></thead>';
     
@@ -144,7 +188,7 @@ function renderSimpleTable(rows) {
         const cells = splitRow(rows[i]);
         html += '<tr>';
         for (const cell of cells) {
-            html += `<td>${cell.trim()}</td>`;
+            html += `<td>${escapeHtml(cell.trim())}</td>`;
         }
         html += '</tr>';
     }
@@ -259,15 +303,22 @@ export function addMessageToScreen(role, content, reasoning_content = null, mode
     }
     let bodyHtml = "";
     if (role === "assistant" && reasoning_content) {
-        bodyHtml += `<details class="thinking-details" style="margin-bottom:12px;background:rgba(0,200,255,0.03);border:1px solid rgba(0,200,255,0.15);border-radius:4px;padding:8px;"><summary style="font-size:10px;color:#00c8ff;cursor:pointer;font-family:var(--font-mono);outline:none;user-select:none;">🧠 THOUGHT PROCESS</summary><div class="thinking-content" style="font-size:11px;color:rgba(255,255,255,0.6);font-family:var(--font-mono);margin-top:6px;white-space:pre-wrap;line-height:1.4;">${escapeHtml(reasoning_content)}</div></details>`;
+        bodyHtml += `<details class="thinking-details vgt-inline-a0b9ca64"><summary class="vgt-inline-517fe0e8">🧠 THOUGHT PROCESS</summary><div class="thinking-content vgt-inline-74191084">${escapeHtml(reasoning_content)}</div></details>`;
     }
     const rendered = formatMarkdown(content);
     if (content && content.length > 600) {
-        bodyHtml += `<div class="msg-collapsible collapsed"><div class="msg-content">${rendered}</div><div class="msg-fade-overlay"></div><button class="msg-toggle-btn" style="font-size:9px;color:var(--vgt-cyan);background:rgba(0,240,255,0.05);border:1px solid rgba(0,240,255,0.2);padding:4px 12px;border-radius:4px;cursor:pointer;margin-top:8px;font-family:var(--font-mono);">▶ ENTFALTEN (${content.length})</button></div>`;
+        bodyHtml += `<div class="msg-collapsible collapsed"><div class="msg-content">${rendered}</div><div class="msg-fade-overlay"></div><button class="msg-toggle-btn vgt-inline-6b439284">▶ ENTFALTEN (${content.length})</button></div>`;
     } else {
         bodyHtml += rendered;
     }
-    messageDiv.innerHTML = `<div class="msg-header">${escapeHtml(headerText)}</div><div class="msg-body">${bodyHtml}</div>`;
+    const messageHeader = document.createElement('div');
+    messageHeader.className = 'msg-header';
+    messageHeader.textContent = headerText;
+    const messageBody = document.createElement('div');
+    messageBody.className = 'msg-body';
+    const parsedBody = new DOMParser().parseFromString(bodyHtml, 'text/html');
+    for (const child of Array.from(parsedBody.body.childNodes)) messageBody.appendChild(document.importNode(child, true));
+    messageDiv.append(messageHeader, messageBody);
     elChatOutput.appendChild(messageDiv);
     const toggle = messageDiv.querySelector('.msg-toggle-btn');
     if (toggle) {
@@ -316,26 +367,30 @@ export function updateMessageWithThinking(msgId, thinking, content, startTime, i
                 }
                 const openAttr = isFinished ? "" : "open";
                 const loader = isFinished ? "" : `
-                    <span class="thinking-spinner" style="display: inline-block; width: 8px; height: 8px; border: 1.5px solid rgba(0,240,255,0.2); border-top-color: var(--vgt-cyan); border-radius: 50%; animation: spin 1s linear infinite; margin-right: 6px; vertical-align: middle;"></span>
+                    <span class="thinking-spinner vgt-inline-5bc8a0f7"></span>
                     <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
                 `;
                 const contentText = escapeHtml(thinking ? thinking : (isFinished ? "Analyse abgeschlossen." : "Kortex analysiert Aufgabe..."));
+                const activeToolName = state.pendingToolCallName || (state.pendingToolQueue && state.pendingToolQueue[0]?.name);
+                const toolBadge = activeToolName ? `<span class="vgt-inline-c1570082">⚡ BEFEHL: [${escapeHtml(activeToolName)}]</span>` : "";
+
                 html += `
-                    <details class="thinking-details" ${openAttr} style="margin-bottom: 12px; background: rgba(0,200,255,0.02); border: 1px solid rgba(0,200,255,0.12); border-radius: 6px; padding: 10px; font-family: var(--font-mono);">
-                        <summary style="font-size: 10px; color: var(--vgt-cyan); cursor: pointer; outline: none; user-select: none; display: flex; align-items: center; justify-content: space-between;">
-                            <div style="display: flex; align-items: center;">
+                    <details class="thinking-details vgt-inline-593b5c3f" ${openAttr}>
+                        <summary class="vgt-inline-e8fc31e5">
+                            <div class="vgt-inline-dee67890">
                                 ${loader}
                                 <span>🧠 CORTEX DENKPROZESS</span>
+                                ${toolBadge}
                             </div>
-                            <span style="font-size: 9px; color: var(--vgt-text-dim);">${elapsedText}</span>
+                            <span class="vgt-inline-89910260">${elapsedText}</span>
                         </summary>
-                        <div class="thinking-content" style="font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 8px; white-space: pre-wrap; line-height: 1.5; border-top: 1px solid rgba(0,240,255,0.05); padding-top: 6px;">${contentText}</div>
+                        <div class="thinking-content vgt-inline-ce99dd7e">${contentText}</div>
                     </details>
                 `;
             }
             let renderedContent = formatMarkdown(content);
             if (!isFinished && content) {
-                const cursorHTML = `<span class="chat-cursor" style="display: inline-block; width: 6px; height: 14px; background: var(--vgt-cyan, #00f0ff); margin-left: 4px; animation: chat-cursor-blink 0.8s step-start infinite; vertical-align: middle;"></span><style>@keyframes chat-cursor-blink { 50% { opacity: 0; } }</style>`;
+                const cursorHTML = `<span class="chat-cursor vgt-inline-5df96fa0"></span><style>@keyframes chat-cursor-blink { 50% { opacity: 0; } }</style>`;
                 const lastTagRegex = /(<\/p>|<\/li>|<\/code>|<\/td>|<\/div>|<\/pre>|<\/h[1-6]>)(<\/[a-z]+>|\s)*$/i;
                 if (lastTagRegex.test(renderedContent)) {
                     renderedContent = renderedContent.replace(lastTagRegex, (match, p1, p2) => cursorHTML + p1 + (p2 || ""));
@@ -345,6 +400,10 @@ export function updateMessageWithThinking(msgId, thinking, content, startTime, i
             }
             html += renderedContent;
             body.innerHTML = html;
+
+            if (isFinished && content) {
+                detectAndExecuteEmbeddedToolCalls(content, msgId);
+            }
         }
     }
 
@@ -522,7 +581,7 @@ export async function executeApprovedTool(msgId, name, args, approvalToken = "")
 			};
             addAgentLog(`Sicherheitsprüfung erfordert Operator-Zustimmung für: [${name}]`, "warning");
             if (box) {
-                box.innerHTML = `<span class="tool-status-badge status-rejected" style="color: var(--vgt-orange)">SECURITY GATE: Bestätigung ausstehend...</span>`;
+                box.innerHTML = `<span class="tool-status-badge status-rejected vgt-inline-1a9332cc">SECURITY GATE: Bestätigung ausstehend...</span>`;
             }
             openPermissionGate(name, data.capability, data.risk_level, data.risk_score, data.threats, args, msgId, data.approval_token || "");
             return;
@@ -591,6 +650,7 @@ export async function executeApprovedTool(msgId, name, args, approvalToken = "")
 
         if (name === "market_lookup" && data.status === "success") {
             window.dispatchEvent(new CustomEvent('aethel:sphere-market', { detail: { symbols: args.symbols || [] } }));
+            renderChatMarketWidget(msgId, data.result);
         }
         if (name === "sphere_write_document" && data.status === "success") {
             window.dispatchEvent(new CustomEvent('aethel:sphere-document-updated'));
@@ -604,7 +664,10 @@ export async function executeApprovedTool(msgId, name, args, approvalToken = "")
     } catch (e) {
         console.error("Tool exec error", e);
         if (box) {
-            box.innerHTML = `<span class="tool-status-badge status-failed">CONNECTION FAILED: ${escapeHtml(e.message)}</span>`;
+            const failure = document.createElement('span');
+            failure.className = 'tool-status-badge status-failed';
+            failure.textContent = `CONNECTION FAILED: ${String(e.message || 'unknown error')}`;
+            box.replaceChildren(failure);
         }
         
         if (name === "web_browser") {
@@ -618,6 +681,117 @@ export async function executeApprovedTool(msgId, name, args, approvalToken = "")
 window.approveTool = function(msgId, name, args, approvalToken = "") {
     executeApprovedTool(msgId, name, args, approvalToken);
 };
+
+function renderChatMarketWidget(msgId, jsonResult) {
+    const msgElement = document.getElementById(msgId);
+    if (!msgElement) return;
+    try {
+        const quotes = typeof jsonResult === 'string' ? JSON.parse(jsonResult) : jsonResult;
+        if (!Array.isArray(quotes) || quotes.length === 0) return;
+
+        const widget = document.createElement('div');
+        widget.className = 'chat-market-widget glass-card';
+        widget.style.cssText = 'margin-top:12px; padding:14px; border:1px solid rgba(255,123,0,0.3); border-radius:12px; background:linear-gradient(145deg, rgba(255,123,0,0.08), rgba(6,10,22,0.95)); font-family:var(--font-mono);';
+
+        const header = document.createElement('div');
+        header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px;';
+        
+        const title = document.createElement('span');
+        title.style.cssText = 'font-size:11px; color:var(--vgt-orange); font-weight:800; letter-spacing:0.1em; display:flex; align-items:center; gap:6px;';
+        title.innerHTML = `📊 MARKTDATEN // ECHTZEIT KURSE`;
+
+        const openBtn = document.createElement('button');
+        openBtn.className = 'cyber-button';
+        openBtn.style.cssText = 'font-size:9px; padding:4px 10px; background:rgba(255,123,0,0.15); border:1px solid var(--vgt-orange); color:var(--vgt-orange); cursor:pointer; width:auto;';
+        openBtn.textContent = '↗ SPHERE MÄRKTE-MODUL ÖFFNEN';
+        openBtn.addEventListener('click', () => {
+            document.getElementById('nav-btn-sphere')?.click();
+            if (window.openSphereApp) window.openSphereApp('market');
+        });
+
+        header.append(title, openBtn);
+        widget.appendChild(header);
+
+        const grid = document.createElement('div');
+        grid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:8px;';
+
+        for (const q of quotes) {
+            const card = document.createElement('div');
+            const isUp = Number(q.change_24h_percent) >= 0;
+            card.style.cssText = `background:rgba(0,0,0,0.4); border:1px solid ${isUp ? 'rgba(57,255,20,0.25)' : 'rgba(255,0,79,0.25)'}; border-radius:8px; padding:8px 10px; display:flex; flex-direction:column; gap:2px;`;
+
+            const symRow = document.createElement('div');
+            symRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center;';
+            const sym = document.createElement('strong');
+            sym.style.cssText = 'font-size:11px; color:#fff;';
+            sym.textContent = q.symbol;
+
+            const cat = document.createElement('span');
+            cat.style.cssText = 'font-size:8px; color:var(--vgt-cyan);';
+            cat.textContent = (q.category || '').toUpperCase();
+            symRow.append(sym, cat);
+
+            const name = document.createElement('small');
+            name.style.cssText = 'font-size:9px; color:var(--vgt-text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+            name.textContent = q.name;
+
+            const pVal = Number(q.price);
+            const currSym = q.currency === 'EUR' ? '€' : (q.currency === 'JPY' ? '¥' : '$');
+            const formattedPrice = pVal < 5 ? pVal.toFixed(4) : pVal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const price = document.createElement('b');
+            price.style.cssText = 'font-size:13px; color:#fff; margin-top:2px;';
+            price.textContent = `${currSym}${formattedPrice}`;
+
+            const delta = Number(q.change_24h_percent || 0);
+            const change = document.createElement('span');
+            change.style.cssText = `font-size:9px; font-weight:bold; color:${isUp ? 'var(--vgt-green)' : 'var(--vgt-red)'};`;
+            change.textContent = `${delta >= 0 ? '+' : ''}${delta.toFixed(2)}% / 24H`;
+
+            card.append(symRow, name, price, change);
+            grid.appendChild(card);
+        }
+
+        widget.appendChild(grid);
+        msgElement.querySelector('.msg-body')?.appendChild(widget);
+    } catch(e) {
+        console.warn('Market widget render failed', e);
+    }
+}
+
+async function detectAndExecuteEmbeddedToolCalls(content, msgId) {
+    if (!content || typeof content !== 'string') return;
+    
+    // Look for JSON code blocks or inline JSON containing tool call structures like sphere_market_overview or market_lookup
+    const jsonMatches = content.match(/\[\s*\{\s*"name"\s*:\s*"(?:sphere_market_overview|market_lookup)"[\s\S]*?\}\s*\]/gi)
+        || content.match(/\{\s*"name"\s*:\s*"(?:sphere_market_overview|market_lookup)"[\s\S]*?\}/gi);
+
+    if (!jsonMatches) return;
+
+    for (const matchStr of jsonMatches) {
+        try {
+            const parsed = JSON.parse(matchStr);
+            const callObj = Array.isArray(parsed) ? parsed[0] : parsed;
+            if (callObj && (callObj.name === 'sphere_market_overview' || callObj.name === 'market_lookup')) {
+                const toolName = callObj.name;
+                const toolArgs = callObj.arguments || callObj.args || {};
+                
+                // Execute tool via backend API
+                const res = await fetch(`${state.API_BASE}/v1/tools/execute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: toolName, args: toolArgs })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    window.dispatchEvent(new CustomEvent('aethel:sphere-market', { detail: { symbols: toolArgs.symbols || toolArgs.assets || [] } }));
+                    renderChatMarketWidget(msgId, data.result);
+                }
+            }
+        } catch(e) {
+            console.warn('Failed to parse embedded tool call', e);
+        }
+    }
+}
 
 export function openHandoffModal(agentName, content) {
     const modal = document.getElementById("handoff-modal");
@@ -1421,7 +1595,7 @@ export function updateChecklistUI(checklist) {
             agentStatusLabel.style.color = "var(--vgt-green)";
         }
         if (agentStepsContainer) {
-            agentStepsContainer.innerHTML = `<div style="color: var(--vgt-text-dim); text-align: center; margin-top: 40px;">Warte auf einen Agent-Run, um den Plan anzuzeigen...</div>`;
+            agentStepsContainer.innerHTML = `<div class="vgt-inline-e9f2faf1">Warte auf einen Agent-Run, um den Plan anzuzeigen...</div>`;
         }
         return;
     }
@@ -1476,11 +1650,11 @@ export function updateChecklistUI(checklist) {
             stepDiv.style.gap = "12px";
             stepDiv.style.fontSize = "11px";
 
-            let stepIcon = `<span style="color: var(--vgt-text-dim);">[ ]</span>`;
+            let stepIcon = `<span class="vgt-inline-67f22013">[ ]</span>`;
             if (item.status === "in_progress") {
-                stepIcon = `<span class="animate-pulse" style="color: var(--vgt-cyan);">⚡</span>`;
+                stepIcon = `<span class="animate-pulse vgt-inline-425b87cc">⚡</span>`;
             } else if (item.status === "done") {
-                stepIcon = `<span style="color: var(--vgt-green);">✅</span>`;
+                stepIcon = `<span class="vgt-inline-4746b22a">✅</span>`;
             }
 
             const stepIconWrap = document.createElement("div");
@@ -1539,13 +1713,13 @@ export function appendFileChangesToMessage(msgId, changes) {
     });
 
     let html = `
-        <div class="file-changes-box" style="margin-top: 16px; border: 1px solid rgba(0,240,255,0.25); background: rgba(0,240,255,0.03); border-radius: 6px; font-family: var(--font-mono); overflow: hidden;">
-            <details style="outline: none;" open>
-                <summary style="padding: 10px 14px; font-size: 10px; color: var(--vgt-cyan); cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; outline: none;">
+        <div class="file-changes-box vgt-inline-d64d5a78">
+            <details open class="vgt-inline-3e3261ae">
+                <summary class="vgt-inline-b786c289">
                     <span>📁 ${changes.length} Datei${changes.length > 1 ? 'en' : ''} geändert (+${totalAdded} -${totalRemoved} Zeilen)</span>
-                    <span style="font-size: 8px; color: var(--vgt-text-dim);">[ DETAILS ]</span>
+                    <span class="vgt-inline-dff64c31">[ DETAILS ]</span>
                 </summary>
-                <div style="padding: 10px 14px; border-top: 1px solid rgba(0,240,255,0.1); display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto;">
+                <div class="vgt-inline-2e222999">
     `;
 
     changes.forEach(c => {
@@ -1554,12 +1728,12 @@ export function appendFileChangesToMessage(msgId, changes) {
         const added = Number.isFinite(Number(c.added)) ? Number(c.added) : 0;
         const removed = Number.isFinite(Number(c.removed)) ? Number(c.removed) : 0;
         html += `
-            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px;">
-                <span style="color: #fff;">📄 ${safeFile}</span>
-                <span style="color: var(--vgt-text-dim); font-size: 9px; margin-left: 10px; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; text-align: left;">${safePath}</span>
-                <span style="font-size: 9px; font-weight: bold; margin-left: 10px;">
-                    <span style="color: var(--vgt-green);">+${added}</span> 
-                    <span style="color: var(--vgt-red); margin-left: 4px;">-${removed}</span>
+            <div class="vgt-inline-4e0cdc50">
+                <span class="vgt-inline-24e2c294">📄 ${safeFile}</span>
+                <span class="vgt-inline-30fe20f3">${safePath}</span>
+                <span class="vgt-inline-624a8b66">
+                    <span class="vgt-inline-4746b22a">+${added}</span> 
+                    <span class="vgt-inline-a98c6141">-${removed}</span>
                 </span>
             </div>
         `;

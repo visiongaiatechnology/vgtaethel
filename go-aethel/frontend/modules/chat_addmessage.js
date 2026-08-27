@@ -53,10 +53,10 @@ export function addMessageToScreen(role, content, reasoning_content = null) {
     if (role === "assistant" && reasoning_content) {
         bodyHtml += `
             <details class="thinking-details">
-                <summary style="font-size: 10px; color: var(--vgt-cyan); cursor: pointer; font-family: var(--font-mono); outline: none; user-select: none;">
+                <summary class="vgt-inline-f7b06c8b">
                     🧠 Denkprozess anzeigen
                 </summary>
-                <div class="thinking-content" style="font-size: 12px; color: rgba(255,255,255,0.65); font-family: var(--font-mono); margin-top: 8px; white-space: pre-wrap; line-height: 1.5;">${escapeHtml(reasoning_content)}</div>
+                <div class="thinking-content vgt-inline-d3a143ff">${escapeHtml(reasoning_content)}</div>
             </details>
         `;
     }
@@ -67,8 +67,8 @@ export function addMessageToScreen(role, content, reasoning_content = null) {
     if (isLong) {
         bodyHtml += `<div class="msg-collapsible">`;
         bodyHtml += `<div class="msg-collapsed">${renderedContent.slice(0, 300)}...</div>`;
-        bodyHtml += `<div class="msg-full" style="display:none;">${renderedContent}</div>`;
-        bodyHtml += `<button class="msg-toggle-btn" style="font-size:9px;color:var(--vgt-cyan);background:rgba(0,240,255,0.05);border:1px solid rgba(0,240,255,0.2);padding:4px 12px;border-radius:4px;cursor:pointer;margin-top:8px;font-family:var(--font-mono);">▶ ENTFALTEN (${content.length} Zeichen)</button>`;
+        bodyHtml += `<div class="msg-full vgt-inline-7830d708">${renderedContent}</div>`;
+        bodyHtml += `<button class="msg-toggle-btn vgt-inline-6b439284">▶ ENTFALTEN (${content.length} Zeichen)</button>`;
         bodyHtml += `</div>`;
     } else {
         bodyHtml += renderedContent;

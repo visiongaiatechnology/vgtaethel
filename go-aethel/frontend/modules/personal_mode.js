@@ -1,3 +1,4 @@
+// STATUS: DIAMANT VGT SUPREME
 import { state } from './state.js';
 import * as api from './api.js';
 
@@ -58,6 +59,21 @@ export async function loadPersonalMode() {
             setVal("personal-interests", (profile.interests || []).join(", "));
             setVal("personal-goals", (profile.goals || []).join(", "));
             setVal("personal-notes", profile.notes || "");
+
+            // Hydrate Alarm Clock settings
+            setVal("personal-alarm-time", cfg.alarm_time || localStorage.getItem("aethel_alarm_time") || "07:00");
+            setChecked("personal-alarm-enabled", cfg.alarm_enabled ?? (localStorage.getItem("aethel_alarm_enabled") === "true"));
+            setChecked("personal-alarm-read-aloud", cfg.alarm_read_aloud ?? (localStorage.getItem("aethel_alarm_read_aloud") !== "false"));
+            setChecked("personal-daily-plan-enabled", cfg.daily_plan_enabled);
+            setChecked("personal-weather-updates", cfg.weather_updates);
+            setVal("personal-quiet-start", cfg.quiet_hours_start || "22:30");
+            setVal("personal-quiet-end", cfg.quiet_hours_end || "07:00");
+
+            // Keep sentinel emergency filter aligned with Personal Core home location.
+            try {
+                const { syncSentinelLocation } = await import('./emergency_overlay.js');
+                await syncSentinelLocation(profile.location_city, profile.location_country);
+            } catch (_) { /* non-fatal */ }
 
             if (statusEl) {
                 statusEl.textContent = cfg.enabled
@@ -154,6 +170,44 @@ export function setupPersonalModeUIEvents() {
         document.getElementById("nav-btn-personal")?.click();
         setTimeout(() => document.getElementById("personal-btn-guided-setup")?.click(), 200);
     });
+
+    // Alarm Clock Event Listeners
+    document.getElementById("personal-alarm-time")?.addEventListener("change", (e) => {
+        localStorage.setItem("aethel_alarm_time", e.target.value);
+    });
+    document.getElementById("personal-alarm-enabled")?.addEventListener("change", (e) => {
+        localStorage.setItem("aethel_alarm_enabled", e.target.checked ? "true" : "false");
+    });
+    document.getElementById("personal-alarm-read-aloud")?.addEventListener("change", (e) => {
+        localStorage.setItem("aethel_alarm_read_aloud", e.target.checked ? "true" : "false");
+    });
+    document.getElementById("personal-btn-test-alarm")?.addEventListener("click", triggerAlarmWakeRoutine);
+    document.getElementById("personal-btn-weather-now")?.addEventListener("click", async event => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        try {
+            await api.personalOperationAction('generate', { kind: 'weather', city: val('personal-location-city') });
+            window.showAethelToast?.('Standort-Wetter wird als Personal-Operations-Popup zugestellt.', 'success');
+        } catch (error) {
+            window.showAethelToast?.(`Wetterabruf fehlgeschlagen: ${error.message}`, 'error');
+        } finally {
+            button.disabled = false;
+        }
+    });
+    document.getElementById("personal-btn-plan-now")?.addEventListener("click", async event => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        try {
+            await api.personalOperationAction('generate', { kind: 'daily_plan' });
+            window.showAethelToast?.('Tagesplan wurde an Personal Operations übergeben.', 'success');
+        } catch (error) {
+            window.showAethelToast?.(`Tagesplan fehlgeschlagen: ${error.message}`, 'error');
+        } finally {
+            button.disabled = false;
+        }
+    });
+
+    // Alarm delivery is owned by the persistent Go Personal Operations service.
     // Do not fetch personal data here — boot hydrate / switchMode own the load timing
     // so we never paint before the core is READY or leave fields empty after a race.
 }
@@ -298,7 +352,14 @@ function collectPersonalConfig() {
         initiative_level: Number(document.getElementById("personal-initiative")?.value || 60),
         wake_word: val("personal-wake-word") || "aethel",
         primary_model: val("personal-primary-model"),
-        fallback_model: val("personal-fallback-model")
+        fallback_model: val("personal-fallback-model"),
+        alarm_enabled: !!document.getElementById("personal-alarm-enabled")?.checked,
+        alarm_time: val("personal-alarm-time") || "07:00",
+        alarm_read_aloud: !!document.getElementById("personal-alarm-read-aloud")?.checked,
+        daily_plan_enabled: !!document.getElementById("personal-daily-plan-enabled")?.checked,
+        weather_updates: !!document.getElementById("personal-weather-updates")?.checked,
+        quiet_hours_start: val("personal-quiet-start") || "22:30",
+        quiet_hours_end: val("personal-quiet-end") || "07:00"
     };
 }
 
@@ -515,4 +576,58 @@ async function updateColleagueDashboard(profile, status) {
         });
         elSuggestions.appendChild(btn);
     }
+}
+
+function playMorningAlarmChime() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.18);
+
+            gain.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.18);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.18 + 0.5);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(ctx.currentTime + idx * 0.18);
+            osc.stop(ctx.currentTime + idx * 0.18 + 0.5);
+        });
+    } catch(e) {
+        console.warn('Alarm audio chime unavailable:', e);
+    }
+}
+
+export function triggerAlarmWakeRoutine() {
+    import('./alarm_engine.js').then(m => {
+        m.startAIAlarmSequence(false);
+    }).catch(e => console.error('Failed to trigger AI alarm sequence:', e));
+}
+
+let alarmLoopStarted = false;
+function startAlarmClockBackgroundLoop() {
+    if (alarmLoopStarted) return;
+    alarmLoopStarted = true;
+
+    setInterval(() => {
+        const enabled = localStorage.getItem("aethel_alarm_enabled") === "true";
+        if (!enabled) return;
+
+        const alarmTime = localStorage.getItem("aethel_alarm_time") || "07:00";
+        const now = new Date();
+        const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const todayStr = now.toISOString().split('T')[0];
+        const lastFired = localStorage.getItem("aethel_alarm_last_fired");
+
+        if (currentTimeStr === alarmTime && lastFired !== todayStr) {
+            localStorage.setItem("aethel_alarm_last_fired", todayStr);
+            triggerAlarmWakeRoutine();
+        }
+    }, 15000);
 }
