@@ -350,7 +350,6 @@ func decodeShadowModelReport(content string) (osint.ShadowReport, error) {
 	for _, candidate := range candidates {
 		var report osint.ShadowReport
 		decoder := json.NewDecoder(strings.NewReader(candidate))
-		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&report); err != nil {
 			lastErr = err
 			continue
@@ -360,7 +359,7 @@ func decodeShadowModelReport(content string) (osint.ShadowReport, error) {
 			lastErr = errors.New("trailing structured data")
 			continue
 		}
-		if strings.TrimSpace(report.ThreatLevel) == "" || strings.TrimSpace(report.Summary) == "" {
+		if strings.TrimSpace(report.ThreatLevel) == "" || strings.TrimSpace(string(report.Summary)) == "" {
 			lastErr = errors.New("missing report identity fields")
 			continue
 		}
@@ -478,7 +477,7 @@ func shadowReportMarkdown(report osint.ShadowReport) string {
 	}
 	b.WriteString("\n## 72h Forecast Matrix\n")
 	for _, forecast := range report.Forecasts {
-		fmt.Fprintf(&b, "- **%s / %s / %s** probability=%d instruments=%s — %s\n", forecast.Sector, forecast.Horizon, forecast.Direction, forecast.Probability, strings.Join(forecast.Instruments, ", "), forecast.Prediction)
+		fmt.Fprintf(&b, "- **%s / %s / %s** probability=%d instruments=%s — %s\n", forecast.Sector, forecast.Horizon, forecast.Direction, forecast.Probability, strings.Join([]string(forecast.Instruments), ", "), forecast.Prediction)
 	}
 	b.WriteString("\n## Sphere Market Pulse Snapshot\n")
 	for _, point := range report.MarketSnapshot {

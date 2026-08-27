@@ -37,6 +37,25 @@ func handleSetup(w http.ResponseWriter, r *http.Request) {
 	req.DeepSeekAPIKey = strings.TrimSpace(req.DeepSeekAPIKey)
 	req.GeminiAPIKey = strings.TrimSpace(req.GeminiAPIKey)
 	req.ClaudeAPIKey = strings.TrimSpace(req.ClaudeAPIKey)
+	// Settings inputs intentionally never receive decrypted secrets. Empty fields
+	// therefore mean "keep the sealed value", not "delete this provider".
+	if state != nil {
+		if req.APIKey == "" {
+			req.APIKey = state.GetAPIKey()
+		}
+		if req.OpenAIAPIKey == "" {
+			req.OpenAIAPIKey = state.GetOpenAIKey()
+		}
+		if req.DeepSeekAPIKey == "" {
+			req.DeepSeekAPIKey = state.GetDeepSeekKey()
+		}
+		if req.GeminiAPIKey == "" {
+			req.GeminiAPIKey = state.GetGeminiKey()
+		}
+		if req.ClaudeAPIKey == "" {
+			req.ClaudeAPIKey = state.GetClaudeKey()
+		}
+	}
 	hasGroq := provider.IsConfiguredProviderKey("Groq", req.APIKey)
 	hasDS := provider.IsConfiguredProviderKey("DeepSeek", req.DeepSeekAPIKey)
 	hasOpenAI := provider.IsConfiguredProviderKey("OpenAI", req.OpenAIAPIKey)

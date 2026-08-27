@@ -37,3 +37,30 @@ func TestDecodeShadowModelReportRejectsTruncatedJSON(t *testing.T) {
 		t.Fatal("truncated model JSON was accepted")
 	}
 }
+
+func TestDecodeShadowModelReportNormalizesSemanticSchemaVariants(t *testing.T) {
+	content := `{
+		"threat_level":"HIGH",
+		"summary":"Evidence-bound summary with enough content for report identification.",
+		"situation":["First development","Second development"],
+		"cui_bono":{"actor":"Strategic beneficiary"},
+		"strategic_reality":"Projection",
+		"divergences":["Source A differs","Source B is unconfirmed"],
+		"confirmed_vectors":[],
+		"regions":[],
+		"conflict_links":[],
+		"forecast_matrix":{"sector":"CRYPTO","horizon":"72h","prediction":"Volatile risk-sensitive movement remains plausible.","probability":0.7,"direction":"bullish","instruments":"BTC","evidence_ids":"item-1"},
+		"evidence_ids":"item-1",
+		"harmless_extra_field":"discarded"
+	}`
+	report, err := decodeShadowModelReport(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(report.Forecasts) != 1 || report.Forecasts[0].Probability != 70 || len(report.EvidenceIDs) != 1 {
+		t.Fatalf("semantic variants were not normalized: %+v", report)
+	}
+	if string(report.Divergences) != "Source A differs\n- Source B is unconfirmed" {
+		t.Fatalf("divergence list was not normalized: %q", report.Divergences)
+	}
+}
