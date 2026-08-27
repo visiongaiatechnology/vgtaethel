@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -28,7 +29,8 @@ import (
 
 // App is the Wails application struct
 type App struct {
-	ctx context.Context
+	ctx        context.Context
+	operations *personal.OperationsService
 }
 
 func NewApp() *App {
@@ -60,6 +62,20 @@ func (a *App) startup(ctx context.Context) {
 
 	memoryStore := memory.NewLocalMemoryStore()
 	personalStore := personal.NewPersonalStore("./vgt_workspace/personal")
+	operationsStore := personal.NewOperationsStore("./vgt_workspace/personal/operations.enc")
+	if err := operationsStore.Load(); err != nil {
+		log.Printf("Personal Operations inbox unavailable: %v", err)
+	}
+	operationsService := personal.NewOperationsService(operationsStore, personalStore)
+	operationsService.SetWeatherProvider(func(city string) (string, string, error) {
+		snapshot, err := skills.LookupWeather(city)
+		if err != nil {
+			return "", "", err
+		}
+		body := fmt.Sprintf("%s · %.1f °C · Wind %.1f km/h\nStand: %s", snapshot.Summary, snapshot.Temperature, snapshot.WindSpeed, snapshot.ObservedAt)
+		return "Wetter · " + snapshot.City, body, nil
+	})
+	a.operations = operationsService
 	releaseService := system.NewReleaseService("./vgt_workspace/release")
 	registry := skills.NewSkillRegistry()
 	providers := provider.NewProviderRegistry()
@@ -76,7 +92,9 @@ func (a *App) startup(ctx context.Context) {
 	registry.Register(&skills.PersonalMemoryRecallSkill{Store: personalStore})
 	registry.Register(&skills.WebBrowserSkill{})
 	registry.Register(&skills.WeatherSkill{})
+	registry.Register(&skills.PersonalOperationsSkill{Store: personalStore, Inbox: operationsStore})
 	registry.Register(&skills.MarketSkill{})
+	registry.Register(&skills.SphereMarketOverviewSkill{})
 	registry.Register(&skills.SphereWriteDocumentSkill{})
 	registry.Register(&skills.MediaControlSkill{})
 	registry.Register(&skills.YouTubeControlSkill{})
@@ -89,6 +107,7 @@ func (a *App) startup(ctx context.Context) {
 	registry.Register(&skills.ExternalAgentHandoffSkill{})
 	registry.Register(&skills.IntelligenceStatusSkill{})
 	registry.Register(&skills.GlobalWatchNexusContextSkill{})
+	registry.Register(&skills.GlobalWatchNaturalHazardsContextSkill{})
 	registry.Register(&skills.GlobalWatchScheduleBriefingSkill{})
 	registry.Register(&skills.IntelligenceProposeObservationSkill{})
 	registry.Register(&skills.IntelligenceAddEntitySkill{})
@@ -132,6 +151,8 @@ func (a *App) startup(ctx context.Context) {
 	registry.Register(&skills.IntelligenceConnectorFetchSkill{})
 	registry.Register(&skills.MailListMessagesSkill{})
 	registry.Register(&skills.MailSendMessageSkill{})
+	registry.Register(&skills.MailReadMessageSkill{})
+	registry.Register(&skills.MailManageSkill{})
 
 	gKey, oKey, dsKey, gemKey, claudeKey, mDirs, mounts := loadConfig()
 
@@ -159,11 +180,28 @@ func (a *App) startup(ctx context.Context) {
 
 	taskEngine := agent.NewTaskEngine("./vgt_workspace/tasks.json")
 	_ = taskEngine.Load()
+	taskEngine.SetNotificationSink(func(task agent.TaskItem) {
+		priority := "normal"
+		if task.Status == "failed" || task.Status == "blocked" {
+			priority = "high"
+		}
+		_, _ = operationsStore.Enqueue(personal.OperationNotice{
+			Kind: "task_update", Priority: priority, Title: task.Text,
+			Body: task.LastReport, Source: "task_engine", RequireAck: task.Status != "done",
+			Metadata: map[string]string{"task_id": task.ID, "status": task.Status},
+		})
+	})
 	runEngine := agent.NewRunEngine("./vgt_workspace/agent_runs.json")
 
 	// Intelligence + OSINT before InitState (skills/handlers need them)
 	osintEngine := osint.NewOSINTEngine("./vgt_workspace/osint_feeds.json")
-	intelStore := intelligence.NewIntelligenceStore("./vgt_workspace/intelligence_core.json")
+	shadowService := osint.NewShadowService("./vgt_workspace/shadow_osint.enc")
+	sharedIntelBus := intelligence.NewEventBus()
+	intelligence.SharedIntelStore = intelligence.NewStore("./vgt_workspace/intel_shared.json", sharedIntelBus)
+	if err := intelligence.MigrateLegacyIntelligence("./vgt_workspace/intelligence_core.json", intelligence.SharedIntelStore); err != nil {
+		log.Printf("[INTELLIGENCE] Legacy migration failed closed: %v", err)
+	}
+	intelStore := intelligence.NewCanonicalIntelligenceAdapter(intelligence.SharedIntelStore)
 	intelStore.ChatEvaluator = func(systemPrompt, userPrompt string) (string, error) {
 		msg := map[string]any{"role": "user", "content": userPrompt}
 		rawMsg, _ := json.Marshal(msg)
@@ -196,33 +234,32 @@ func (a *App) startup(ctx context.Context) {
 	intelMonitor := osint.NewGlobalWatchMonitor(intelStore, "./vgt_workspace/global_watch_schedule.json", "./vgt_workspace/intelligence_reports")
 	intelMonitor.Start()
 
-	sharedIntelBus := intelligence.NewEventBus()
-	intelligence.SharedIntelStore = intelligence.NewStore("./vgt_workspace/intel_shared.json", sharedIntelBus)
 	intelligence.SharedIntelStore.StartProactiveLoop(2 * time.Minute)
 	if pc := personal.BuildSharedPersonalContext(personalStore); pc.OperatorID != "" || len(pc.Interests) > 0 || len(pc.Goals) > 0 {
 		intelligence.SharedIntelStore.SetPersonalContext(pc)
 	}
 	osint.RegisterAllConnectors()
+	osint.StartWebsiteMonitorScheduler(ctx, intelligence.SharedIntelStore)
 
 	osintEngine.SetRefreshHook(func(events []intelligence.OSINTEvent) {
-		intelStore.SyncOSINTEvents(events)
 		for _, ev := range events {
+			// Preserve hazard source labels so Live Globe can classify earthquakes / volcanoes.
+			srcID := "rss-" + strings.ReplaceAll(ev.Source, " ", "_")
+			srcLower := strings.ToLower(ev.Source + " " + ev.Title + " " + ev.Summary)
+			switch {
+			case strings.Contains(srcLower, "usgs") || strings.Contains(srcLower, "[earthquake]"):
+				srcID = "usgs-earthquakes"
+			case strings.Contains(srcLower, "eonet") || strings.Contains(srcLower, "[volcano"):
+				srcID = "nasa-eonet-volcano"
+			}
 			obs := intelligence.Observation{
-				ID: "obs-" + ev.ID, SourceID: "rss-" + strings.ReplaceAll(ev.Source, " ", "_"),
+				ID: "obs-" + ev.ID, SourceID: srcID,
 				RawText: ev.Title + " " + ev.Summary, ObservedAt: ev.Timestamp,
 				Latitude: ev.Lat, Longitude: ev.Lon, Domain: string(ev.Domain),
+				OriginalURL: ev.SourceURL, FinalURL: ev.URL, PublishedAt: ev.Timestamp,
+				FetchedAt: time.Now().UTC(), MIMEType: "application/feed+json", ParserVersion: "osint-event-v2",
 			}
 			intelligence.SharedIntelStore.IngestObservation(obs)
-		}
-		snap := intelligence.SharedIntelStore.GetSnapshot()
-		for _, se := range snap.Events {
-			re := intelligence.IntelligenceEvent{
-				ID: "shared-" + se.ID, Title: se.Title,
-				Summary: "[" + se.Domain + "] " + se.Summary, Source: "shared-intel",
-				Latitude: se.Latitude, Longitude: se.Longitude,
-				Confidence: se.Confidence, Severity: se.Severity, ObservedAt: se.ObservedAt,
-			}
-			_ = intelStore.ProposeEvent(re)
 		}
 	})
 	osintEngine.Start()
@@ -252,10 +289,18 @@ func (a *App) startup(ctx context.Context) {
 		state.GetAPIKey, state.GetOpenAIKey, state.GetDeepSeekKey, state.GetGeminiKey, state.GetClaudeKey,
 		state.saveConfig, state.GetMountedDirs, state.GetMounts,
 	)
+	handlers.InitOperations(operationsStore)
+	handlers.InitShadowService(shadowService)
 	// Agent chat loop reuses HTTP chat handler without importing handlers (avoids cycle).
 	agent.ChatHandler = handlers.HandleChat
 
 	state.tasks.Start()
+	operationsService.Start()
+	// Seed sentinel home from Personal Core so emergency popups only fire for the operator location.
+	if profile, err := personalStore.LoadProfile(); err == nil {
+		agent.SharedSentinel.SetLocation(profile.LocationCity, profile.LocationCountry)
+	}
+	agent.SharedSentinel.Start()
 
 	// Install operator drop-in Earth basemap (1.jpg → frontend/assets/earth_day.jpg) if needed
 	handlers.EnsureEarthTextureOnDisk()
@@ -300,6 +345,10 @@ func (a *App) startup(ctx context.Context) {
 	APIRouter.HandleFunc("/v1/memory/search", handlers.HandleMemorySearch)
 	APIRouter.HandleFunc("/v1/audio/health", handlers.HandleAudioHealth)
 	APIRouter.HandleFunc("/v1/audio/test", handlers.HandleAudioTest)
+	APIRouter.HandleFunc("/v1/sentinel/alerts", agent.HandleSentinelAlerts)
+	APIRouter.HandleFunc("/v1/space/weather", handlers.HandleSpaceWeather)
+	APIRouter.HandleFunc("/v1/space/sdo_image", handlers.HandleSdoImageProxy)
+	APIRouter.HandleFunc("/v1/space/analysis", handlers.HandleSpaceAnalysis)
 	APIRouter.HandleFunc("/v1/viewport/screenshot", handlers.HandleViewportScreenshot)
 	APIRouter.HandleFunc("/v1/viewport/status", handlers.HandleViewportStatus)
 	APIRouter.HandleFunc("/v1/weather", handlers.HandleWeather)
@@ -318,14 +367,48 @@ func (a *App) startup(ctx context.Context) {
 	APIRouter.HandleFunc("/v1/personal/setup/questions", handlers.HandlePersonalSetupQuestions)
 	APIRouter.HandleFunc("/v1/personal/setup", handlers.HandlePersonalSetup)
 	APIRouter.HandleFunc("/v1/personal/learn", handlers.HandlePersonalLearn)
+	APIRouter.HandleFunc("/v1/personal/operations", handlers.HandlePersonalOperations)
 	APIRouter.HandleFunc("/v1/osint/feeds", handlers.HandleOSINTFeeds)
 	APIRouter.HandleFunc("/v1/osint/briefing", handlers.HandleOSINTBriefing)
 	APIRouter.HandleFunc("/v1/osint/article", handlers.HandleOSINTArticleReader)
 	APIRouter.HandleFunc("/v1/osint/collectors", handlers.HandleOSINTCollectors)
+	APIRouter.HandleFunc("/v1/shadow/", handlers.HandleShadow)
 	APIRouter.HandleFunc("/v1/mail/config", handlers.HandleMailConfig)
 	APIRouter.HandleFunc("/v1/mail/test", handlers.HandleMailTest)
+	APIRouter.HandleFunc("/v1/mail/folders", handlers.HandleMailFolders)
+	APIRouter.HandleFunc("/v1/mail/messages", handlers.HandleMailMessages)
+	APIRouter.HandleFunc("/v1/mail/message", handlers.HandleMailMessage)
+	APIRouter.HandleFunc("/v1/mail/action", handlers.HandleMailAction)
+	APIRouter.HandleFunc("/v1/mail/policies", handlers.HandleMailPolicies)
+	APIRouter.HandleFunc("/v1/mail/calendar", handlers.HandleMailCalendar)
 
 	log.Println("✅ VGT AETHEL :: API-ROUTER BEREIT")
+
+	// SHADOW collection is bounded and rotates through the editable source
+	// catalog. AI analysis starts only when a complete 40–60 item batch exists.
+	go func() {
+		collect := func() {
+			if _, err := shadowService.Collect(ctx, 8); err != nil {
+				log.Printf("[SHADOW] collection: %v", err)
+			}
+			if shadowService.Status().PendingItems >= osint.ShadowBatchMin {
+				if err := handlers.RunShadowAutoAnalysis(); err != nil {
+					log.Printf("[SHADOW] analysis: %v", err)
+				}
+			}
+		}
+		collect()
+		ticker := time.NewTicker(15 * time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				collect()
+			}
+		}
+	}()
 
 	// DeepSeek cache warmup (asynchron, blockiert nicht den Startup)
 	if dsKey != "" {
@@ -346,6 +429,9 @@ func (a *App) beforeClose(ctx context.Context) bool {
 
 // shutdown is called at app termination
 func (a *App) shutdown(ctx context.Context) {
+	if a.operations != nil {
+		a.operations.Stop()
+	}
 	log.Println("🔴 VGT AETHEL :: SHUTDOWN")
 }
 

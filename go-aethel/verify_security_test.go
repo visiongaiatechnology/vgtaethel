@@ -14,17 +14,17 @@ import (
 	"go-aethel/system"
 )
 
-func TestBetaV2ReleaseIdentityIsConsistent(t *testing.T) {
-	if system.ProductVersion != "1.0.0-beta.2" {
+func TestBetaV3ReleaseIdentityIsConsistent(t *testing.T) {
+	if system.ProductVersion != "1.0.0-beta.3" {
 		t.Fatalf("unexpected product version %q", system.ProductVersion)
 	}
 
 	files := map[string][]string{
-		"wails.json":                            {`"productVersion": "1.0.0-beta.2"`, "Beta V2"},
-		filepath.Join("frontend", "index.html"): {"BETA V2", "PRODUCTION CANDIDATE"},
-		filepath.Join("build", "windows", "installer", "aethel.iss"):       {`#define AppVersion "1.0.0-beta.2"`},
-		filepath.Join("docs", "project", "RELEASE_NOTES.md"):               {"1.0.0-beta.2", "BETA V2"},
-		filepath.Join("..", ".github", "workflows", "windows-release.yml"): {"1.0.0-beta.2-dev"},
+		"wails.json":                            {`"productVersion": "1.0.0-beta.3"`, "Beta V3"},
+		filepath.Join("frontend", "index.html"): {"BETA V3", "STRATEGIC COMMAND BUILD"},
+		filepath.Join("build", "windows", "installer", "aethel.iss"):       {`#define AppVersion "1.0.0-beta.3"`},
+		filepath.Join("docs", "project", "RELEASE_NOTES.md"):               {"1.0.0-beta.3", "BETA V3"},
+		filepath.Join("..", ".github", "workflows", "windows-release.yml"): {"1.0.0-beta.3-dev"},
 	}
 	for path, required := range files {
 		content, err := os.ReadFile(path)
@@ -155,7 +155,7 @@ func TestSecretVaultRefusesMalformedExistingKey(t *testing.T) {
 }
 
 func TestMemoryClassifiesAndRejectsSensitiveValues(t *testing.T) {
-	if !memory.ContainsSensitiveMemoryData("api_key=sk-example_secret_value_123456") {
+	if !memory.ContainsSensitiveMemoryData("api_key=fixture_sensitive_value_123456") {
 		t.Fatal("API key pattern was accepted for general memory")
 	}
 	if memory.ContainsSensitiveMemoryData("Die bevorzugte Sprache ist Deutsch.") {
@@ -174,7 +174,7 @@ func TestMemoryRequiresConsentAndStoresProvenance(t *testing.T) {
 	if _, err := store.AddWithConsent("Der Nutzer bevorzugt Deutsch.", "preference", "assistant_tool", false, nil, ""); err == nil {
 		t.Fatal("memory write succeeded without operator consent")
 	}
-	if _, err := store.AddWithConsent("api_key=sk-example_secret_value_123456", "general", "operator", true, nil, ""); err == nil {
+	if _, err := store.AddWithConsent("api_key=fixture_sensitive_value_123456", "general", "operator", true, nil, ""); err == nil {
 		t.Fatal("sensitive content was accepted with consent")
 	}
 	id, err := store.AddWithConsent("Der Nutzer bevorzugt Deutsch.", "preference", "operator", true, nil, "")

@@ -4,8 +4,6 @@ import (
 	"embed"
 	"io/fs"
 	"log"
-	"os"
-	"path/filepath"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -25,7 +23,13 @@ func main() {
 			panic(recovered)
 		}
 	}()
-	pinRuntimeWorkingDirectory()
+	if !isBindingsBuild() {
+		runtimeDir, err := configureRuntimeWorkingDirectory()
+		if err != nil {
+			log.Fatalf("AETHEL runtime workspace unavailable: %v", err)
+		}
+		log.Printf("[RUNTIME] Persistent workspace root: %s", runtimeDir)
+	}
 	log.Println("🛡️ VGT AETHEL :: INITIALISIERUNG (WAILS DESKTOP)...")
 
 	app := NewApp()
@@ -65,33 +69,4 @@ func main() {
 	if err != nil {
 		log.Fatalf("Wails failed: %v", err)
 	}
-}
-
-// pinRuntimeWorkingDirectory keeps every relative AETHEL workspace path bound
-// to the directory that contains the shipped executable. Windows shortcuts,
-// terminals and launchers may otherwise inject an unrelated current directory,
-// causing the UI to see a different config/key pair than the installed app.
-func pinRuntimeWorkingDirectory() {
-	executablePath, err := os.Executable()
-	if err != nil {
-		log.Printf("[RUNTIME] Executable path unavailable: %v", err)
-		return
-	}
-	runtimeDir, ok := selectRuntimeWorkingDirectory(executablePath)
-	if !ok {
-		return
-	}
-	if err := os.Chdir(runtimeDir); err != nil {
-		log.Printf("[RUNTIME] Cannot bind workspace to executable directory: %v", err)
-	}
-}
-
-func selectRuntimeWorkingDirectory(executablePath string) (string, bool) {
-	runtimeDir := filepath.Clean(filepath.Dir(executablePath))
-	workspacePath := filepath.Join(runtimeDir, "vgt_workspace")
-	info, err := os.Stat(workspacePath)
-	if err != nil || !info.IsDir() {
-		return "", false
-	}
-	return runtimeDir, true
 }

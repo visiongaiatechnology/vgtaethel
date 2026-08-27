@@ -40,6 +40,25 @@ func loadShippedOSINTGraph(t *testing.T) (entry, graph string) {
 	return string(entryBytes), b.String()
 }
 
+func TestGlobalWatchSeparatesNewsFromNaturalHazards(t *testing.T) {
+	indexBytes, err := os.ReadFile(filepath.Join("frontend", "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, graph := loadShippedOSINTGraph(t)
+	index := string(indexBytes)
+	for _, required := range []string{"gw-feed-list", "gw-hazard-list", "Naturereignisse", "NUR AUF EXPLIZITE ANFRAGE AN AETHEL"} {
+		if !strings.Contains(index, required) {
+			t.Fatalf("Global Watch missing isolated hazard UI marker %q", required)
+		}
+	}
+	for _, required := range []string{"category=all", "renderNaturalHazards", "isEarthquakeEvent(ev) || isVolcanoEvent(ev)"} {
+		if !strings.Contains(graph, required) {
+			t.Fatalf("Global Watch feed isolation missing %q", required)
+		}
+	}
+}
+
 func TestModelRegistryHasDirectWailsFallback(t *testing.T) {
 	content, err := os.ReadFile(filepath.Join("frontend", "modules", "api.js"))
 	if err != nil {
@@ -388,7 +407,7 @@ func TestOSINTModuleImportGraph(t *testing.T) {
 	}
 }
 
-func TestOSINTFrontendGlobeNoCDNAndInlinedMath(t *testing.T) { // BETA V2 - structural proof of shipped Global Watch (split under osint/*)
+func TestOSINTFrontendGlobeNoCDNAndInlinedMath(t *testing.T) { // BETA V3 - structural proof of shipped Global Watch (split under osint/*)
 
 	entry, watch := loadShippedOSINTGraph(t)
 	mathBytes, err := osintFrontend.ReadFile("frontend/modules/globe_math.js")
@@ -475,6 +494,25 @@ func TestOSINTFrontendGlobeNoCDNAndInlinedMath(t *testing.T) { // BETA V2 - stru
 	}
 	if strings.Contains(watch, "Stub risk overlay") || strings.Contains(watch, "placeholder circle for high risk") {
 		t.Error("risks layer must not remain a decorative stub")
+	}
+	// Country/region polygon overlay for risk color (not only circle markers)
+	if !strings.Contains(watch, "m.ring") || !strings.Contains(watch, "band.fill") {
+		t.Error("risks layer must draw semi-transparent region polygon fill from marker rings")
+	}
+	if !strings.Contains(watch, "openRegionalRiskDetailPopup") {
+		t.Error("single-click regional risk detail popup missing")
+	}
+	if !strings.Contains(watch, "mergeRiskReferences") {
+		t.Error("risk popup must use mergeRiskReferences so feed URLs upgrade title-only API refs")
+	}
+	if !strings.Contains(watch, "gw-risk-detail-narrative") || !strings.Contains(watch, "gw-risk-detail-references") {
+		t.Error("risk detail popup must expose narrative + references containers")
+	}
+	if !strings.Contains(watch, "RUSSIA") || !strings.Contains(watch, "IRAN") {
+		t.Error("frontend REGION_GEO/catalog must include RUSSIA and IRAN")
+	}
+	if !strings.Contains(watch, "REGIONAL_RISK_CATALOG_IDS") {
+		t.Error("frontend must define REGIONAL_RISK_CATALOG_IDS for stable HUD list")
 	}
 	// Toast must not inject message via innerHTML
 	if strings.Contains(watch, "toast.innerHTML = `") {
@@ -569,7 +607,7 @@ func TestOSINTFrontendGlobeNoCDNAndInlinedMath(t *testing.T) { // BETA V2 - stru
 	}
 	if !strings.Contains(watch, "GLOBE_IDLE_ROTATION_FRAME_MS = 40") ||
 		!strings.Contains(watch, "GLOBE_IDLE_ROTATION_RADIANS_PER_SECOND = 0.022") {
-		t.Error("idle globe rotation must retain the smooth Beta V2 cadence and speed")
+		t.Error("idle globe rotation must retain the smooth Beta V3 cadence and speed")
 	}
 	if strings.Contains(watch, "GEO:${geoCount}") {
 		t.Error("duplicate canvas diagnostics overlap the single globe hint")
@@ -598,6 +636,40 @@ func TestOSINTFrontendGlobeNoCDNAndInlinedMath(t *testing.T) { // BETA V2 - stru
 	}
 	if !strings.Contains(watch, "openGwReportReader") {
 		t.Error("report/article reader open path missing")
+	}
+}
+
+func TestShadowBetaV3CommandGlobeIsLocalAndDirectional(t *testing.T) {
+	uiBytes, err := os.ReadFile(filepath.Join("frontend", "modules", "shadow_osint.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	globeBytes, err := os.ReadFile(filepath.Join("frontend", "modules", "shadow_globe.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cssBytes, err := os.ReadFile(filepath.Join("frontend", "shadow-osint.css"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ui, globe, css := string(uiBytes), string(globeBytes), string(cssBytes)
+	for _, marker := range []string{"ShadowCommandGlobe", "conflict_links", "shadow-conflict-overlay", "renderConflictLinks"} {
+		if !strings.Contains(ui, marker) {
+			t.Errorf("SHADOW UI missing %q", marker)
+		}
+	}
+	for _, marker := range []string{"getContext('webgl2'", "drawConflictLink", "drawArrowhead", "attacker_latitude", "target_latitude", "assets/earth_day.jpg"} {
+		if !strings.Contains(globe, marker) {
+			t.Errorf("SHADOW command globe missing %q", marker)
+		}
+	}
+	if strings.Contains(globe, "https://") || strings.Contains(ui, "innerHTML") {
+		t.Error("SHADOW UI must remain local-only and must not render data through innerHTML")
+	}
+	for _, marker := range []string{"body.shadow-osint-active .sidebar", "body.shadow-osint-active .header-bar", ".shadow-map-overlay"} {
+		if !strings.Contains(css, marker) {
+			t.Errorf("SHADOW shell skin missing %q", marker)
+		}
 	}
 }
 
@@ -1220,8 +1292,9 @@ func TestGlobalWatchChromeAndSphereAndNeuralCoreStructure(t *testing.T) {
 		`id="editor-btn-export-html"`,
 		`id="editor-btn-export-md"`,
 		`sphere-window-editor`,
-		`class="sphere-window glass-card hidden" id="sphere-window-editor"`,
-		`class="sphere-window glass-card hidden" id="sphere-window-browser"`,
+		`id="sphere-window-editor"`,
+		`id="sphere-window-browser"`,
+		`class="sphere-window glass-card hidden vgt-inline-`,
 		`id="gw-risk-hud-collapse"`,
 		`id="gw-risk-hud-body"`,
 		`gw-float-drag-handle`,

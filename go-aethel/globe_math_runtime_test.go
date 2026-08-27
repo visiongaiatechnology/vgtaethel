@@ -48,7 +48,7 @@ func stripESModuleSyntax(src string) string {
 	return strings.ReplaceAll(strings.Join(out, "\n"), "export ", "")
 }
 
-func TestGlobeMathRuntimeFromShippedJS(t *testing.T) { // BETA V2 real JS execution via goja — drives shipped pure osint/* modules
+func TestGlobeMathRuntimeFromShippedJS(t *testing.T) { // BETA V3 real JS execution via goja — drives shipped pure osint/* modules
 
 	vm := goja.New()
 	projectionSource := strings.ReplaceAll(string(globeProjectionRuntimeJS), "export ", "")

@@ -9,7 +9,7 @@ import (
 func TestDirectWailsModelRegistryReturnsConfiguredGroqModels(t *testing.T) {
 	previous := state
 	state = &AppState{
-		apiKey:    "gsk_configured_test_value",
+		apiKey:    "fixture_configured_provider_value",
 		providers: provider.NewProviderRegistry(),
 	}
 	t.Cleanup(func() { state = previous })
