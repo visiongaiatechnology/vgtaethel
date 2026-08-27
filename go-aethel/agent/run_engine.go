@@ -73,6 +73,17 @@ type RunStep struct {
 	ToolCallID       string          `json:"tool_call_id,omitempty"`
 	ToolArgs         json.RawMessage `json:"tool_args,omitempty"`
 	ExpectedContains string          `json:"expected_contains,omitempty"`
+	IdempotencyKey   string          `json:"idempotency_key"`
+	Attempts         int             `json:"attempts"`
+	MaxAttempts      int             `json:"max_attempts"`
+	RetryBackoff     time.Duration   `json:"retry_backoff"`
+	RetrySafe        bool            `json:"retry_safe"`
+	NextAttemptAt    time.Time       `json:"next_attempt_at,omitempty"`
+	OutputSchema     json.RawMessage `json:"output_schema,omitempty"`
+	Postcondition    string          `json:"postcondition,omitempty"`
+	CheckpointHash   string          `json:"checkpoint_hash,omitempty"`
+	CompensationTool string          `json:"compensation_tool,omitempty"`
+	CompensationArgs json.RawMessage `json:"compensation_args,omitempty"`
 	ApprovalGranted  bool            `json:"approval_granted,omitempty"`
 	Result           string          `json:"result,omitempty"`
 	Error            string          `json:"error,omitempty"`
@@ -83,6 +94,23 @@ type RunStep struct {
 	FinishedAt       time.Time       `json:"finished_at,omitempty"`
 }
 
+type DeadLetter struct {
+	StepID         string    `json:"step_id"`
+	IdempotencyKey string    `json:"idempotency_key"`
+	Attempts       int       `json:"attempts"`
+	Error          string    `json:"error"`
+	FailedAt       time.Time `json:"failed_at"`
+}
+
+type CompensationRecord struct {
+	StepID   string          `json:"step_id"`
+	ToolName string          `json:"tool_name"`
+	ToolArgs json.RawMessage `json:"tool_args"`
+	Status   string          `json:"status"`
+	Result   string          `json:"result,omitempty"`
+	Error    string          `json:"error,omitempty"`
+}
+
 type RunTrace struct {
 	Timestamp time.Time `json:"timestamp"`
 	Event     string    `json:"event"`
@@ -91,33 +119,36 @@ type RunTrace struct {
 }
 
 type AgentRun struct {
-	ID                  string            `json:"id"`
-	Objective           string            `json:"objective"`
-	ProfileID           string            `json:"profile_id"`
-	ModelID             string            `json:"model_id,omitempty"`
-	OrchestratorModelID string            `json:"orchestrator_model_id,omitempty"`
-	ReasoningEffort     string            `json:"reasoning_effort,omitempty"`
-	Mode                string            `json:"mode,omitempty"`
-	LiveOperator        bool              `json:"live_operator_active,omitempty"`
-	SphereActive        bool              `json:"sphere_active,omitempty"`
-	SystemPrompt        string            `json:"system_prompt,omitempty"`
-	AgentMessages       []json.RawMessage `json:"agent_messages,omitempty"`
-	AgentTurn           int               `json:"agent_turn"`
-	MaxAgentTurns       int               `json:"max_agent_turns"`
-	FinalReport         string            `json:"final_report,omitempty"`
-	Status              RunStatus         `json:"status"`
-	Steps               []RunStep         `json:"steps"`
-	Trace               []RunTrace        `json:"trace"`
-	CreatedAt           time.Time         `json:"created_at"`
-	UpdatedAt           time.Time         `json:"updated_at"`
-	CompletedAt         *time.Time        `json:"completed_at,omitempty"`
-	FailureReason       string            `json:"failure_reason,omitempty"`
-	ToolCalls           int               `json:"tool_calls"`
-	EstimatedCost       float64           `json:"estimated_cost_usd"`
-	CostBudgetUSD       float64           `json:"cost_budget_usd"`
-	SpentUSD            float64           `json:"spent_usd"`
-	ApprovalStepID      string            `json:"approval_step_id,omitempty"`
-	Continuity          ContinuityState   `json:"continuity"`
+	ID                  string               `json:"id"`
+	Objective           string               `json:"objective"`
+	ProfileID           string               `json:"profile_id"`
+	ModelID             string               `json:"model_id,omitempty"`
+	OrchestratorModelID string               `json:"orchestrator_model_id,omitempty"`
+	ReasoningEffort     string               `json:"reasoning_effort,omitempty"`
+	Mode                string               `json:"mode,omitempty"`
+	LiveOperator        bool                 `json:"live_operator_active,omitempty"`
+	SphereActive        bool                 `json:"sphere_active,omitempty"`
+	SystemPrompt        string               `json:"system_prompt,omitempty"`
+	AgentMessages       []json.RawMessage    `json:"agent_messages,omitempty"`
+	AgentTurn           int                  `json:"agent_turn"`
+	MaxAgentTurns       int                  `json:"max_agent_turns"`
+	FinalReport         string               `json:"final_report,omitempty"`
+	Status              RunStatus            `json:"status"`
+	Steps               []RunStep            `json:"steps"`
+	Trace               []RunTrace           `json:"trace"`
+	CreatedAt           time.Time            `json:"created_at"`
+	UpdatedAt           time.Time            `json:"updated_at"`
+	CompletedAt         *time.Time           `json:"completed_at,omitempty"`
+	FailureReason       string               `json:"failure_reason,omitempty"`
+	ToolCalls           int                  `json:"tool_calls"`
+	EstimatedCost       float64              `json:"estimated_cost_usd"`
+	CostBudgetUSD       float64              `json:"cost_budget_usd"`
+	SpentUSD            float64              `json:"spent_usd"`
+	ApprovalStepID      string               `json:"approval_step_id,omitempty"`
+	Continuity          ContinuityState      `json:"continuity"`
+	DeadlineAt          time.Time            `json:"deadline_at"`
+	DeadLetters         []DeadLetter         `json:"dead_letters"`
+	Compensations       []CompensationRecord `json:"compensations"`
 }
 
 type CreateRunRequest struct {
@@ -133,6 +164,7 @@ type CreateRunRequest struct {
 	AgentMessages       []json.RawMessage `json:"agent_messages,omitempty"`
 	MaxAgentTurns       int               `json:"max_agent_turns,omitempty"`
 	CostBudgetUSD       float64           `json:"cost_budget_usd,omitempty"`
+	TimeoutSeconds      int               `json:"timeout_seconds,omitempty"`
 	Steps               []RunStep         `json:"steps"`
 }
 
@@ -159,13 +191,17 @@ func NewRunEngine(filePath string) *RunEngine {
 
 func defaultAgentProfiles() map[string]AgentProfile {
 	profiles := []AgentProfile{
-		{ID: "researcher", Name: "Researcher", Description: "Recherche und lokale Analyse ohne Schreib- oder Steuerrechte.", AllowedCapabilities: []security.Capability{security.CapFsRead, security.CapMemoryRead, security.CapBrowserOpen, security.CapBrowserRead, security.CapWeatherRead, security.CapMarketRead}, MaxSteps: 16, MaxToolCalls: 12},
+		{ID: "collector", Name: "Collector", Description: "Policy-gesteuerte Erhebung aus freigegebenen Quellen ohne Host-Schreib-, GUI-, Mail- oder Prozessrechte.", AllowedCapabilities: []security.Capability{security.CapIntelSources, security.CapIntelRead, security.CapBrowserOpen, security.CapBrowserRead}, MaxSteps: 24, MaxToolCalls: 18},
+		{ID: "analyst", Name: "Analyst", Description: "Read-only Analyse normalisierter kanonischer Intelligence-Daten.", AllowedCapabilities: []security.Capability{security.CapIntelRead}, MaxSteps: 24, MaxToolCalls: 18},
+		{ID: "case_worker", Name: "Case Worker", Description: "Fallgebundene Evidenz-, Entitäts- und Assessment-Mutationen mit signierter Einmalfreigabe.", AllowedCapabilities: []security.Capability{security.CapIntelRead, security.CapIntelWrite}, MaxSteps: 24, MaxToolCalls: 18},
+		{ID: "operator", Name: "Operator", Description: "Explizit freigegebene externe Effekte; jede schreibende, sendende, steuernde oder ausführende Aktion bleibt Policy- und Approval-gebunden.", AllowedCapabilities: []security.Capability{security.CapIntelRead, security.CapIntelWrite, security.CapIntelSources, security.CapFsRead, security.CapFsWrite, security.CapBrowserOpen, security.CapBrowserRead, security.CapBrowserCtl, security.CapScreenRead, security.CapGuiMoveMouse, security.CapGuiClick, security.CapGuiType, security.CapGuiPressKey, security.CapMessagingSend, security.CapSecretUse, security.CapUINavigation}, MaxSteps: 24, MaxToolCalls: 18},
+		{ID: "researcher", Name: "Researcher", Description: "Quellenrecherche und lokale Read-only Analyse ohne Host-Schreibrechte.", AllowedCapabilities: []security.Capability{security.CapFsRead, security.CapMemoryRead, security.CapBrowserOpen, security.CapBrowserRead, security.CapWeatherRead, security.CapMarketRead, security.CapIntelRead, security.CapUINavigation}, MaxSteps: 24, MaxToolCalls: 18},
 		{ID: "developer", Name: "Developer", Description: "Entwicklungsarbeit in explizit freigegebenen Workspaces.", AllowedCapabilities: []security.Capability{security.CapFsRead, security.CapFsWrite, security.CapFsMount, security.CapSysExec, security.CapMemoryRead, security.CapMemoryWrite, security.CapTaskCreate, security.CapTaskSchedule, security.CapGuiMoveMouse, security.CapGuiClick, security.CapGuiType, security.CapGuiPressKey, security.CapScreenRead, security.CapBrowserOpen, security.CapBrowserRead, security.CapWeatherRead, security.CapMarketRead, security.CapSphereWrite, security.CapIntelRead, security.CapIntelWrite, security.CapUINavigation}, MaxSteps: 32, MaxToolCalls: 24},
-		{ID: "aethel_runtime", Name: "Aethel Runtime", Description: "Bereichsübergreifende interne Aethel-Funktionen ohne Shell-, Dateischreib- oder Desktop-Rechte.", AllowedCapabilities: []security.Capability{security.CapMemoryRead, security.CapMemoryWrite, security.CapFsRead, security.CapTaskCreate, security.CapTaskSchedule, security.CapBrowserOpen, security.CapBrowserRead, security.CapWeatherRead, security.CapMarketRead, security.CapMediaControl, security.CapIntelRead, security.CapIntelWrite, security.CapUINavigation, security.CapSecretUse, security.CapMessagingSend}, MaxSteps: 24, MaxToolCalls: 18},
-		{ID: "browser_operator", Name: "Browser Operator", Description: "Sichtbare Browser- und Mediensteuerung mit Operator-Freigaben.", AllowedCapabilities: []security.Capability{security.CapBrowserOpen, security.CapBrowserCtl, security.CapBrowserRead, security.CapScreenRead, security.CapGuiMoveMouse, security.CapGuiClick, security.CapGuiType, security.CapGuiPressKey, security.CapWeatherRead, security.CapMarketRead}, MaxSteps: 24, MaxToolCalls: 18},
+		{ID: "aethel_runtime", Name: "Aethel Runtime", Description: "Bereichsübergreifende interne Aethel-Funktionen mit Workspace-Schreibrechten.", AllowedCapabilities: []security.Capability{security.CapMemoryRead, security.CapMemoryWrite, security.CapFsRead, security.CapFsWrite, security.CapSphereWrite, security.CapTaskCreate, security.CapTaskSchedule, security.CapBrowserOpen, security.CapBrowserRead, security.CapWeatherRead, security.CapMarketRead, security.CapMediaControl, security.CapIntelRead, security.CapIntelWrite, security.CapUINavigation, security.CapSecretUse, security.CapMessagingSend}, MaxSteps: 24, MaxToolCalls: 18},
+		{ID: "browser_operator", Name: "Browser Operator", Description: "Sichtbare Browser- und Mediensteuerung mit Operator-Freigaben.", AllowedCapabilities: []security.Capability{security.CapBrowserOpen, security.CapBrowserCtl, security.CapBrowserRead, security.CapScreenRead, security.CapGuiMoveMouse, security.CapGuiClick, security.CapGuiType, security.CapGuiPressKey, security.CapWeatherRead, security.CapMarketRead, security.CapFsRead, security.CapFsWrite, security.CapSphereWrite}, MaxSteps: 24, MaxToolCalls: 18},
 		{ID: "sphere_workspace", Name: "Sphere Workspace", Description: "Gemeinsamer Sphere-Workspace ohne System- oder GUI-Steuerung.", AllowedCapabilities: []security.Capability{security.CapFsRead, security.CapFsWrite, security.CapSphereWrite, security.CapMemoryRead, security.CapMemoryWrite, security.CapTaskCreate, security.CapBrowserOpen, security.CapBrowserRead, security.CapMediaControl, security.CapWeatherRead, security.CapMarketRead, security.CapIntelRead, security.CapIntelWrite, security.CapUINavigation, security.CapSecretUse, security.CapMessagingSend}, MaxSteps: 24, MaxToolCalls: 18},
-		{ID: "global_watch_operator", Name: "Global Watch Operator", Description: "Lageabfragen und sichtbare Global-Watch-Steuerung ohne Hostkontrolle.", AllowedCapabilities: []security.Capability{security.CapIntelRead, security.CapIntelWrite, security.CapBrowserRead, security.CapWeatherRead, security.CapMarketRead, security.CapUINavigation}, MaxSteps: 24, MaxToolCalls: 18},
-		{ID: "personal_assistant", Name: "Personal Assistant", Description: "Lokaler persönlicher Assistent ohne Systemschreibrechte.", AllowedCapabilities: []security.Capability{security.CapMemoryRead, security.CapMemoryWrite, security.CapFsRead, security.CapMediaControl, security.CapTaskCreate, security.CapWeatherRead, security.CapMarketRead, security.CapSecretUse, security.CapMessagingSend}, MaxSteps: 16, MaxToolCalls: 10},
+		{ID: "global_watch_operator", Name: "Global Watch Operator", Description: "Read-only Lageabfragen, Analyse und Global-Watch-Berichterstattung.", AllowedCapabilities: []security.Capability{security.CapIntelRead, security.CapBrowserRead, security.CapWeatherRead, security.CapMarketRead, security.CapUINavigation, security.CapFsRead, security.CapMemoryRead}, MaxSteps: 24, MaxToolCalls: 18},
+		{ID: "personal_assistant", Name: "Personal Assistant", Description: "Lokaler persönlicher Assistent mit Workspace-Schreibrechten.", AllowedCapabilities: []security.Capability{security.CapMemoryRead, security.CapMemoryWrite, security.CapFsRead, security.CapFsWrite, security.CapSphereWrite, security.CapMediaControl, security.CapTaskCreate, security.CapWeatherRead, security.CapMarketRead, security.CapSecretUse, security.CapMessagingSend}, MaxSteps: 20, MaxToolCalls: 14},
 	}
 	result := make(map[string]AgentProfile, len(profiles))
 	for _, profile := range profiles {
@@ -198,6 +234,21 @@ func (e *RunEngine) load() error {
 			migrated.TokenBudget.OutputTokens = run.Continuity.TokenBudget.OutputTokens
 			migrated.TokenBudget.CachedTokens = run.Continuity.TokenBudget.CachedTokens
 			run.Continuity = migrated
+		}
+		if run.DeadlineAt.IsZero() {
+			run.DeadlineAt = run.CreatedAt.Add(time.Hour)
+		}
+		for index := range run.Steps {
+			step := &run.Steps[index]
+			if step.IdempotencyKey == "" {
+				step.IdempotencyKey = stepIdempotencyKey(*step)
+			}
+			if step.MaxAttempts == 0 {
+				step.MaxAttempts = 1
+			}
+			if step.Status == StepVerified && step.CheckpointHash == "" {
+				step.CheckpointHash = stepCheckpointHash(*step)
+			}
 		}
 		// A process cannot safely resume an in-flight syscall after restart.
 		// Preserve its trace and make operator intent explicit.
@@ -238,10 +289,17 @@ func cloneRun(run AgentRun) AgentRun {
 	copyRun := run
 	copyRun.Steps = append([]RunStep(nil), run.Steps...)
 	copyRun.Trace = append([]RunTrace(nil), run.Trace...)
+	copyRun.DeadLetters = append([]DeadLetter(nil), run.DeadLetters...)
+	copyRun.Compensations = append([]CompensationRecord(nil), run.Compensations...)
+	for index := range copyRun.Compensations {
+		copyRun.Compensations[index].ToolArgs = append(json.RawMessage(nil), run.Compensations[index].ToolArgs...)
+	}
 	copyRun.Continuity.ExpectedEffects = append([]string(nil), run.Continuity.ExpectedEffects...)
 	copyRun.Continuity.Evidence = append([]RunEvidence(nil), run.Continuity.Evidence...)
 	for i := range copyRun.Steps {
 		copyRun.Steps[i].ToolArgs = append(json.RawMessage(nil), run.Steps[i].ToolArgs...)
+		copyRun.Steps[i].OutputSchema = append(json.RawMessage(nil), run.Steps[i].OutputSchema...)
+		copyRun.Steps[i].CompensationArgs = append(json.RawMessage(nil), run.Steps[i].CompensationArgs...)
 	}
 	copyRun.AgentMessages = make([]json.RawMessage, len(run.AgentMessages))
 	for i := range run.AgentMessages {
@@ -264,6 +322,18 @@ func ClampRunDetail(detail string) string {
 		return string([]rune(detail)[:6000]) + "…"
 	}
 	return detail
+}
+
+func stepIdempotencyKey(step RunStep) string {
+	payload := string(step.Kind) + "\x00" + strings.TrimSpace(step.ToolName) + "\x00" + string(step.ToolArgs) + "\x00" + strings.TrimSpace(step.Title)
+	digest := sha256.Sum256([]byte(payload))
+	return hex.EncodeToString(digest[:])
+}
+
+func stepCheckpointHash(step RunStep) string {
+	payload := step.ID + "\x00" + step.IdempotencyKey + "\x00" + step.Result + "\x00" + step.EvidenceBefore + "\x00" + step.EvidenceAfter
+	digest := sha256.Sum256([]byte(payload))
+	return hex.EncodeToString(digest[:])
 }
 
 func (e *RunEngine) Profiles() []AgentProfile {
@@ -321,7 +391,26 @@ func (e *RunEngine) Create(input CreateRunRequest) (AgentRun, error) {
 				return AgentRun{}, errors.New("tool steps need a valid tool name and JSON arguments")
 			}
 		}
+		if len(step.OutputSchema) > 0 && !json.Valid(step.OutputSchema) {
+			return AgentRun{}, errors.New("step output schema must be valid JSON")
+		}
+		if step.MaxAttempts == 0 {
+			step.MaxAttempts = 3
+		}
+		if step.MaxAttempts < 1 || step.MaxAttempts > 8 {
+			return AgentRun{}, errors.New("step retry limit is outside safety boundary")
+		}
+		if step.RetryBackoff == 0 {
+			step.RetryBackoff = time.Second
+		}
+		if step.RetryBackoff < 0 || step.RetryBackoff > 5*time.Second {
+			return AgentRun{}, errors.New("step retry backoff is outside safety boundary")
+		}
+		if step.CompensationTool != "" && (len(step.CompensationArgs) == 0 || !json.Valid(step.CompensationArgs)) {
+			return AgentRun{}, errors.New("compensation requires valid JSON arguments")
+		}
 		step.ID = fmt.Sprintf("step_%02d", index+1)
+		step.IdempotencyKey = stepIdempotencyKey(*step)
 		step.Status = StepPending
 	}
 	id, err := newRunID()
@@ -340,7 +429,14 @@ func (e *RunEngine) Create(input CreateRunRequest) (AgentRun, error) {
 	if runMode == "" {
 		runMode = "chat_agent"
 	}
-	run := AgentRun{ID: id, Objective: objective, ProfileID: profileID, ModelID: strings.TrimSpace(input.ModelID), OrchestratorModelID: strings.TrimSpace(input.OrchestratorModelID), ReasoningEffort: strings.ToLower(strings.TrimSpace(input.ReasoningEffort)), Mode: runMode, LiveOperator: input.LiveOperator, SphereActive: input.SphereActive, SystemPrompt: input.SystemPrompt, AgentMessages: append([]json.RawMessage(nil), input.AgentMessages...), MaxAgentTurns: maxTurns, Status: RunQueued, Steps: input.Steps, CreatedAt: now, UpdatedAt: now, CostBudgetUSD: input.CostBudgetUSD, Continuity: newContinuityState(objective, input.SphereActive)}
+	timeout := input.TimeoutSeconds
+	if timeout == 0 {
+		timeout = 3600
+	}
+	if timeout < 1 || timeout > 86400 {
+		return AgentRun{}, errors.New("run timeout is outside safety boundary")
+	}
+	run := AgentRun{ID: id, Objective: objective, ProfileID: profileID, ModelID: strings.TrimSpace(input.ModelID), OrchestratorModelID: strings.TrimSpace(input.OrchestratorModelID), ReasoningEffort: strings.ToLower(strings.TrimSpace(input.ReasoningEffort)), Mode: runMode, LiveOperator: input.LiveOperator, SphereActive: input.SphereActive, SystemPrompt: input.SystemPrompt, AgentMessages: append([]json.RawMessage(nil), input.AgentMessages...), MaxAgentTurns: maxTurns, Status: RunQueued, Steps: input.Steps, CreatedAt: now, UpdatedAt: now, DeadlineAt: now.Add(time.Duration(timeout) * time.Second), CostBudgetUSD: input.CostBudgetUSD, Continuity: newContinuityState(objective, input.SphereActive), DeadLetters: []DeadLetter{}, Compensations: []CompensationRecord{}}
 	run.Continuity.ExpectedEffects = requiredExecutionEffects(run)
 	if len(run.Continuity.ExpectedEffects) > 0 && run.Continuity.Tier == CognitiveDirect {
 		run.Continuity.Tier = CognitiveOperational
@@ -468,7 +564,18 @@ func (e *RunEngine) AppendAgentToolSteps(id string, calls []AgentToolCall) (Agen
 			}
 			return cloneRun(run), err
 		}
-		step := RunStep{ID: fmt.Sprintf("step_%02d", len(run.Steps)+1), Kind: RunStepTool, Title: "Tool: " + call.Name, Status: StepPending, ToolName: call.Name, ToolCallID: call.ID, ToolArgs: append(json.RawMessage(nil), call.Arguments...)}
+		duplicate := false
+		for _, existing := range run.Steps {
+			if existing.ToolCallID == call.ID {
+				duplicate = true
+				break
+			}
+		}
+		if duplicate {
+			continue
+		}
+		step := RunStep{ID: fmt.Sprintf("step_%02d", len(run.Steps)+1), Kind: RunStepTool, Title: "Tool: " + call.Name, Status: StepPending, ToolName: call.Name, ToolCallID: call.ID, ToolArgs: append(json.RawMessage(nil), call.Arguments...), MaxAttempts: 3, RetryBackoff: time.Second}
+		step.IdempotencyKey = stepIdempotencyKey(step)
 		run.Steps = append(run.Steps, step)
 		run.Trace = appendRunTrace(run.Trace, "tool_planned", call.Name, step.ID)
 	}
@@ -527,7 +634,12 @@ func (e *RunEngine) CompleteAgent(id, report string, messages []json.RawMessage)
 	for index := range messages {
 		run.AgentMessages[index] = append(json.RawMessage(nil), messages[index]...)
 	}
-	run.Steps = append(run.Steps, RunStep{ID: fmt.Sprintf("step_%02d", len(run.Steps)+1), Kind: RunStepReport, Title: "Verifizierter Abschlussbericht", Status: StepVerified, Result: run.FinalReport, StartedAt: now, FinishedAt: now})
+	reportStep := RunStep{ID: fmt.Sprintf("step_%02d", len(run.Steps)+1), Kind: RunStepReport, Title: "Verifizierter Abschlussbericht", Status: StepVerified, Result: run.FinalReport, StartedAt: now, FinishedAt: now, MaxAttempts: 1, Attempts: 1}
+	reportStep.IdempotencyKey = stepIdempotencyKey(reportStep)
+	reportStep.EvidenceBefore = evidenceBeforeForStep(reportStep)
+	reportStep.EvidenceAfter = evidenceAfterForStep(reportStep, reportStep.Result)
+	reportStep.CheckpointHash = stepCheckpointHash(reportStep)
+	run.Steps = append(run.Steps, reportStep)
 	run.Trace = appendRunTrace(run.Trace, "completed", "Agent delivered final report.", "")
 	run.Continuity.finalize(run, true)
 	e.runs[id] = run
@@ -692,7 +804,88 @@ func (e *RunEngine) Pause(id string) (AgentRun, error) {
 }
 
 func (e *RunEngine) Cancel(id string) (AgentRun, error) {
-	return e.transition(id, map[RunStatus]bool{RunQueued: true, RunRunning: true, RunWaitingApproval: true, RunPaused: true}, RunCancelled, "cancelled", "Operator cancelled run.")
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	run, ok := e.runs[id]
+	if !ok {
+		return AgentRun{}, errors.New("run not found")
+	}
+	if run.Status != RunQueued && run.Status != RunRunning && run.Status != RunWaitingApproval && run.Status != RunPaused {
+		return AgentRun{}, fmt.Errorf("run cannot transition from %s to %s", run.Status, RunCancelled)
+	}
+	for index := len(run.Steps) - 1; index >= 0; index-- {
+		step := run.Steps[index]
+		if step.Status == StepVerified && step.CompensationTool != "" {
+			run.Compensations = append(run.Compensations, CompensationRecord{StepID: step.ID, ToolName: step.CompensationTool, ToolArgs: append(json.RawMessage(nil), step.CompensationArgs...), Status: "pending"})
+		}
+	}
+	now := time.Now().UTC()
+	run.Status = RunCancelled
+	run.UpdatedAt = now
+	run.CompletedAt = &now
+	run.Trace = appendRunTrace(run.Trace, "cancelled", "Operator cancelled run; declared compensations were queued in reverse step order.", "")
+	run.Continuity.finalize(run, false)
+	e.runs[id] = run
+	if err := e.saveLocked(); err != nil {
+		return AgentRun{}, err
+	}
+	return cloneRun(run), nil
+}
+
+func (e *RunEngine) Compensate(id string, policy *security.PolicyEngine, registry *skills.SkillRegistry) (AgentRun, error) {
+	e.mu.Lock()
+	run, ok := e.runs[id]
+	if !ok {
+		e.mu.Unlock()
+		return AgentRun{}, errors.New("run not found")
+	}
+	if run.Status != RunCancelled && run.Status != RunFailed {
+		e.mu.Unlock()
+		return AgentRun{}, errors.New("only cancelled or failed runs can be compensated")
+	}
+	index := -1
+	for candidate := range run.Compensations {
+		if run.Compensations[candidate].Status == "pending" {
+			index = candidate
+			break
+		}
+	}
+	if index < 0 {
+		e.mu.Unlock()
+		return cloneRun(run), nil
+	}
+	record := run.Compensations[index]
+	run.Compensations[index].Status = "running"
+	e.runs[id] = run
+	if err := e.saveLocked(); err != nil {
+		e.mu.Unlock()
+		return AgentRun{}, err
+	}
+	e.mu.Unlock()
+
+	step := RunStep{ID: "compensate_" + record.StepID, Kind: RunStepTool, Title: "Compensate " + record.StepID, ToolName: record.ToolName, ToolArgs: record.ToolArgs, ApprovalGranted: false}
+	result, waiting, executionErr := executeRunStep(step, e.profiles[run.ProfileID], policy, registry)
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	run = e.runs[id]
+	if waiting {
+		executionErr = errors.New("compensation requires a separate approved execution path")
+	}
+	if executionErr != nil {
+		run.Compensations[index].Status = "failed"
+		run.Compensations[index].Error = ClampRunDetail(executionErr.Error())
+		run.Trace = appendRunTrace(run.Trace, "compensation_failed", run.Compensations[index].Error, record.StepID)
+	} else {
+		run.Compensations[index].Status = "completed"
+		run.Compensations[index].Result = ClampRunDetail(result)
+		run.Trace = appendRunTrace(run.Trace, "compensation_completed", record.ToolName, record.StepID)
+	}
+	run.UpdatedAt = time.Now().UTC()
+	e.runs[id] = run
+	if err := e.saveLocked(); err != nil {
+		return AgentRun{}, err
+	}
+	return cloneRun(run), executionErr
 }
 
 // Advance executes at most one durable step. The caller can safely invoke it
@@ -707,6 +900,18 @@ func (e *RunEngine) Advance(id string, policy *security.PolicyEngine, registry *
 	if run.Status != RunRunning {
 		e.mu.Unlock()
 		return cloneRun(run), fmt.Errorf("run is not active: %s", run.Status)
+	}
+	if !run.DeadlineAt.IsZero() && !time.Now().UTC().Before(run.DeadlineAt) {
+		now := time.Now().UTC()
+		run.Status = RunFailed
+		run.FailureReason = "run deadline exceeded"
+		run.CompletedAt = &now
+		run.UpdatedAt = now
+		run.Trace = appendRunTrace(run.Trace, "deadline_exceeded", run.FailureReason, "")
+		e.runs[id] = run
+		err := e.saveLocked()
+		e.mu.Unlock()
+		return cloneRun(run), err
 	}
 	if e.advancing[id] {
 		e.mu.Unlock()
@@ -733,6 +938,25 @@ func (e *RunEngine) Advance(id string, policy *security.PolicyEngine, registry *
 		return cloneRun(run), err
 	}
 	step := run.Steps[nextIndex]
+	for _, completedStep := range run.Steps {
+		if completedStep.ID != step.ID && completedStep.Status == StepVerified && completedStep.IdempotencyKey != "" && completedStep.IdempotencyKey == step.IdempotencyKey {
+			now := time.Now().UTC()
+			step.Status = StepVerified
+			step.Result = completedStep.Result
+			step.EvidenceBefore = completedStep.EvidenceBefore
+			step.EvidenceAfter = completedStep.EvidenceAfter
+			step.EvidenceChanged = completedStep.EvidenceChanged
+			step.CheckpointHash = completedStep.CheckpointHash
+			step.StartedAt, step.FinishedAt = now, now
+			run.Steps[nextIndex] = step
+			run.Trace = appendRunTrace(run.Trace, "step_idempotent_replay", "Reused verified result for identical idempotency key.", step.ID)
+			run.UpdatedAt = now
+			e.runs[id] = run
+			err := e.saveLocked()
+			e.mu.Unlock()
+			return cloneRun(run), err
+		}
+	}
 	if step.Status == StepWaitingApproval {
 		run.Status = RunWaitingApproval
 		run.ApprovalStepID = step.ID
@@ -759,11 +983,28 @@ func (e *RunEngine) Advance(id string, policy *security.PolicyEngine, registry *
 
 	// Execute outside the run lock. The final update re-reads the run so a
 	// concurrent pause/cancel cannot be overwritten by a stale snapshot.
-	evidenceBefore := desktopEvidenceForStep(step)
+	evidenceBefore := evidenceBeforeForStep(step)
 	result, waitingApproval, executionErr := executeRunStep(step, profile, policy, registry)
+	attempts := 1
+	for executionErr != nil && step.RetrySafe && !isRecoverableReadScopeError(&step, executionErr) && attempts < step.MaxAttempts {
+		timer := time.NewTimer(step.RetryBackoff)
+		<-timer.C
+		e.mu.RLock()
+		latest, exists := e.runs[id]
+		continueRun := exists && latest.Status == RunRunning && (latest.DeadlineAt.IsZero() || time.Now().UTC().Before(latest.DeadlineAt))
+		e.mu.RUnlock()
+		if !continueRun {
+			break
+		}
+		attempts++
+		result, waitingApproval, executionErr = executeRunStep(step, profile, policy, registry)
+		if waitingApproval {
+			break
+		}
+	}
 	evidenceAfter := ""
 	if !waitingApproval {
-		evidenceAfter = desktopEvidenceForStep(step)
+		evidenceAfter = evidenceAfterForStep(step, result)
 	} else {
 		evidenceBefore = ""
 	}
@@ -786,6 +1027,7 @@ func (e *RunEngine) Advance(id string, policy *security.PolicyEngine, registry *
 		return cloneRun(run), err
 	}
 	current.FinishedAt = time.Now().UTC()
+	current.Attempts += attempts
 	current.EvidenceBefore = evidenceBefore
 	current.EvidenceAfter = evidenceAfter
 	current.EvidenceChanged = evidenceBefore != "" && evidenceAfter != "" && evidenceBefore != evidenceAfter
@@ -812,15 +1054,30 @@ func (e *RunEngine) Advance(id string, policy *security.PolicyEngine, registry *
 		completed := current.FinishedAt
 		run.CompletedAt = &completed
 		run.Trace = appendRunTrace(run.Trace, "step_failed", current.Error, current.ID)
+		run.DeadLetters = append(run.DeadLetters, DeadLetter{StepID: current.ID, IdempotencyKey: current.IdempotencyKey, Attempts: current.Attempts, Error: current.Error, FailedAt: current.FinishedAt})
 	} else {
 		current.Status = StepVerified
 		current.Result = ClampRunDetail(result)
+		if validationErr := validateStepOutput(*current); validationErr != nil {
+			current.Status = StepFailed
+			current.Error = ClampRunDetail(validationErr.Error())
+			run.Status = RunFailed
+			run.FailureReason = current.Error
+			completed := current.FinishedAt
+			run.CompletedAt = &completed
+			run.DeadLetters = append(run.DeadLetters, DeadLetter{StepID: current.ID, IdempotencyKey: current.IdempotencyKey, Attempts: current.Attempts, Error: current.Error, FailedAt: current.FinishedAt})
+			run.Trace = appendRunTrace(run.Trace, "postcondition_failed", current.Error, current.ID)
+		} else {
+			current.CheckpointHash = stepCheckpointHash(*current)
+		}
 		if current.Kind == RunStepTool {
 			run.ToolCalls++
 		}
-		run.Trace = appendRunTrace(run.Trace, "step_verified", current.Title, current.ID)
-		run.Continuity.Phase = PhaseVerifying
-		run.Continuity.addEvidence(*current)
+		if current.Status == StepVerified {
+			run.Trace = appendRunTrace(run.Trace, "step_verified", current.Title, current.ID)
+			run.Continuity.Phase = PhaseVerifying
+			run.Continuity.addEvidence(*current)
+		}
 	}
 	run.UpdatedAt = time.Now().UTC()
 	e.runs[id] = run
@@ -917,4 +1174,80 @@ func desktopEvidenceForStep(step RunStep) string {
 	}
 	digest := sha256.Sum256(data)
 	return fmt.Sprintf("sha256:%x", digest)
+}
+
+func evidenceBeforeForStep(step RunStep) string {
+	if desktop := desktopEvidenceForStep(step); desktop != "" {
+		return desktop
+	}
+	digest := sha256.Sum256(step.ToolArgs)
+	return "input-sha256:" + hex.EncodeToString(digest[:])
+}
+
+func evidenceAfterForStep(step RunStep, result string) string {
+	if desktop := desktopEvidenceForStep(step); desktop != "" {
+		return desktop
+	}
+	digest := sha256.Sum256([]byte(result))
+	return "output-sha256:" + hex.EncodeToString(digest[:])
+}
+
+func validateStepOutput(step RunStep) error {
+	postcondition := strings.TrimSpace(step.Postcondition)
+	switch {
+	case postcondition == "", postcondition == "none":
+	case postcondition == "non_empty":
+		if strings.TrimSpace(step.Result) == "" {
+			return errors.New("postcondition failed: output is empty")
+		}
+	case postcondition == "json_valid":
+		if !json.Valid([]byte(step.Result)) {
+			return errors.New("postcondition failed: output is not valid JSON")
+		}
+	case strings.HasPrefix(postcondition, "contains:"):
+		marker := strings.TrimPrefix(postcondition, "contains:")
+		if marker == "" || !strings.Contains(step.Result, marker) {
+			return errors.New("postcondition failed: required marker is absent")
+		}
+	default:
+		return errors.New("postcondition type is invalid")
+	}
+	if len(step.OutputSchema) == 0 {
+		return nil
+	}
+	var schema struct {
+		Type     string   `json:"type"`
+		Required []string `json:"required"`
+	}
+	if err := json.Unmarshal(step.OutputSchema, &schema); err != nil {
+		return errors.New("output schema is invalid")
+	}
+	var output any
+	if err := json.Unmarshal([]byte(step.Result), &output); err != nil {
+		return errors.New("output schema rejected non-JSON output")
+	}
+	switch schema.Type {
+	case "object":
+		object, ok := output.(map[string]any)
+		if !ok {
+			return errors.New("output schema requires an object")
+		}
+		for _, field := range schema.Required {
+			if _, exists := object[field]; !exists {
+				return errors.New("output schema required field is absent")
+			}
+		}
+	case "array":
+		if _, ok := output.([]any); !ok {
+			return errors.New("output schema requires an array")
+		}
+	case "string":
+		if _, ok := output.(string); !ok {
+			return errors.New("output schema requires a string")
+		}
+	case "":
+	default:
+		return errors.New("output schema type is unsupported")
+	}
+	return nil
 }

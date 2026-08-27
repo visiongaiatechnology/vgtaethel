@@ -101,6 +101,23 @@ func TestGlobalWatchIntentSeparatesNavigationFromIntelligence(t *testing.T) {
 	}
 }
 
+func TestNaturalHazardIntentUsesOnlyIsolatedContext(t *testing.T) {
+	run := AgentRun{Objective: "Welche Erdbeben gab es in den letzten 24 Stunden?", ProfileID: "global_watch_operator"}
+	effects := requiredExecutionEffects(run)
+	if !containsString(effects, "global_watch_natural_hazards_context") {
+		t.Fatalf("explicit natural-hazard question missing isolated context: %+v", effects)
+	}
+	if containsString(effects, "global_watch_nexus_context") {
+		t.Fatalf("ordinary news context was forced into natural-hazard query: %+v", effects)
+	}
+
+	news := AgentRun{Objective: "Wie ist die aktuelle Nachrichtenlage weltweit?", ProfileID: "global_watch_operator"}
+	effects = requiredExecutionEffects(news)
+	if !containsString(effects, "global_watch_nexus_context") || containsString(effects, "global_watch_natural_hazards_context") {
+		t.Fatalf("news query crossed the context boundary: %+v", effects)
+	}
+}
+
 func TestGlobalWatchFollowUpKeepsConversationDomain(t *testing.T) {
 	previous, err := json.Marshal(map[string]string{"role": "user", "content": "Nutze die neuesten Infos über Global Watch"})
 	if err != nil {

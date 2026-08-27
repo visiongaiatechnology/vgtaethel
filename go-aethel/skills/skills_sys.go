@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"go-aethel/security"
 	"os"
-	"os/exec"
 	"runtime"
 	"strings"
 	"time"
@@ -58,6 +57,9 @@ func (s *ExecuteCommandSkill) Execute(args json.RawMessage) (string, error) {
 	if input.Background && !approvedBackgroundCommands[command] {
 		return "", errors.New("background execution is not allowed for this command")
 	}
+	if input.Background {
+		return "", errors.New("background execution requires a dedicated supervised service broker")
+	}
 
 	cmdPath := TrustedExecutable(command)
 	if cmdPath == "" {
@@ -65,36 +67,24 @@ func (s *ExecuteCommandSkill) Execute(args json.RawMessage) (string, error) {
 	}
 	auditTarget := commandArgumentDigest(command, input.Args)
 
-	if input.Background {
-		cmd := exec.Command(cmdPath, input.Args...) // #nosec G204 -- executable is a fixed allowlisted absolute path; arguments passed without a shell.
-		cmd.Env = restrictedCommandEnvironment()
-		if err := cmd.Start(); err != nil {
-			security.LogKernelActivity("EXEC_FAILED", auditTarget, "ERROR")
-			return "", errors.New("background command failed")
-		}
-		pid := cmd.Process.Pid
-		go func() {
-			_ = cmd.Wait()
-		}()
-		security.LogKernelActivity("EXEC_BG", auditTarget, "SUCCESS")
-		return fmt.Sprintf("Approved background command started (PID: %d)", pid), nil
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, cmdPath, input.Args...) // #nosec G204 -- executable is a fixed allowlisted absolute path; arguments passed without a shell.
-	cmd.Env = restrictedCommandEnvironment()
-	output, err := cmd.CombinedOutput()
+	result, err := security.DefaultProcessBroker.Execute(ctx, security.ProcessRequest{
+		Executable:  cmdPath,
+		Arguments:   append([]string(nil), input.Args...),
+		Environment: restrictedCommandEnvironment(),
+		Limits:      security.ProcessLimits{Timeout: 60 * time.Second, MemoryBytes: 512 << 20, MaximumProcesses: 8, MaximumOutput: 1 << 20},
+	})
 	if ctx.Err() == context.DeadlineExceeded {
 		security.LogKernelActivity("EXEC_TIMEOUT", auditTarget, "ERROR")
 		return "", errors.New("command timed out after 60 seconds")
 	}
 	if err != nil {
 		security.LogKernelActivity("EXEC_FAILED", auditTarget, "ERROR")
-		return "", fmt.Errorf("command failed: %s", clampRunDetail(string(output)))
+		return "", fmt.Errorf("command failed: %s", clampRunDetail(result.Output))
 	}
 	security.LogKernelActivity("EXEC", auditTarget, "SUCCESS")
-	return clampRunDetail(string(output)), nil
+	return clampRunDetail(result.Output), nil
 }
 
 var approvedSystemCommands = map[string]bool{

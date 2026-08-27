@@ -19,6 +19,7 @@ import (
 type IntelligenceStatusSkill struct{}
 
 type GlobalWatchNexusContextSkill struct{}
+type GlobalWatchNaturalHazardsContextSkill struct{}
 type globalWatchNexusContextArgs struct {
 	Limit int     `json:"limit"`
 	Hours float64 `json:"hours"`
@@ -26,7 +27,7 @@ type globalWatchNexusContextArgs struct {
 
 func (s *GlobalWatchNexusContextSkill) Name() string { return "global_watch_nexus_context" }
 func (s *GlobalWatchNexusContextSkill) Description() string {
-	return "Liest das autoritative Lagebild aus dem UNIFIED intelligence.SharedIntelStore (RAW/INFERENCE/VERIFIED). Pflicht vor Weltlage-Schlussfolgerungen — keine parallele Chat-Wahrheit."
+	return "Liest den autoritativen Nachrichtenkontext aus dem UNIFIED SharedIntelStore. Naturereignisse sind strikt ausgeschlossen; nur bei expliziter Frage das separate Naturgefahrenwerkzeug verwenden."
 }
 func (s *GlobalWatchNexusContextSkill) RiskLevel() security.RiskLevel { return security.RiskSafe }
 func (s *GlobalWatchNexusContextSkill) Parameters() map[string]interface{} {
@@ -53,6 +54,40 @@ func (s *GlobalWatchNexusContextSkill) Execute(args json.RawMessage) (string, er
 		return intelligence.SharedIntelStore.LiveNexusContextWithin(input.Limit, input.Hours), nil
 	}
 	return "", errors.New("unified intelligence.SharedIntelStore unavailable — cannot invent parallel chat truth")
+}
+
+func (s *GlobalWatchNaturalHazardsContextSkill) Name() string {
+	return "global_watch_natural_hazards_context"
+}
+func (s *GlobalWatchNaturalHazardsContextSkill) Description() string {
+	return "Liest Erdbeben- und Vulkanereignisse aus dem isolierten Naturgefahrenkontext. Nur bei einer ausdruecklichen Operatorfrage zu Erdbeben, Vulkanen oder Naturgefahren verwenden."
+}
+func (s *GlobalWatchNaturalHazardsContextSkill) RiskLevel() security.RiskLevel {
+	return security.RiskSafe
+}
+func (s *GlobalWatchNaturalHazardsContextSkill) Parameters() map[string]interface{} {
+	return map[string]interface{}{"type": "object", "properties": map[string]interface{}{
+		"limit": map[string]interface{}{"type": "integer", "minimum": 1, "maximum": 20},
+		"hours": map[string]interface{}{"type": "number", "minimum": 1, "maximum": 720},
+	}, "additionalProperties": false}
+}
+func (s *GlobalWatchNaturalHazardsContextSkill) Execute(args json.RawMessage) (string, error) {
+	var input globalWatchNexusContextArgs
+	if len(args) > 0 && string(args) != "null" {
+		if err := json.Unmarshal(args, &input); err != nil {
+			return "", errors.New("invalid natural hazards context arguments")
+		}
+	}
+	if input.Hours == 0 {
+		input.Hours = 24
+	}
+	if input.Hours < 1 || input.Hours > 720 {
+		return "", errors.New("natural hazards context hours out of range")
+	}
+	if intelligence.SharedIntelStore == nil {
+		return "", errors.New("unified intelligence.SharedIntelStore unavailable")
+	}
+	return intelligence.SharedIntelStore.LiveNaturalHazardsContextWithin(input.Limit, input.Hours), nil
 }
 
 type GlobalWatchScheduleBriefingSkill struct{}
@@ -582,7 +617,7 @@ type navigateUIArgs struct {
 
 func (s *NavigateUISkill) Name() string { return "navigate_ui" }
 func (s *NavigateUISkill) Description() string {
-	return "Wechselt die AETHEL-Oberfläche: global_watch/globe, sphere, core, personal, chat, case, tasks, settings, memory. Nutze dies wenn der Operator z.B. 'wechsle auf Live Globe' sagt."
+	return "Wechselt die AETHEL-Oberfläche: global_watch/globe, sphere, core, personal, mail, chat, case, tasks, settings, memory. Nutze dies wenn der Operator z.B. 'wechsle auf Live Globe' sagt."
 }
 func (s *NavigateUISkill) RiskLevel() security.RiskLevel { return security.RiskLow }
 func (s *NavigateUISkill) Parameters() map[string]interface{} {
@@ -591,7 +626,7 @@ func (s *NavigateUISkill) Parameters() map[string]interface{} {
 		"properties": map[string]interface{}{
 			"view": map[string]interface{}{
 				"type": "string",
-				"enum": []string{"core", "chat", "global_watch", "globe", "sphere", "personal", "case", "tasks", "settings", "memory", "agents", "agent_tracker"},
+				"enum": []string{"core", "chat", "global_watch", "globe", "sphere", "personal", "mail", "case", "tasks", "settings", "memory", "agents", "agent_tracker"},
 			},
 		},
 		"required": []string{"view"},

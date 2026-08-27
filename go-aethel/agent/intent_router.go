@@ -13,7 +13,7 @@ func requestsUINavigation(objective string) bool {
 	text := normalizeAgentObjective(objective)
 	if text == "" || !containsAny(text,
 		"global watch", "live-globus", "live globus", "sphere", "sphaere",
-		"personal core", "run center", "agent tracker", "settings", "einstellungen",
+		"personal core", "e-mail command", "mail tab", "run center", "agent tracker", "settings", "einstellungen",
 		"chat terminal", "neural core", "persona registry") {
 		return false
 	}
@@ -43,6 +43,13 @@ func objectiveRequestsGlobalWatch(objective string) bool {
 	return containsAny(text,
 		"news", "nachricht", "neueste", "aktuell", "info", "briefing", "analys",
 		"bewert", "risiko", "alert", "warnung", "was ist", "wie ist", "nutze")
+}
+
+func objectiveRequestsNaturalHazards(objective string) bool {
+	text := normalizeAgentObjective(objective)
+	return containsAny(text,
+		"erdbeben", "earthquake", "quake", "seismisch", "seismic",
+		"vulkan", "volcano", "eruption", "naturgefahr", "natural hazard")
 }
 
 func isGlobalWatchFollowUp(objective string) bool {

@@ -1,7 +1,7 @@
 ; STATUS: DIAMANT VGT SUPREME
 #define AppName "VGT AETHEL"
 #ifndef AppVersion
-  #define AppVersion "1.0.0-beta.2"
+  #define AppVersion "1.0.0-beta.3"
 #endif
 #define AppPublisher "VisionGaiaTechnology"
 #define AppExeName "AETHEL.exe"

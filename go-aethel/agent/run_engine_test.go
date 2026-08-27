@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 type failingReadScopeSkill struct{}
@@ -20,6 +21,23 @@ func (failingReadScopeSkill) Parameters() map[string]interface{} { return map[st
 func (failingReadScopeSkill) RiskLevel() security.RiskLevel      { return security.RiskLow }
 func (failingReadScopeSkill) Execute(json.RawMessage) (string, error) {
 	return "", errors.New("SECURITY VIOLATION: path escaped the configured Windows workspace jail")
+}
+
+type retryTestSkill struct {
+	attempts  int
+	failUntil int
+}
+
+func (*retryTestSkill) Name() string                       { return "fs_list_dir" }
+func (*retryTestSkill) Description() string                { return "bounded retry test" }
+func (*retryTestSkill) Parameters() map[string]interface{} { return map[string]interface{}{} }
+func (*retryTestSkill) RiskLevel() security.RiskLevel      { return security.RiskLow }
+func (skill *retryTestSkill) Execute(json.RawMessage) (string, error) {
+	skill.attempts++
+	if skill.attempts <= skill.failUntil {
+		return "", errors.New("transient read failure")
+	}
+	return `{"status":"ok"}`, nil
 }
 
 func TestRunEnginePersistsControlledLifecycle(t *testing.T) {
@@ -244,5 +262,155 @@ func TestInteractiveProfilesAllowSafeLiveDataLookups(t *testing.T) {
 		if !profileAllows(profile, security.CapWeatherRead) || !profileAllows(profile, security.CapMarketRead) {
 			t.Fatalf("profile %s cannot execute safe live-data lookups", id)
 		}
+	}
+}
+
+func TestGlobalWatchProfileIsReadOnly(t *testing.T) {
+	profile := defaultAgentProfiles()["global_watch_operator"]
+	for _, capability := range []security.Capability{security.CapFsWrite, security.CapIntelWrite, security.CapMemoryWrite, security.CapSphereWrite, security.CapSysExec} {
+		if profileAllows(profile, capability) {
+			t.Fatalf("global watch profile leaked mutating capability %s", capability)
+		}
+	}
+	if !profileAllows(profile, security.CapIntelRead) || !profileAllows(profile, security.CapFsRead) {
+		t.Fatal("global watch profile lost required read capabilities")
+	}
+}
+
+func TestOSINTProfilesEnforceCapabilitySeparation(t *testing.T) {
+	profiles := defaultAgentProfiles()
+	for _, id := range []string{"collector", "analyst", "case_worker", "operator", "developer"} {
+		if _, exists := profiles[id]; !exists {
+			t.Fatalf("required capability profile %s is missing", id)
+		}
+	}
+	for _, id := range []string{"collector", "analyst", "researcher", "global_watch_operator"} {
+		profile := profiles[id]
+		for _, capability := range []security.Capability{security.CapFsWrite, security.CapSysExec, security.CapMessagingSend, security.CapGuiClick, security.CapGuiType} {
+			if profileAllows(profile, capability) {
+				t.Fatalf("read-oriented profile %s leaked capability %s", id, capability)
+			}
+		}
+	}
+	if !profileAllows(profiles["collector"], security.CapIntelSources) || profileAllows(profiles["collector"], security.CapIntelWrite) {
+		t.Fatal("collector must fetch through the source broker without general intelligence mutation rights")
+	}
+	if !profileAllows(profiles["case_worker"], security.CapIntelWrite) || profileAllows(profiles["case_worker"], security.CapFsWrite) {
+		t.Fatal("case worker must be case-authority scoped and host-write isolated")
+	}
+	if !profileAllows(profiles["developer"], security.CapFsWrite) || !profileAllows(profiles["developer"], security.CapSysExec) {
+		t.Fatal("developer profile lost its explicitly separated development authority")
+	}
+}
+
+func TestOSINTToolSchemasDoNotExposeCrossDomainEffects(t *testing.T) {
+	for _, profileID := range []string{"collector", "analyst", "case_worker", "global_watch_operator", "researcher"} {
+		tools := toolAllowlistForRun(AgentRun{ProfileID: profileID, Objective: "Analyse public intelligence sources"})
+		for _, forbidden := range []string{"fs_write_file", "fs_replace_file_content", "sys_exec_cmd", "mail_send_message", "gui_control", "gui_window_control"} {
+			if containsString(tools, forbidden) {
+				t.Fatalf("profile %s exposed forbidden tool %s", profileID, forbidden)
+			}
+		}
+	}
+}
+
+func TestRunRetriesSafeStepAndCreatesDeterministicCheckpoint(t *testing.T) {
+	root := t.TempDir()
+	engine := NewRunEngine(filepath.Join(root, "runs.json"))
+	run, err := engine.Create(CreateRunRequest{Objective: "Retry bounded transient reads", ProfileID: "researcher", Steps: []RunStep{{
+		Kind: RunStepTool, Title: "Read source", ToolName: "fs_list_dir", ToolArgs: json.RawMessage(`{"path":"."}`),
+		RetrySafe: true, MaxAttempts: 3, RetryBackoff: time.Millisecond,
+		OutputSchema: json.RawMessage(`{"type":"object","required":["status"]}`), Postcondition: "json_valid",
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Start(run.ID); err != nil {
+		t.Fatal(err)
+	}
+	registry := skills.NewSkillRegistry()
+	skill := &retryTestSkill{failUntil: 2}
+	registry.Register(skill)
+	policy := security.NewPolicyEngine(security.NewSecurityGuard(), security.NewLeaseManager(filepath.Join(root, "leases.json")), security.NewAuditLogger(filepath.Join(root, "audit.json")))
+	run, err = engine.Advance(run.ID, policy, registry)
+	if err != nil || run.Steps[0].Status != StepVerified || run.Steps[0].Attempts != 3 || len(run.Steps[0].CheckpointHash) != 64 {
+		t.Fatalf("retry/checkpoint contract failed: %+v %v", run, err)
+	}
+	checkpoint := run.Steps[0].CheckpointHash
+	reloaded := NewRunEngine(filepath.Join(root, "runs.json"))
+	persisted, _ := reloaded.Get(run.ID)
+	if persisted.Steps[0].CheckpointHash != checkpoint {
+		t.Fatal("deterministic checkpoint did not survive restart")
+	}
+}
+
+func TestRunRoutesExhaustedRetryAndSchemaFailureToDeadLetter(t *testing.T) {
+	root := t.TempDir()
+	engine := NewRunEngine(filepath.Join(root, "runs.json"))
+	run, err := engine.Create(CreateRunRequest{Objective: "Reject invalid tool output", ProfileID: "researcher", Steps: []RunStep{{
+		Kind: RunStepTool, Title: "Read source", ToolName: "fs_list_dir", ToolArgs: json.RawMessage(`{"path":"."}`),
+		RetrySafe: true, MaxAttempts: 2, RetryBackoff: time.Millisecond,
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Start(run.ID); err != nil {
+		t.Fatal(err)
+	}
+	registry := skills.NewSkillRegistry()
+	registry.Register(&retryTestSkill{failUntil: 5})
+	policy := security.NewPolicyEngine(security.NewSecurityGuard(), security.NewLeaseManager(filepath.Join(root, "leases.json")), security.NewAuditLogger(filepath.Join(root, "audit.json")))
+	run, err = engine.Advance(run.ID, policy, registry)
+	if err != nil || run.Status != RunFailed || len(run.DeadLetters) != 1 || run.DeadLetters[0].Attempts != 2 {
+		t.Fatalf("exhausted retries were not dead-lettered: %+v %v", run, err)
+	}
+
+	second, err := engine.Create(CreateRunRequest{Objective: "Enforce output schema", ProfileID: "researcher", Steps: []RunStep{{Kind: RunStepPlan, Title: "Plain plan", OutputSchema: json.RawMessage(`{"type":"object"}`)}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Start(second.ID); err != nil {
+		t.Fatal(err)
+	}
+	second, err = engine.Advance(second.ID, policy, registry)
+	if err != nil || second.Status != RunFailed || len(second.DeadLetters) != 1 {
+		t.Fatalf("schema failure was not dead-lettered: %+v %v", second, err)
+	}
+}
+
+func TestRunIdempotentReplayAndCancellationCompensation(t *testing.T) {
+	root := t.TempDir()
+	engine := NewRunEngine(filepath.Join(root, "runs.json"))
+	compensationArgs := json.RawMessage(`{"path":"."}`)
+	run, err := engine.Create(CreateRunRequest{Objective: "Verify replay and compensation", ProfileID: "researcher", Steps: []RunStep{
+		{Kind: RunStepPlan, Title: "Same deterministic plan", CompensationTool: "fs_list_dir", CompensationArgs: compensationArgs},
+		{Kind: RunStepPlan, Title: "Same deterministic plan"},
+		{Kind: RunStepReport, Title: "Keep run cancellable"},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Start(run.ID); err != nil {
+		t.Fatal(err)
+	}
+	policy := security.NewPolicyEngine(security.NewSecurityGuard(), security.NewLeaseManager(filepath.Join(root, "leases.json")), security.NewAuditLogger(filepath.Join(root, "audit.json")))
+	registry := skills.NewSkillRegistry()
+	registry.Register(&retryTestSkill{})
+	if run, err = engine.Advance(run.ID, policy, registry); err != nil {
+		t.Fatal(err)
+	}
+	if run, err = engine.Advance(run.ID, policy, registry); err != nil {
+		t.Fatal(err)
+	}
+	if run.Steps[1].Status != StepVerified || run.Steps[1].CheckpointHash != run.Steps[0].CheckpointHash {
+		t.Fatalf("idempotent replay did not reuse checkpoint: %+v", run.Steps)
+	}
+	run, err = engine.Cancel(run.ID)
+	if err != nil || len(run.Compensations) != 1 || run.Compensations[0].Status != "pending" {
+		t.Fatalf("cancellation did not queue compensation: %+v %v", run, err)
+	}
+	run, err = engine.Compensate(run.ID, policy, registry)
+	if err != nil || run.Compensations[0].Status != "completed" {
+		t.Fatalf("compensation did not complete: %+v %v", run.Compensations, err)
 	}
 }
