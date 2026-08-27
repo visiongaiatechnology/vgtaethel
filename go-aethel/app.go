@@ -388,6 +388,9 @@ func (a *App) startup(ctx context.Context) {
 	// catalog. AI analysis starts only when a complete 40–60 item batch exists.
 	go func() {
 		collect := func() {
+			if enabled, _ := shadowService.Autonomy(); !enabled {
+				return
+			}
 			if _, err := shadowService.Collect(ctx, 8); err != nil {
 				log.Printf("[SHADOW] collection: %v", err)
 			}
