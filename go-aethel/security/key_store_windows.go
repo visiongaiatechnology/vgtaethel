@@ -9,14 +9,39 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
 
-const dpapiKeyPath = "./vgt_workspace/config.key.dpapi"
+const securityKeyDirectoryEnv = "AETHEL_SECURITY_KEY_DIR"
+
+var platformKeyMu sync.Mutex
+
+func platformSecurityKeyDirectory() (string, error) {
+	configured := os.Getenv(securityKeyDirectoryEnv)
+	if configured == "" {
+		if strings.HasSuffix(strings.ToLower(filepath.Base(os.Args[0])), ".test.exe") {
+			return filepath.Join(os.TempDir(), fmt.Sprintf("vgt-aethel-test-keys-%d", os.Getpid())), nil
+		}
+		return filepath.Clean("./vgt_workspace"), nil
+	}
+	if !filepath.IsAbs(configured) {
+		return "", errors.New("AETHEL_SECURITY_KEY_DIR must be absolute")
+	}
+	return filepath.Clean(configured), nil
+}
 
 func getPlatformSecretKey() ([]byte, error) {
+	platformKeyMu.Lock()
+	defer platformKeyMu.Unlock()
+	keyDirectory, err := platformSecurityKeyDirectory()
+	if err != nil {
+		return nil, err
+	}
+	dpapiKeyPath := filepath.Join(keyDirectory, "config.key.dpapi")
 	if err := os.MkdirAll(filepath.Dir(dpapiKeyPath), 0700); err != nil {
 		return nil, err
 	}
@@ -35,7 +60,7 @@ func getPlatformSecretKey() ([]byte, error) {
 
 	// One-time migration of the old local key. The legacy file is removed only
 	// after Windows has durably protected an equivalent DPAPI value.
-	legacyPath := "./vgt_workspace/config.key"
+	legacyPath := filepath.Join(keyDirectory, "config.key")
 	if legacy, err := os.ReadFile(legacyPath); err == nil {
 		if len(legacy) != 32 {
 			return nil, errors.New("invalid legacy configuration key length")
@@ -44,7 +69,7 @@ func getPlatformSecretKey() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := os.WriteFile(dpapiKeyPath, protected, 0600); err != nil { // #nosec G703 -- compile-time fixed private workspace path.
+		if err := writePrivateFileAtomic(dpapiKeyPath, protected); err != nil {
 			return nil, err
 		}
 		if err := os.Remove(legacyPath); err != nil {
@@ -63,7 +88,7 @@ func getPlatformSecretKey() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := os.WriteFile(dpapiKeyPath, protected, 0600); err != nil {
+	if err := writePrivateFileAtomic(dpapiKeyPath, protected); err != nil {
 		return nil, err
 	}
 	return key, nil

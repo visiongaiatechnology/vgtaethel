@@ -18,7 +18,7 @@ import (
 )
 
 type builtinRSSConnector struct {
-	mu       sync.Mutex
+	mu        sync.Mutex
 	lastFetch time.Time
 }
 
@@ -93,13 +93,19 @@ func (c *builtinRSSConnector) Fetch() ([]intelligence.Observation, error) {
 			id = fmt.Sprintf("conn-%d-%d", time.Now().UnixNano(), i)
 		}
 		out = append(out, intelligence.Observation{
-			ID:         "conn-" + id,
-			SourceID:   srcID,
-			RawText:    raw,
-			ObservedAt: ev.Timestamp,
-			Latitude:   ev.Lat,
-			Longitude:  ev.Lon,
-			Domain:     string(ev.Domain),
+			ID:            "conn-" + id,
+			SourceID:      srcID,
+			RawText:       raw,
+			ObservedAt:    ev.Timestamp,
+			Latitude:      ev.Lat,
+			Longitude:     ev.Lon,
+			Domain:        string(ev.Domain),
+			OriginalURL:   ev.SourceURL,
+			FinalURL:      ev.URL,
+			FetchedAt:     time.Now().UTC(),
+			PublishedAt:   ev.Timestamp,
+			MIMEType:      "application/feed+json",
+			ParserVersion: "builtin-rss-v2",
 		})
 	}
 	return out, nil
@@ -114,17 +120,18 @@ func minInt(a, b int) int {
 
 // connectorRegistrySummary is used by identity/source health surfaces.
 func ConnectorRegistrySummary() map[string]any {
-	out := make([]map[string]any, 0, len(connectors.Registry))
-	for name, c := range connectors.Registry {
+	registered := connectors.List()
+	out := make([]map[string]any, 0, len(registered))
+	for _, c := range registered {
 		d := c.Descriptor()
 		health := "ok"
 		if err := c.HealthCheck(); err != nil {
 			health = err.Error()
 		}
 		out = append(out, map[string]any{
-			"name": name, "version": d.Version, "trust_tier": int(d.TrustTier),
+			"name": d.Name, "version": d.Version, "trust_tier": int(d.TrustTier),
 			"activated": d.Activated, "rate_limit_per_min": d.RateLimitPerMin,
-			"polling": d.PollingInterval.String(), "health": health,
+			"polling": d.PollingInterval.String(), "health": health, "policy": d.Policy,
 		})
 	}
 	return map[string]any{
@@ -140,12 +147,15 @@ func RunConnectorFetchIngest(name string) (fetched int, ingested int, err error)
 	if name == "" {
 		name = "builtin-rss"
 	}
-	c, ok := connectors.Registry[name]
+	c, ok := connectors.Get(name)
 	if !ok {
 		return 0, 0, fmt.Errorf("connector %q not registered", name)
 	}
 	if intelligence.SharedIntelStore == nil {
 		return 0, 0, errors.New("intelligence.SharedIntelStore unavailable")
+	}
+	if err := connectors.AuthorizeFetch(name, "case-support", "global", time.Now().UTC()); err != nil {
+		return 0, 0, err
 	}
 	obs, err := c.Fetch()
 	if err != nil {

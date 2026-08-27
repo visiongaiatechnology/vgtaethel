@@ -603,12 +603,17 @@ func (sg *SecurityGuard) Scan(toolName string, args string) ThreatReport {
 		riskLevel = RiskLow
 		riskScore = 10
 
+	case "personal_operations":
+		cap = CapTaskCreate
+		riskLevel = RiskModerate
+		riskScore = 30
+
 	case "market_lookup":
 		cap = CapMarketRead
 		riskLevel = RiskLow
 		riskScore = 10
 
-	case "mail_list_messages":
+	case "mail_list_messages", "mail_read_message", "mail_manage":
 		cap = CapSecretUse
 		riskLevel = RiskModerate
 		riskScore = 40
@@ -623,7 +628,7 @@ func (sg *SecurityGuard) Scan(toolName string, args string) ThreatReport {
 		riskLevel = RiskLow
 		riskScore = 15
 
-	case "intelligence_status", "global_watch_nexus_context":
+	case "intelligence_status", "global_watch_nexus_context", "global_watch_natural_hazards_context":
 		cap = CapIntelRead
 		riskLevel = RiskLow
 		riskScore = 10
@@ -799,6 +804,13 @@ func NewPolicyEngine(guard *SecurityGuard, leases *LeaseManager, audit *AuditLog
 		leases: leases,
 		audit:  audit,
 	}
+}
+
+func (pe *PolicyEngine) AddLease(lease PermissionLease) error {
+	if pe != nil && pe.leases != nil {
+		return pe.leases.AddLease(lease)
+	}
+	return nil
 }
 
 func (pe *PolicyEngine) Evaluate(toolName string, args string, hasOverride bool) (bool, string, ThreatReport) {

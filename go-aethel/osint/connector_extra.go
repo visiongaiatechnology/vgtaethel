@@ -36,7 +36,8 @@ func (c *domainRSSConnector) Descriptor() connectors.Descriptor {
 		PollingInterval: 15 * time.Minute,
 		RateLimitPerMin: 40,
 		LicenseInfo:     "in-tree AETHEL domain slice over OSINT collectors",
-		TrustTier:      connectors.TrustBuiltIn,
+		Policy:          connectors.PublicOSINTPolicy("source-specific", "", 40, time.Minute, 180*24*time.Hour),
+		TrustTier:       connectors.TrustBuiltIn,
 		Activated:       true,
 	}
 }
@@ -111,7 +112,8 @@ func (c *usgsConnector) Descriptor() connectors.Descriptor {
 		RateLimitPerMin: 50,
 		Regions:         []string{"global"},
 		LicenseInfo:     "USGS public earthquake feed; AETHEL local ingest only",
-		TrustTier:      connectors.TrustBuiltIn,
+		Policy:          connectors.PublicOSINTPolicy("US-government-work", "", 50, time.Minute, 365*24*time.Hour),
+		TrustTier:       connectors.TrustBuiltIn,
 		Activated:       true,
 	}
 }
@@ -183,13 +185,16 @@ func (c *usgsConnector) Fetch() ([]intelligence.Observation, error) {
 		}
 		lon := f.Geometry.Coordinates[0]
 		lat := f.Geometry.Coordinates[1]
+		if !validHazardCoordinates(lat, lon) || f.Properties.Mag < -2 || f.Properties.Mag > 12 {
+			continue
+		}
 		// Tagged for frontend hazard layer (magnitude bands on globe)
 		raw := fmt.Sprintf("[earthquake] M %.1f | %s | magnitude %.1f | %s",
 			f.Properties.Mag, f.Properties.Title, f.Properties.Mag, f.Properties.URL)
 		out = append(out, intelligence.Observation{
 			ID: "usgs-" + f.ID, SourceID: "usgs-earthquakes", RawText: raw,
 			ObservedAt: time.UnixMilli(f.Properties.Time).UTC(),
-			Latitude: lat, Longitude: lon, Domain: "geo",
+			Latitude:   lat, Longitude: lon, Domain: "geo",
 		})
 	}
 	return out, nil
@@ -207,7 +212,8 @@ func (c *sharedStoreConnector) Descriptor() connectors.Descriptor {
 		PollingInterval: 60 * time.Minute,
 		RateLimitPerMin: 20,
 		LicenseInfo:     "local intelligence.SharedIntelStore replay; no network",
-		TrustTier:      connectors.TrustBuiltIn,
+		Policy:          connectors.LocalReplayPolicy(),
+		TrustTier:       connectors.TrustBuiltIn,
 		Activated:       true,
 	}
 }
@@ -239,13 +245,14 @@ func (c *eonetConnector) Descriptor() connectors.Descriptor {
 	return connectors.Descriptor{
 		Name:            "builtin-eonet",
 		Version:         "1.0.0",
-		SourceTypes:     []string{"json", "api"},
+		SourceTypes:     []string{"json", "api", "satellite-event-layer"},
 		Permissions:     []string{"network.fetch.public"},
 		PollingInterval: 30 * time.Minute,
 		RateLimitPerMin: 40,
 		Regions:         []string{"global"},
 		LicenseInfo:     "NASA EONET public API; AETHEL local ingest only",
-		TrustTier:      connectors.TrustBuiltIn,
+		Policy:          connectors.PublicOSINTPolicy("NASA-EONET-public-metadata", "https://www.nasa.gov/nasa-web-privacy-policy-and-important-notices/", 40, time.Minute, 365*24*time.Hour),
+		TrustTier:       connectors.TrustBuiltIn,
 		Activated:       true,
 	}
 }
@@ -286,12 +293,17 @@ func (c *eonetConnector) Fetch() ([]intelligence.Observation, error) {
 	if err != nil {
 		return nil, err
 	}
+	return parseEONETObservations(body)
+}
+
+// parseEONETObservations is the shipped EONET body→Observations path (fail-closed geo).
+func parseEONETObservations(body []byte) ([]intelligence.Observation, error) {
 	var payload struct {
 		Events []struct {
-			ID     string `json:"id"`
-			Title  string `json:"title"`
-			Link   string `json:"link"`
-			Closed string `json:"closed"`
+			ID         string `json:"id"`
+			Title      string `json:"title"`
+			Link       string `json:"link"`
+			Closed     string `json:"closed"`
 			Categories []struct {
 				Title string `json:"title"`
 			} `json:"categories"`
@@ -310,20 +322,28 @@ func (c *eonetConnector) Fetch() ([]intelligence.Observation, error) {
 		if i >= 40 || strings.TrimSpace(ev.Title) == "" {
 			continue
 		}
-		// Prefer latest geometry point
+		// Prefer latest geometry point with valid coordinates (fail closed — never invent 0,0).
 		var lat, lon float64
 		var observed time.Time
+		found := false
 		for gi := len(ev.Geometry) - 1; gi >= 0; gi-- {
 			g := ev.Geometry[gi]
-			if len(g.Coordinates) >= 2 {
-				// EONET GeoJSON: [lon, lat]
-				lon = g.Coordinates[0]
-				lat = g.Coordinates[1]
-				if t, err := time.Parse(time.RFC3339, g.Date); err == nil {
-					observed = t.UTC()
-				}
-				break
+			if len(g.Coordinates) < 2 {
+				continue
 			}
+			// EONET GeoJSON: [lon, lat]
+			lon, lat = g.Coordinates[0], g.Coordinates[1]
+			if !validHazardCoordinates(lat, lon) {
+				continue
+			}
+			if t, err := time.Parse(time.RFC3339, g.Date); err == nil {
+				observed = t.UTC()
+			}
+			found = true
+			break
+		}
+		if !found {
+			continue
 		}
 		if observed.IsZero() {
 			observed = time.Now().UTC()
@@ -350,7 +370,9 @@ func (c *eonetConnector) Fetch() ([]intelligence.Observation, error) {
 		}
 		out = append(out, intelligence.Observation{
 			ID: "eonet-" + id, SourceID: srcID, RawText: raw,
-			ObservedAt: observed, Latitude: lat, Longitude: lon, Domain: "geo",
+			ObservedAt: observed, PublishedAt: observed, FetchedAt: time.Now().UTC(), Latitude: lat, Longitude: lon, Domain: "geo",
+			OriginalURL: "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=40", FinalURL: strings.TrimSpace(ev.Link),
+			MIMEType: "application/json", ParserVersion: "nasa-eonet-v3",
 		})
 	}
 	return out, nil
@@ -373,7 +395,8 @@ func (c *volcanoConnector) Descriptor() connectors.Descriptor {
 		RateLimitPerMin: 40,
 		Regions:         []string{"global"},
 		LicenseInfo:     "NASA EONET volcano category; AETHEL local ingest only",
-		TrustTier:      connectors.TrustBuiltIn,
+		Policy:          connectors.PublicOSINTPolicy("US-government-work", "", 40, time.Minute, 365*24*time.Hour),
+		TrustTier:       connectors.TrustBuiltIn,
 		Activated:       true,
 	}
 }
@@ -439,16 +462,24 @@ func (c *volcanoConnector) Fetch() ([]intelligence.Observation, error) {
 		}
 		var lat, lon float64
 		var observed time.Time
+		found := false
 		for gi := len(ev.Geometry) - 1; gi >= 0; gi-- {
 			g := ev.Geometry[gi]
-			if len(g.Coordinates) >= 2 {
-				lon = g.Coordinates[0]
-				lat = g.Coordinates[1]
-				if t, err := time.Parse(time.RFC3339, g.Date); err == nil {
-					observed = t.UTC()
-				}
-				break
+			if len(g.Coordinates) < 2 {
+				continue
 			}
+			lon, lat = g.Coordinates[0], g.Coordinates[1]
+			if !validHazardCoordinates(lat, lon) {
+				continue
+			}
+			if t, err := time.Parse(time.RFC3339, g.Date); err == nil {
+				observed = t.UTC()
+			}
+			found = true
+			break
+		}
+		if !found {
+			continue
 		}
 		if observed.IsZero() {
 			observed = time.Now().UTC()
@@ -466,7 +497,7 @@ func (c *volcanoConnector) Fetch() ([]intelligence.Observation, error) {
 	return out, nil
 }
 
-// RegisterAllConnectors registers BuiltIn RSS/domain/USGS/EONET/volcano connectors.
+// RegisterAllConnectors registers the policy-gated built-in collection catalog.
 func RegisterAllConnectors() {
 	_ = connectors.Register(&builtinRSSConnector{})
 	_ = connectors.Register(&domainRSSConnector{name: "builtin-cyber", domain: "cyber"})
@@ -477,4 +508,9 @@ func RegisterAllConnectors() {
 	_ = connectors.Register(&eonetConnector{})
 	_ = connectors.Register(&volcanoConnector{})
 	_ = connectors.Register(&sharedStoreConnector{})
+	_ = connectors.Register(&cisaKEVConnector{})
+	_ = connectors.Register(&reliefWebConnector{})
+	_ = connectors.Register(newOFACActionsConnector())
+	_ = connectors.Register(newFAANASConnector())
+	_ = connectors.Register(newUSCGBNMConnector())
 }

@@ -31,6 +31,13 @@ type PersonalConfig struct {
 	WakeWord         string    `json:"wake_word"`
 	StartupBriefing  bool      `json:"startup_briefing"`
 	StartupReadAloud bool      `json:"startup_read_aloud"`
+	AlarmEnabled     bool      `json:"alarm_enabled"`
+	AlarmTime        string    `json:"alarm_time"`
+	AlarmReadAloud   bool      `json:"alarm_read_aloud"`
+	DailyPlanEnabled bool      `json:"daily_plan_enabled"`
+	WeatherUpdates   bool      `json:"weather_updates"`
+	QuietHoursStart  string    `json:"quiet_hours_start"`
+	QuietHoursEnd    string    `json:"quiet_hours_end"`
 	ForbiddenTopics  []string  `json:"forbidden_topics,omitempty"`
 	UpdatedAt        time.Time `json:"updated_at"`
 }
@@ -93,6 +100,10 @@ func defaultPersonalConfig() PersonalConfig {
 		HonestyLevel:    90,
 		InitiativeLevel: 60,
 		WakeWord:        "aethel",
+		AlarmTime:       "07:00",
+		AlarmReadAloud:  true,
+		QuietHoursStart: "22:30",
+		QuietHoursEnd:   "07:00",
 		UpdatedAt:       time.Now().UTC(),
 	}
 }

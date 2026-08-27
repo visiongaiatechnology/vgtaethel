@@ -108,8 +108,12 @@ func (c *HazardJSONCollector) parseEarthquakeGeoJSON(body []byte) ([]intelligenc
 	}
 	events := make([]intelligence.OSINTEvent, 0, min(len(feed.Features), 100))
 	for _, feature := range feed.Features {
-		if len(events) >= 100 || len(feature.Geometry.Coordinates) < 2 {
+		if len(events) >= 100 {
 			break
+		}
+		// Incomplete geometry must skip only this feature — never abort the rest of the feed.
+		if len(feature.Geometry.Coordinates) < 2 {
+			continue
 		}
 		lon, lat := feature.Geometry.Coordinates[0], feature.Geometry.Coordinates[1]
 		if !validHazardCoordinates(lat, lon) || feature.Properties.Magnitude < -2 || feature.Properties.Magnitude > 12 {
@@ -130,8 +134,10 @@ func (c *HazardJSONCollector) parseEarthquakeGeoJSON(body []byte) ([]intelligenc
 		if id == "" {
 			id = hashID(c.cfg.Name + title + timestamp.Format(time.RFC3339Nano))
 		}
+		// Summary also carries tags so frontend hazard helpers classify even if title is rewritten.
+		summary := fmt.Sprintf("[earthquake] magnitude %.1f · %s", feature.Properties.Magnitude, place)
 		events = append(events, intelligence.OSINTEvent{
-			ID: id, Title: title, Summary: fmt.Sprintf("Magnitude %.1f · %s", feature.Properties.Magnitude, place),
+			ID: id, Title: title, Summary: summary,
 			Source: c.cfg.Name, SourceURL: c.cfg.URL, URL: boundedHazardText(feature.Properties.URL, 1024),
 			Domain: intelligence.DomainGeo, Timestamp: timestamp, Confidence: 0.9, Status: "raw", Lat: lat, Lon: lon, HasGeo: true,
 		})
@@ -159,17 +165,28 @@ func (c *HazardJSONCollector) parseVolcanoEONET(body []byte) ([]intelligence.OSI
 		if len(events) >= 100 || len(sourceEvent.Geometry) == 0 {
 			continue
 		}
-		geometry := sourceEvent.Geometry[len(sourceEvent.Geometry)-1]
-		if len(geometry.Coordinates) < 2 {
-			continue
+		// Prefer latest geometry entry with valid coordinates (fail closed on missing geo).
+		var lat, lon float64
+		var timestamp time.Time
+		found := false
+		for gi := len(sourceEvent.Geometry) - 1; gi >= 0; gi-- {
+			geometry := sourceEvent.Geometry[gi]
+			if len(geometry.Coordinates) < 2 {
+				continue
+			}
+			lon, lat = geometry.Coordinates[0], geometry.Coordinates[1]
+			if !validHazardCoordinates(lat, lon) {
+				continue
+			}
+			timestamp = time.Now().UTC()
+			if parsed, err := time.Parse(time.RFC3339, geometry.Date); err == nil {
+				timestamp = parsed.UTC()
+			}
+			found = true
+			break
 		}
-		lon, lat := geometry.Coordinates[0], geometry.Coordinates[1]
-		if !validHazardCoordinates(lat, lon) {
+		if !found {
 			continue
-		}
-		timestamp := time.Now().UTC()
-		if parsed, err := time.Parse(time.RFC3339, geometry.Date); err == nil {
-			timestamp = parsed.UTC()
 		}
 		title := boundedHazardText(sourceEvent.Title, 300)
 		if title == "" {
@@ -180,7 +197,8 @@ func (c *HazardJSONCollector) parseVolcanoEONET(body []byte) ([]intelligence.OSI
 			id = hashID(c.cfg.Name + title + timestamp.Format(time.RFC3339Nano))
 		}
 		events = append(events, intelligence.OSINTEvent{
-			ID: id, Title: "[volcano erupting] " + title, Summary: "Aktives Vulkanereignis aus konfigurierter EONET-kompatibler Quelle.",
+			ID: id, Title: "[volcano erupting] " + title,
+			Summary: "[volcano erupting] Aktives Vulkanereignis aus EONET-kompatibler Quelle: " + title,
 			Source: c.cfg.Name, SourceURL: c.cfg.URL, URL: boundedHazardText(sourceEvent.Link, 1024),
 			Domain: intelligence.DomainGeo, Timestamp: timestamp, Confidence: 0.85, Status: "raw", Lat: lat, Lon: lon, HasGeo: true,
 		})

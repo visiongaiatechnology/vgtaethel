@@ -11,6 +11,7 @@ import (
 	"net/mail"
 	"net/smtp"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -42,12 +43,21 @@ type Config struct {
 }
 
 type Message struct {
-	UID     uint32    `json:"uid"`
-	From    string    `json:"from"`
-	Subject string    `json:"subject"`
-	Date    time.Time `json:"date"`
-	Preview string    `json:"preview"`
-	Unread  bool      `json:"unread"`
+	UID       uint32    `json:"uid"`
+	Folder    string    `json:"folder"`
+	From      string    `json:"from"`
+	Subject   string    `json:"subject"`
+	Date      time.Time `json:"date"`
+	Preview   string    `json:"preview"`
+	Unread    bool      `json:"unread"`
+	SpamScore int       `json:"spam_score"`
+	SpamClass string    `json:"spam_class"`
+}
+
+type Folder struct {
+	Name       string   `json:"name"`
+	Delimiter  string   `json:"delimiter"`
+	Attributes []string `json:"attributes,omitempty"`
 }
 
 type OutgoingMessage struct {
@@ -60,10 +70,15 @@ type OutgoingMessage struct {
 type Service struct {
 	configPath string
 	vault      *security.SecretVault
+	store      *SecureMailStore
+	storeErr   error
 }
 
 func NewService(configPath string, vault *security.SecretVault) *Service {
-	return &Service{configPath: configPath, vault: vault}
+	directory := filepath.Dir(configPath)
+	store := NewSecureMailStore(filepath.Join(directory, "mail_store.enc"), filepath.Join(directory, "mail_mldsa65_key.enc"))
+	storeErr := store.Load()
+	return &Service{configPath: configPath, vault: vault, store: store, storeErr: storeErr}
 }
 
 func (s *Service) LoadConfig() (Config, error) {
@@ -127,6 +142,13 @@ func (s *Service) DeleteConfig() error {
 }
 
 func (s *Service) ListMessages(limit int) ([]Message, error) {
+	return s.ListFolderMessages("INBOX", limit)
+}
+
+func (s *Service) ListFolderMessages(folder string, limit int) ([]Message, error) {
+	if s.storeErr != nil {
+		return nil, errors.New("encrypted mail archive integrity check failed")
+	}
 	cfg, password, err := s.credentials()
 	if err != nil {
 		return nil, err
@@ -134,8 +156,8 @@ func (s *Service) ListMessages(limit int) ([]Message, error) {
 	if limit < 1 {
 		limit = 10
 	}
-	if limit > 20 {
-		limit = 20
+	if limit > 100 {
+		limit = 100
 	}
 	dialer := &net.Dialer{Timeout: 12 * time.Second, KeepAlive: 20 * time.Second}
 	client, err := imapclient.DialWithDialerTLS(dialer, net.JoinHostPort(cfg.IMAPHost, fmt.Sprint(cfg.IMAPPort)), tlsConfig(cfg.IMAPHost))
@@ -147,7 +169,10 @@ func (s *Service) ListMessages(limit int) ([]Message, error) {
 	if err := client.Login(cfg.Username, password); err != nil {
 		return nil, errors.New("IMAP authentication failed")
 	}
-	selected, err := client.Select("INBOX", true)
+	if !validMailboxName(folder) {
+		return nil, errors.New("mail folder is invalid")
+	}
+	selected, err := client.Select(folder, true)
 	if err != nil {
 		return nil, errors.New("IMAP inbox selection failed")
 	}
@@ -181,9 +206,15 @@ func (s *Service) ListMessages(limit int) ([]Message, error) {
 				from = item.Envelope.From[0].PersonalName + " <" + from + ">"
 			}
 		}
+		stored := StoredMessage{AccountID: strings.ToLower(cfg.Email), Folder: folder, UID: item.Uid, From: boundedText(from, 500), Subject: boundedText(item.Envelope.Subject, 1000), Date: item.Envelope.Date.UTC(), TextBody: preview, Unread: !containsFlag(item.Flags, imap.SeenFlag)}
+		assessment := AssessSpam(stored)
+		stored.SpamScore, stored.SpamClass, stored.SpamReasons = assessment.Score, assessment.Class, assessment.Reasons
+		if err := s.store.UpsertMessages([]StoredMessage{stored}); err != nil {
+			return nil, errors.New("encrypted mail archive write failed")
+		}
 		messages = append(messages, Message{
-			UID: item.Uid, From: boundedText(from, 500), Subject: boundedText(item.Envelope.Subject, 1000),
-			Date: item.Envelope.Date.UTC(), Preview: preview, Unread: !containsFlag(item.Flags, imap.SeenFlag),
+			UID: item.Uid, Folder: folder, From: stored.From, Subject: stored.Subject,
+			Date: stored.Date, Preview: preview, Unread: stored.Unread, SpamScore: assessment.Score, SpamClass: assessment.Class,
 		})
 	}
 	if err := <-fetchErr; err != nil {
@@ -191,6 +222,97 @@ func (s *Service) ListMessages(limit int) ([]Message, error) {
 	}
 	sort.Slice(messages, func(i, j int) bool { return messages[i].Date.After(messages[j].Date) })
 	return messages, nil
+}
+
+func (s *Service) ListFolders() ([]Folder, error) {
+	cfg, password, err := s.credentials()
+	if err != nil {
+		return nil, err
+	}
+	client, err := dialIMAP(cfg, password)
+	if err != nil {
+		return nil, err
+	}
+	defer client.Logout()
+	channel := make(chan *imap.MailboxInfo, 64)
+	errCh := make(chan error, 1)
+	go func() { errCh <- client.List("", "*", channel) }()
+	folders := make([]Folder, 0, 16)
+	for info := range channel {
+		if info != nil {
+			folders = append(folders, Folder{Name: info.Name, Delimiter: info.Delimiter, Attributes: info.Attributes})
+		}
+	}
+	if err := <-errCh; err != nil {
+		return nil, errors.New("IMAP folder listing failed")
+	}
+	sort.Slice(folders, func(i, j int) bool { return strings.ToLower(folders[i].Name) < strings.ToLower(folders[j].Name) })
+	return folders, nil
+}
+
+func (s *Service) CreateFolder(name string) error {
+	if !validMailboxName(name) || strings.EqualFold(name, "INBOX") {
+		return errors.New("mail folder is invalid")
+	}
+	cfg, password, err := s.credentials()
+	if err != nil {
+		return err
+	}
+	client, err := dialIMAP(cfg, password)
+	if err != nil {
+		return err
+	}
+	defer client.Logout()
+	if err := client.Create(name); err != nil {
+		return errors.New("IMAP folder creation failed")
+	}
+	return nil
+}
+
+func (s *Service) MoveMessage(folder string, uid uint32, destination string) error {
+	if !validMailboxName(folder) || !validMailboxName(destination) || uid == 0 {
+		return errors.New("mail move request is invalid")
+	}
+	cfg, password, err := s.credentials()
+	if err != nil {
+		return err
+	}
+	client, err := dialIMAP(cfg, password)
+	if err != nil {
+		return err
+	}
+	defer client.Logout()
+	if _, err := client.Select(folder, false); err != nil {
+		return errors.New("IMAP folder selection failed")
+	}
+	set := new(imap.SeqSet)
+	set.AddNum(uid)
+	if err := client.UidMove(set, destination); err != nil {
+		return errors.New("IMAP message move failed")
+	}
+	return nil
+}
+
+func dialIMAP(cfg Config, password string) (*imapclient.Client, error) {
+	dialer := &net.Dialer{Timeout: 12 * time.Second, KeepAlive: 20 * time.Second}
+	client, err := imapclient.DialWithDialerTLS(dialer, net.JoinHostPort(cfg.IMAPHost, fmt.Sprint(cfg.IMAPPort)), tlsConfig(cfg.IMAPHost))
+	if err != nil {
+		return nil, errors.New("secure IMAP connection failed")
+	}
+	client.Timeout = 20 * time.Second
+	if err := client.Login(cfg.Username, password); err != nil {
+		client.Logout()
+		return nil, errors.New("IMAP authentication failed")
+	}
+	return client, nil
+}
+
+func validMailboxName(name string) bool {
+	name = strings.TrimSpace(name)
+	if name == "" || len([]rune(name)) > 240 || strings.ContainsAny(name, "\x00\r\n") {
+		return false
+	}
+	return true
 }
 
 func (s *Service) Send(message OutgoingMessage) error {

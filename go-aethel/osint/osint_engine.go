@@ -507,6 +507,11 @@ func (e *OSINTEngine) Start() {
 		e.configs = defaultFeeds()
 		_ = e.saveConfigs()
 	}
+	// Ensure USGS + EONET volcano collectors exist even on older osint_feeds.json installs.
+	if EnsureDefaultHazardCollectors(&e.configs) {
+		_ = e.saveConfigs()
+		log.Printf("✅ OSINT: USGS Earthquakes + NASA EONET Volcanoes collectors ensured")
+	}
 	e.buildCollectors()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -782,7 +787,12 @@ func (e *OSINTEngine) loadConfigs() error {
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(data, &e.configs)
+	if err := json.Unmarshal(data, &e.configs); err != nil {
+		return err
+	}
+	// Migration: inject reliable hazard sources if operator config pre-dates them.
+	_ = EnsureDefaultHazardCollectors(&e.configs)
+	return nil
 }
 
 // saveConfigs persists collector configurations to disk
@@ -820,8 +830,55 @@ func (e *OSINTEngine) saveConfigs() error {
 
 // ─── Default Feed List ────────────────────────────────────────────────────────
 
-func defaultFeeds() []OSINTCollectorConfig {
+// DefaultHazardCollectors are reliable public seismic / volcanic feeds for the Live Globe.
+// Wired into the OSINT engine (same path Global Watch polls via /v1/osint/feeds).
+func DefaultHazardCollectors() []OSINTCollectorConfig {
 	return []OSINTCollectorConfig{
+		{
+			Name: "USGS Earthquakes (all day)", Type: CollectorTypeEarthquakeGeoJSON,
+			URL: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+			Domain: intelligence.DomainGeo, Enabled: true, Priority: 5,
+		},
+		{
+			// Significant quakes as a second reliable band (M4.5+) if all_day is dense.
+			Name: "USGS Earthquakes M4.5+ (day)", Type: CollectorTypeEarthquakeGeoJSON,
+			URL: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson",
+			Domain: intelligence.DomainGeo, Enabled: true, Priority: 5,
+		},
+		{
+			Name: "NASA EONET Volcanoes (open)", Type: CollectorTypeVolcanoEONET,
+			URL: "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&category=volcanoes&limit=40",
+			Domain: intelligence.DomainGeo, Enabled: true, Priority: 5,
+		},
+	}
+}
+
+// EnsureDefaultHazardCollectors appends missing USGS/EONET hazard collectors by URL.
+// Returns true if configs were mutated (caller should persist).
+func EnsureDefaultHazardCollectors(configs *[]OSINTCollectorConfig) bool {
+	if configs == nil {
+		return false
+	}
+	have := make(map[string]bool, len(*configs))
+	for _, c := range *configs {
+		have[strings.TrimSpace(c.URL)] = true
+		// Also key by type+name for resilience if URL query order differs.
+		have[c.Type+"|"+c.Name] = true
+	}
+	changed := false
+	for _, hazard := range DefaultHazardCollectors() {
+		if have[strings.TrimSpace(hazard.URL)] || have[hazard.Type+"|"+hazard.Name] {
+			continue
+		}
+		*configs = append(*configs, hazard)
+		have[strings.TrimSpace(hazard.URL)] = true
+		changed = true
+	}
+	return changed
+}
+
+func defaultFeeds() []OSINTCollectorConfig {
+	feeds := []OSINTCollectorConfig{
 		// ── General/Geopolitics ──
 		{Name: "Tagesschau Nachrichten", Type: "rss", URL: "https://www.tagesschau.de/xml/rss2", Domain: intelligence.DomainGeneral, Enabled: true, Priority: 5},
 		{Name: "Tagesschau Ausland", Type: "rss", URL: "https://www.tagesschau.de/ausland/index~rss2.xml", Domain: intelligence.DomainGeo, Enabled: true, Priority: 5},
@@ -849,6 +906,9 @@ func defaultFeeds() []OSINTCollectorConfig {
 		{Name: "Heise Online", Type: "rss", URL: "https://www.heise.de/news-atom.xml", Domain: intelligence.DomainGeneral, Enabled: true, Priority: 3},
 		{Name: "MIT Technology Review", Type: "rss", URL: "https://www.technologyreview.com/topnews.rss", Domain: intelligence.DomainGeneral, Enabled: true, Priority: 3},
 	}
+	// ── Natural hazards (Live Globe earthquake / volcano layers) ──
+	feeds = append(feeds, DefaultHazardCollectors()...)
+	return feeds
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

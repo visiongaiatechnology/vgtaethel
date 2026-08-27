@@ -10,11 +10,9 @@ import (
 	"strings"
 	"sync"
 	"time"
-	
+
 	"go-aethel/security"
 )
-
-
 
 // --- 4. RAG / MEMORY SYSTEM (TF-IDF SEARCH ENGINE) ---
 
@@ -36,6 +34,14 @@ type MemoryEntry struct {
 type LocalMemoryStore struct {
 	mu      sync.RWMutex
 	entries []MemoryEntry
+	df      map[string]int
+	index   []indexedMemoryEntry
+}
+
+type indexedMemoryEntry struct {
+	Entry  MemoryEntry
+	Vector map[string]float64
+	Tags   map[string]bool
 }
 
 func NewLocalMemoryStore() *LocalMemoryStore {
@@ -53,6 +59,48 @@ func (l *LocalMemoryStore) loadFromDisk() {
 		return
 	}
 	_ = json.Unmarshal(data, &l.entries)
+	l.rebuildIndexLocked()
+}
+
+func (l *LocalMemoryStore) rebuildIndexLocked() {
+	l.df = make(map[string]int)
+	tokensByEntry := make([][]string, len(l.entries))
+	for index, entry := range l.entries {
+		tokens := tokenize(entry.Content + " " + entry.Category + " " + strings.Join(entry.Tags, " "))
+		tokensByEntry[index] = tokens
+		seen := make(map[string]bool, len(tokens))
+		for _, token := range tokens {
+			seen[token] = true
+		}
+		for token := range seen {
+			l.df[token]++
+		}
+	}
+	l.index = make([]indexedMemoryEntry, 0, len(l.entries))
+	numDocs := float64(len(l.entries))
+	for index, entry := range l.entries {
+		vector := tfIDFVector(tokensByEntry[index], l.df, numDocs)
+		tags := make(map[string]bool, len(entry.Tags))
+		for _, tag := range entry.Tags {
+			tags[strings.ToLower(tag)] = true
+		}
+		l.index = append(l.index, indexedMemoryEntry{Entry: entry, Vector: vector, Tags: tags})
+	}
+}
+
+func tfIDFVector(tokens []string, frequencies map[string]int, numDocs float64) map[string]float64 {
+	vector := make(map[string]float64)
+	if len(tokens) == 0 || numDocs == 0 {
+		return vector
+	}
+	counts := make(map[string]float64)
+	for _, token := range tokens {
+		counts[token]++
+	}
+	for token, count := range counts {
+		vector[token] = (count / float64(len(tokens))) * math.Log(1.0+(numDocs/(1.0+float64(frequencies[token]))))
+	}
+	return vector
 }
 
 func (l *LocalMemoryStore) saveToDisk() error {
@@ -150,6 +198,7 @@ func (l *LocalMemoryStore) AddWithConsent(content, category, source string, cons
 		Supersedes: strings.TrimSpace(supersedes),
 	}
 	l.entries = append(l.entries, entry)
+	l.rebuildIndexLocked()
 	if err := l.saveToDisk(); err != nil {
 		return "", err
 	}
@@ -205,13 +254,14 @@ func (l *LocalMemoryStore) Delete(id string) bool {
 		}
 	}
 	if found {
+		l.rebuildIndexLocked()
 		_ = l.saveToDisk()
 	}
 	return found
 }
 
 // TF-IDF Math & Helper logic in pure Go stdlib
-var reWords = regexp.MustCompile(`[a-zA-Z0-9äöüÄÖÜß]+`)
+var reWords = regexp.MustCompile(`[\p{L}\p{N}]+`)
 var sensitiveMemoryPattern = regexp.MustCompile(`(?i)(?:\b(?:password|passwort|api[_ -]?key|access[_ -]?token|bearer)\b\s*[:=]|\b(?:sk|gsk|AIza|AKIA|xox[baprs])[-_][A-Za-z0-9_-]{8,}|-----BEGIN [A-Z ]+PRIVATE KEY-----)`)
 
 func ContainsSensitiveMemoryData(content string) bool {
@@ -244,44 +294,8 @@ func (l *LocalMemoryStore) Search(query string) []MemoryEntry {
 		return nil
 	}
 
-	// 1. Calculate Document Frequencies (DF)
-	df := make(map[string]int)
-	allDocTokens := make([][]string, len(l.entries))
-
-	for i, entry := range l.entries {
-		tokens := tokenize(entry.Content + " " + entry.Category + " " + strings.Join(entry.Tags, " "))
-		allDocTokens[i] = tokens
-		uniqueTokens := make(map[string]bool)
-		for _, t := range tokens {
-			uniqueTokens[t] = true
-		}
-		for t := range uniqueTokens {
-			df[t]++
-		}
-	}
-
 	numDocs := float64(len(l.entries))
-
-	// Helper to compute TF-IDF vector for a set of tokens
-	getVector := func(tokens []string) map[string]float64 {
-		tf := make(map[string]float64)
-		for _, t := range tokens {
-			tf[t]++
-		}
-		// Normalize tf
-		total := float64(len(tokens))
-		vector := make(map[string]float64)
-		for t, count := range tf {
-			tfVal := count / total
-			// idf = log(1 + numDocs / (1 + df))
-			docFreq := float64(df[t])
-			idfVal := math.Log(1.0 + (numDocs / (1.0 + docFreq)))
-			vector[t] = tfVal * idfVal
-		}
-		return vector
-	}
-
-	queryVec := getVector(queryTokens)
+	queryVec := tfIDFVector(queryTokens, l.df, numDocs)
 
 	// Calculate norm of query vector
 	queryNorm := 0.0
@@ -296,12 +310,12 @@ func (l *LocalMemoryStore) Search(query string) []MemoryEntry {
 	}
 	var scoredResults []ScoredResult
 
-	for i, entry := range l.entries {
-		docTokens := allDocTokens[i]
-		if len(docTokens) == 0 {
+	for _, indexed := range l.index {
+		entry := indexed.Entry
+		if len(indexed.Vector) == 0 {
 			continue
 		}
-		docVec := getVector(docTokens)
+		docVec := indexed.Vector
 
 		// Cosine Similarity: Dot Product / (NormA * NormB)
 		dotProduct := 0.0
@@ -322,10 +336,7 @@ func (l *LocalMemoryStore) Search(query string) []MemoryEntry {
 
 		// 2. Compute Jaccard Tag Similarity
 		tagMatchCount := 0
-		uniqueTags := make(map[string]bool)
-		for _, tag := range entry.Tags {
-			uniqueTags[strings.ToLower(tag)] = true
-		}
+		uniqueTags := indexed.Tags
 		for _, qt := range queryTokens {
 			if uniqueTags[qt] {
 				tagMatchCount++
