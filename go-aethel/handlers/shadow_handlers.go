@@ -137,6 +137,8 @@ func handleShadow(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"reports": shadowService.Reports()})
+	case "data":
+		handleShadowData(w, r)
 	case "regions":
 		if r.Method != http.MethodGet {
 			shadowMethodNotAllowed(w)
@@ -155,6 +157,32 @@ func handleShadow(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func handleShadowData(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		shadowMethodNotAllowed(w)
+		return
+	}
+	var input struct {
+		Confirmation string `json:"confirmation"`
+	}
+	if err := decodeShadowJSON(w, r, &input, 1<<10); err != nil {
+		return
+	}
+	if input.Confirmation != "DELETE SHADOW DATA" {
+		intelligence.WriteIntelJSON(w, http.StatusBadRequest, map[string]string{"error": "explicit SHADOW deletion confirmation required"})
+		return
+	}
+	if err := shadowService.ClearOperationalData(); err != nil {
+		status := http.StatusInternalServerError
+		if errors.Is(err, osint.ErrShadowAnalysisRunning) || errors.Is(err, osint.ErrShadowCollectionRunning) {
+			status = http.StatusConflict
+		}
+		intelligence.WriteIntelJSON(w, status, map[string]string{"error": err.Error()})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]any{"status": "cleared", "shadow": shadowService.Status()})
+}
+
 func shadowMethodNotAllowed(w http.ResponseWriter) {
 	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 }
@@ -170,10 +198,19 @@ func decodeShadowJSON(w http.ResponseWriter, r *http.Request, target any, limit 
 }
 
 func latestShadowItems(items []osint.ShadowIntelItem, limit int) []osint.ShadowIntelItem {
-	if len(items) <= limit {
-		return items
+	now := time.Now().UTC()
+	fresh := make([]osint.ShadowIntelItem, 0, min(limit, len(items)))
+	for index := len(items) - 1; index >= 0 && len(fresh) < limit; index-- {
+		stamp := items[index].PublishedAt
+		if stamp.IsZero() {
+			stamp = items[index].CollectedAt
+		}
+		if stamp.IsZero() || stamp.Before(now.Add(-osint.ShadowIntelMaxAge)) || stamp.After(now.Add(10*time.Minute)) {
+			continue
+		}
+		fresh = append(fresh, items[index])
 	}
-	return append([]osint.ShadowIntelItem(nil), items[len(items)-limit:]...)
+	return fresh
 }
 
 func handleShadowSources(w http.ResponseWriter, r *http.Request) {
@@ -291,10 +328,60 @@ func handleShadowAnalyze(w http.ResponseWriter, r *http.Request, daily bool) {
 
 func buildShadowAnalysisInput(items []osint.ShadowIntelItem) ([]byte, []osint.ShadowMarketPoint) {
 	marketSnapshot := currentShadowMarketSnapshot()
+	contextDossiers := compactShadowContext(shadowService.RecentContextReports(osint.ShadowContextDossiers))
 	payload, _ := json.Marshal(map[string]any{
 		"intel_items": items, "market_pulse": marketSnapshot, "forecast_horizon_hours": 72,
+		"context_dossiers": contextDossiers, "context_policy": "continuity_only_not_current_batch_evidence",
 	})
 	return payload, marketSnapshot
+}
+
+type shadowContextDossier struct {
+	ID               string                         `json:"id"`
+	Kind             string                         `json:"kind"`
+	CreatedAt        time.Time                      `json:"created_at"`
+	ThreatLevel      string                         `json:"threat_level"`
+	Summary          string                         `json:"summary"`
+	StrategicReality string                         `json:"strategic_reality"`
+	Divergences      string                         `json:"divergences"`
+	ConfirmedVectors string                         `json:"confirmed_vectors"`
+	Regions          []osint.ShadowRegionAssessment `json:"regions"`
+	ConflictLinks    []osint.ShadowConflictLink     `json:"conflict_links"`
+	Forecasts        []osint.ShadowForecast         `json:"forecast_matrix"`
+	ContentSHA256    string                         `json:"content_sha256"`
+}
+
+func compactShadowContext(reports []osint.ShadowReport) []shadowContextDossier {
+	result := make([]shadowContextDossier, 0, min(len(reports), osint.ShadowContextDossiers))
+	for _, report := range reports {
+		regions := append([]osint.ShadowRegionAssessment(nil), report.Regions...)
+		links := append([]osint.ShadowConflictLink(nil), report.ConflictLinks...)
+		forecasts := append([]osint.ShadowForecast(nil), report.Forecasts...)
+		if len(regions) > 16 {
+			regions = regions[:16]
+		}
+		if len(links) > 16 {
+			links = links[:16]
+		}
+		if len(forecasts) > 16 {
+			forecasts = forecasts[:16]
+		}
+		result = append(result, shadowContextDossier{
+			ID: report.ID, Kind: report.Kind, CreatedAt: report.CreatedAt, ThreatLevel: report.ThreatLevel,
+			Summary: boundedShadowContextText(string(report.Summary)), StrategicReality: boundedShadowContextText(string(report.StrategicReality)),
+			Divergences: boundedShadowContextText(string(report.Divergences)), ConfirmedVectors: boundedShadowContextText(string(report.ConfirmedVectors)),
+			Regions: regions, ConflictLinks: links, Forecasts: forecasts, ContentSHA256: report.ContentSHA256,
+		})
+	}
+	return result
+}
+
+func boundedShadowContextText(value string) string {
+	runes := []rune(strings.TrimSpace(value))
+	if len(runes) > 4000 {
+		return string(runes[:4000])
+	}
+	return string(runes)
 }
 
 func currentShadowMarketSnapshot() []osint.ShadowMarketPoint {
