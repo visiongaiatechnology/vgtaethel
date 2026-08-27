@@ -22,8 +22,15 @@ import (
 )
 
 const (
-	ShadowBatchMin = 40
-	ShadowBatchMax = 60
+	ShadowBatchMin        = 40
+	ShadowBatchMax        = 60
+	ShadowIntelMaxAge     = 24 * time.Hour
+	ShadowContextDossiers = 3
+)
+
+var (
+	ErrShadowAnalysisRunning   = errors.New("SHADOW analysis already running")
+	ErrShadowCollectionRunning = errors.New("SHADOW collection already running")
 )
 
 type ShadowPercent int
@@ -292,32 +299,37 @@ type ShadowState struct {
 }
 
 type ShadowStatus struct {
-	Sources         int       `json:"sources"`
-	EnabledSources  int       `json:"enabled_sources"`
-	PendingItems    int       `json:"pending_items"`
-	ProcessedItems  int       `json:"processed_items"`
-	Reports         int       `json:"reports"`
-	BatchMin        int       `json:"batch_min"`
-	BatchMax        int       `json:"batch_max"`
-	AnalysisRunning bool      `json:"analysis_running"`
-	AutonomyEnabled bool      `json:"autonomy_enabled"`
-	AutonomyModelID string    `json:"autonomy_model_id,omitempty"`
-	AnalysisModelID string    `json:"analysis_model_id,omitempty"`
-	AnalysisStarted time.Time `json:"analysis_started_at,omitempty"`
-	LastAnalysisAt  time.Time `json:"last_analysis_at,omitempty"`
-	LastAnalysisErr string    `json:"last_analysis_error,omitempty"`
-	LastCollectAt   time.Time `json:"last_collect_at,omitempty"`
+	Sources           int       `json:"sources"`
+	EnabledSources    int       `json:"enabled_sources"`
+	PendingItems      int       `json:"pending_items"`
+	ProcessedItems    int       `json:"processed_items"`
+	StaleItems        int       `json:"stale_items"`
+	Reports           int       `json:"reports"`
+	BatchMin          int       `json:"batch_min"`
+	BatchMax          int       `json:"batch_max"`
+	AnalysisRunning   bool      `json:"analysis_running"`
+	CollectionRunning bool      `json:"collection_running"`
+	AutonomyEnabled   bool      `json:"autonomy_enabled"`
+	AutonomyModelID   string    `json:"autonomy_model_id,omitempty"`
+	AnalysisModelID   string    `json:"analysis_model_id,omitempty"`
+	AnalysisStarted   time.Time `json:"analysis_started_at,omitempty"`
+	LastAnalysisAt    time.Time `json:"last_analysis_at,omitempty"`
+	LastAnalysisErr   string    `json:"last_analysis_error,omitempty"`
+	LastCollectAt     time.Time `json:"last_collect_at,omitempty"`
+	IntakeHours       int       `json:"intake_window_hours"`
+	ContextDossiers   int       `json:"context_dossiers"`
 }
 
 type ShadowService struct {
-	mu              sync.RWMutex
-	path            string
-	state           ShadowState
-	analysisRunning bool
-	analysisModelID string
-	analysisStarted time.Time
-	lastAnalysisAt  time.Time
-	lastAnalysisErr string
+	mu                sync.RWMutex
+	path              string
+	state             ShadowState
+	analysisRunning   bool
+	collectionRunning bool
+	analysisModelID   string
+	analysisStarted   time.Time
+	lastAnalysisAt    time.Time
+	lastAnalysisErr   string
 }
 
 func NewShadowService(path string) *ShadowService {
@@ -376,10 +388,11 @@ func (s *ShadowService) Status() ShadowStatus {
 	defer s.mu.RUnlock()
 	status := ShadowStatus{
 		Sources: len(s.state.Sources), Reports: len(s.state.Reports), BatchMin: ShadowBatchMin, BatchMax: ShadowBatchMax,
-		AnalysisRunning: s.analysisRunning, AutonomyEnabled: s.state.AutonomyEnabled, AutonomyModelID: s.state.AutonomyModelID,
+		AnalysisRunning: s.analysisRunning, CollectionRunning: s.collectionRunning, AutonomyEnabled: s.state.AutonomyEnabled, AutonomyModelID: s.state.AutonomyModelID,
 		AnalysisModelID: s.analysisModelID, AnalysisStarted: s.analysisStarted, LastAnalysisAt: s.lastAnalysisAt,
-		LastAnalysisErr: s.lastAnalysisErr, LastCollectAt: s.state.LastCollectAt,
+		LastAnalysisErr: s.lastAnalysisErr, LastCollectAt: s.state.LastCollectAt, IntakeHours: int(ShadowIntelMaxAge / time.Hour),
 	}
+	now := time.Now().UTC()
 	for _, source := range s.state.Sources {
 		if source.Enabled {
 			status.EnabledSources++
@@ -388,11 +401,30 @@ func (s *ShadowService) Status() ShadowStatus {
 	for _, item := range s.state.Buffer {
 		if item.Processed {
 			status.ProcessedItems++
+		} else if !isFreshShadowItem(item, now) {
+			status.StaleItems++
 		} else {
 			status.PendingItems++
 		}
 	}
+	status.ContextDossiers = min(ShadowContextDossiers, len(s.state.Reports))
 	return status
+}
+
+func isFreshShadowTimestamp(timestamp, now time.Time) bool {
+	if timestamp.IsZero() || now.IsZero() {
+		return false
+	}
+	timestamp, now = timestamp.UTC(), now.UTC()
+	return !timestamp.Before(now.Add(-ShadowIntelMaxAge)) && !timestamp.After(now.Add(10*time.Minute))
+}
+
+func isFreshShadowItem(item ShadowIntelItem, now time.Time) bool {
+	timestamp := item.PublishedAt
+	if timestamp.IsZero() {
+		timestamp = item.CollectedAt
+	}
+	return isFreshShadowTimestamp(timestamp, now)
 }
 
 func (s *ShadowService) SetAutonomy(enabled bool, modelID string) error {
@@ -504,6 +536,11 @@ func (s *ShadowService) Collect(ctx context.Context, sourceLimit int) (int, erro
 		sourceLimit = 8
 	}
 	s.mu.Lock()
+	if s.collectionRunning {
+		s.mu.Unlock()
+		return 0, ErrShadowCollectionRunning
+	}
+	s.collectionRunning = true
 	selected := make([]ShadowSource, 0, sourceLimit)
 	if len(s.state.Sources) > 0 {
 		for checked := 0; checked < len(s.state.Sources) && len(selected) < sourceLimit; checked++ {
@@ -516,6 +553,11 @@ func (s *ShadowService) Collect(ctx context.Context, sourceLimit int) (int, erro
 		s.state.SourceCursor = (s.state.SourceCursor + max(1, len(selected))) % len(s.state.Sources)
 	}
 	s.mu.Unlock()
+	defer func() {
+		s.mu.Lock()
+		s.collectionRunning = false
+		s.mu.Unlock()
+	}()
 	if len(selected) == 0 {
 		return 0, errors.New("no enabled collectable SHADOW sources")
 	}
@@ -572,6 +614,9 @@ func (s *ShadowService) Collect(ctx context.Context, sourceLimit int) (int, erro
 			}
 		}
 		for _, event := range result.events {
+			if !isFreshShadowTimestamp(event.Timestamp, now) {
+				continue
+			}
 			if seen[event.ID] {
 				continue
 			}
@@ -591,16 +636,27 @@ func (s *ShadowService) PrepareBatch(modelID string) ([]ShadowIntelItem, string,
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.analysisRunning {
-		return nil, "", errors.New("SHADOW analysis already running")
+		return nil, "", ErrShadowAnalysisRunning
 	}
+	now := time.Now().UTC()
 	pending := make([]ShadowIntelItem, 0, ShadowBatchMax)
 	for _, item := range s.state.Buffer {
-		if !item.Processed {
+		if !item.Processed && isFreshShadowItem(item, now) {
 			pending = append(pending, item)
-			if len(pending) == ShadowBatchMax {
-				break
-			}
 		}
+	}
+	sort.SliceStable(pending, func(i, j int) bool {
+		left, right := pending[i].PublishedAt, pending[j].PublishedAt
+		if left.IsZero() {
+			left = pending[i].CollectedAt
+		}
+		if right.IsZero() {
+			right = pending[j].CollectedAt
+		}
+		return left.After(right)
+	})
+	if len(pending) > ShadowBatchMax {
+		pending = pending[:ShadowBatchMax]
 	}
 	if len(pending) < ShadowBatchMin {
 		return nil, "", fmt.Errorf("SHADOW requires at least %d pending items", ShadowBatchMin)
@@ -610,6 +666,44 @@ func (s *ShadowService) PrepareBatch(modelID string) ([]ShadowIntelItem, string,
 	s.analysisStarted = time.Now().UTC()
 	s.lastAnalysisErr = ""
 	return pending, s.state.SystemPrompt + "\n\n" + MandatoryShadowV3Contract(), nil
+}
+
+// ClearOperationalData atomically removes SHADOW intercepts, dossiers, runtime
+// telemetry and autonomy state while preserving the editable source registry,
+// encrypted API credentials and doctrine.
+func (s *ShadowService) ClearOperationalData() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.analysisRunning {
+		return ErrShadowAnalysisRunning
+	}
+	if s.collectionRunning {
+		return ErrShadowCollectionRunning
+	}
+
+	previous := s.state
+	next := s.state
+	next.Sources = append([]ShadowSource(nil), s.state.Sources...)
+	for index := range next.Sources {
+		next.Sources[index].LastState = ""
+		next.Sources[index].LastError = ""
+		next.Sources[index].LastFetch = ""
+	}
+	next.Buffer = nil
+	next.Reports = nil
+	next.SourceCursor = 0
+	next.AutonomyEnabled = false
+	next.LastCollectAt = time.Time{}
+	s.state = next
+	if err := s.saveLocked(); err != nil {
+		s.state = previous
+		return err
+	}
+	s.analysisModelID = ""
+	s.analysisStarted = time.Time{}
+	s.lastAnalysisAt = time.Time{}
+	s.lastAnalysisErr = ""
+	return nil
 }
 
 func (s *ShadowService) AbortBatch() {
@@ -836,6 +930,31 @@ func (s *ShadowService) Reports() []ShadowReport {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	result := append([]ShadowReport(nil), s.state.Reports...)
+	return result
+}
+
+func (s *ShadowService) RecentContextReports(limit int) []ShadowReport {
+	if limit < 1 || limit > ShadowContextDossiers {
+		limit = ShadowContextDossiers
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]ShadowReport, 0, limit)
+	seen := make(map[string]bool, limit)
+	appendKind := func(kind string) {
+		for _, report := range s.state.Reports {
+			if len(result) == limit {
+				return
+			}
+			if report.Kind != kind || seen[report.ID] {
+				continue
+			}
+			seen[report.ID] = true
+			result = append(result, report)
+		}
+	}
+	appendKind("daily")
+	appendKind("batch")
 	return result
 }
 

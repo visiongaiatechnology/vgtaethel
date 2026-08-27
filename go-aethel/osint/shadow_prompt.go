@@ -90,5 +90,12 @@ BETA V3 MANDATORY 72H FORECAST CONTRACT
 - Allowed directions: UP, DOWN, SIDEWAYS, VOLATILE, ESCALATION, IMPROVEMENT, STABLE.
 - Produce a MILITARY 72h scenario and, when quotes exist, separate 72h scenarios for BTC, GOLD, and BRENT.
 - Market scenarios combine the current quote/change with geopolitical batch evidence; they never assert certainty or invent a price target.
-- Do not output market_snapshot. AETHEL attaches the trusted snapshot after model inference.`
+- Do not output market_snapshot. AETHEL attaches the trusted snapshot after model inference.
+
+BETA V3 MANDATORY CONTINUITY CONTRACT
+- intel_items contains only source items from the rolling 24-hour intake window.
+- context_dossiers contains at most the three most recent compact dossiers, preferring daily master dossiers and filling gaps with batch dossiers.
+- Context dossiers establish continuity, prior assessments, and changed-vs-unchanged comparisons only.
+- Never cite an old context-dossier evidence_id as evidence for a new claim. Every output evidence_id must exist in the current intel_items batch.
+- Explicitly identify material changes from the prior context and do not repeat stale forecasts as current facts.`
 }

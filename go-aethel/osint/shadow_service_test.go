@@ -4,6 +4,7 @@ package osint
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -66,7 +67,7 @@ func TestShadowV3ConflictContractCannotBeRemovedByEditableDoctrine(t *testing.T)
 		t.Fatal(err)
 	}
 	prompt := service.AnalysisPrompt()
-	for _, required := range []string{"BETA V3 MANDATORY CONFLICT CONTRACT", "attacker_name", "target_name", "evidence_id", "market_pulse", "BTC", "BRENT", "72h"} {
+	for _, required := range []string{"BETA V3 MANDATORY CONFLICT CONTRACT", "attacker_name", "target_name", "evidence_id", "market_pulse", "BTC", "BRENT", "72h", "rolling 24-hour", "context_dossiers"} {
 		if !strings.Contains(prompt, required) {
 			t.Fatalf("mandatory runtime contract missing %q", required)
 		}
@@ -178,6 +179,100 @@ func TestShadowPercentAcceptsFractionIntegerAndPercentString(t *testing.T) {
 	}
 	if err := json.Unmarshal([]byte(`{"fraction":1.2,"integer":101,"text":"85%"}`), &decoded); err == nil {
 		t.Fatal("out-of-range percentage was accepted")
+	}
+}
+
+func TestShadowBatchUsesOnlyLatest24HoursAndNewestItemsFirst(t *testing.T) {
+	service := NewShadowService(filepath.Join(t.TempDir(), "shadow.enc"))
+	now := time.Now().UTC()
+	service.mu.Lock()
+	service.state.Buffer = append(service.state.Buffer, ShadowIntelItem{ID: "stale", PublishedAt: now.Add(-24*time.Hour - time.Second), CollectedAt: now})
+	for index := 0; index < ShadowBatchMin; index++ {
+		service.state.Buffer = append(service.state.Buffer, ShadowIntelItem{ID: fmt.Sprintf("fresh-%02d", index), PublishedAt: now.Add(-time.Duration(index) * time.Minute), CollectedAt: now})
+	}
+	service.mu.Unlock()
+
+	status := service.Status()
+	if status.PendingItems != ShadowBatchMin || status.StaleItems != 1 || status.IntakeHours != 24 {
+		t.Fatalf("incorrect rolling-window status: %+v", status)
+	}
+	items, _, err := service.PrepareBatch("deepseek/deepseek-chat")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer service.AbortBatch()
+	if len(items) != ShadowBatchMin || items[0].ID != "fresh-00" {
+		t.Fatalf("batch was not newest-first: first=%q len=%d", items[0].ID, len(items))
+	}
+	for _, item := range items {
+		if item.ID == "stale" {
+			t.Fatal("stale item escaped the 24-hour intake boundary")
+		}
+	}
+}
+
+func TestShadowContextPrefersLastThreeDailyDossiers(t *testing.T) {
+	service := NewShadowService(filepath.Join(t.TempDir(), "shadow.enc"))
+	service.mu.Lock()
+	service.state.Reports = []ShadowReport{
+		{ID: "batch-new", Kind: "batch"}, {ID: "daily-3", Kind: "daily"},
+		{ID: "daily-2", Kind: "daily"}, {ID: "daily-1", Kind: "daily"}, {ID: "daily-old", Kind: "daily"},
+	}
+	service.mu.Unlock()
+	reports := service.RecentContextReports(ShadowContextDossiers)
+	if len(reports) != 3 || reports[0].ID != "daily-3" || reports[2].ID != "daily-1" {
+		t.Fatalf("unexpected continuity context: %+v", reports)
+	}
+}
+
+func TestShadowClearOperationalDataPreservesConfiguration(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "shadow.enc")
+	service := NewShadowService(path)
+	service.mu.Lock()
+	service.state.SystemPrompt = "custom sealed doctrine"
+	service.state.AutonomyEnabled = true
+	service.state.AutonomyModelID = "deepseek/deepseek-chat"
+	service.state.Buffer = []ShadowIntelItem{{ID: "intel-1", CollectedAt: time.Now().UTC()}}
+	service.state.Reports = []ShadowReport{{ID: "report-1", Kind: "daily"}}
+	service.state.LastCollectAt = time.Now().UTC()
+	service.state.SourceCursor = 7
+	service.state.Sources[0].LastState = "error"
+	service.state.Sources[0].LastError = "temporary failure"
+	service.state.Sources[0].LastFetch = time.Now().UTC().Format(time.RFC3339)
+	service.mu.Unlock()
+
+	if err := service.ClearOperationalData(); err != nil {
+		t.Fatal(err)
+	}
+	reloaded := NewShadowService(path).Snapshot()
+	if len(reloaded.Buffer) != 0 || len(reloaded.Reports) != 0 || !reloaded.LastCollectAt.IsZero() || reloaded.SourceCursor != 0 {
+		t.Fatalf("operational data survived reset: %+v", reloaded)
+	}
+	if reloaded.AutonomyEnabled || reloaded.AutonomyModelID != "deepseek/deepseek-chat" {
+		t.Fatalf("unsafe or lost autonomy state after reset: %+v", reloaded)
+	}
+	if reloaded.SystemPrompt != "custom sealed doctrine" || len(reloaded.Sources) == 0 {
+		t.Fatal("source registry or doctrine was deleted")
+	}
+	if reloaded.Sources[0].LastState != "" || reloaded.Sources[0].LastError != "" || reloaded.Sources[0].LastFetch != "" {
+		t.Fatalf("source runtime telemetry survived reset: %+v", reloaded.Sources[0])
+	}
+}
+
+func TestShadowClearOperationalDataRejectsActiveOperations(t *testing.T) {
+	service := NewShadowService(filepath.Join(t.TempDir(), "shadow.enc"))
+	service.mu.Lock()
+	service.analysisRunning = true
+	service.mu.Unlock()
+	if !errors.Is(service.ClearOperationalData(), ErrShadowAnalysisRunning) {
+		t.Fatal("reset was accepted during active analysis")
+	}
+	service.mu.Lock()
+	service.analysisRunning = false
+	service.collectionRunning = true
+	service.mu.Unlock()
+	if !errors.Is(service.ClearOperationalData(), ErrShadowCollectionRunning) {
+		t.Fatal("reset was accepted during active collection")
 	}
 }
 
