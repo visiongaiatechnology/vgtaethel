@@ -91,12 +91,14 @@ type ShadowReport struct {
 }
 
 type ShadowState struct {
-	Sources       []ShadowSource    `json:"sources"`
-	Buffer        []ShadowIntelItem `json:"buffer"`
-	Reports       []ShadowReport    `json:"reports"`
-	SourceCursor  int               `json:"source_cursor"`
-	SystemPrompt  string            `json:"system_prompt"`
-	LastCollectAt time.Time         `json:"last_collect_at,omitempty"`
+	Sources         []ShadowSource    `json:"sources"`
+	Buffer          []ShadowIntelItem `json:"buffer"`
+	Reports         []ShadowReport    `json:"reports"`
+	SourceCursor    int               `json:"source_cursor"`
+	SystemPrompt    string            `json:"system_prompt"`
+	AutonomyEnabled bool              `json:"autonomy_enabled"`
+	AutonomyModelID string            `json:"autonomy_model_id,omitempty"`
+	LastCollectAt   time.Time         `json:"last_collect_at,omitempty"`
 }
 
 type ShadowStatus struct {
@@ -108,6 +110,12 @@ type ShadowStatus struct {
 	BatchMin        int       `json:"batch_min"`
 	BatchMax        int       `json:"batch_max"`
 	AnalysisRunning bool      `json:"analysis_running"`
+	AutonomyEnabled bool      `json:"autonomy_enabled"`
+	AutonomyModelID string    `json:"autonomy_model_id,omitempty"`
+	AnalysisModelID string    `json:"analysis_model_id,omitempty"`
+	AnalysisStarted time.Time `json:"analysis_started_at,omitempty"`
+	LastAnalysisAt  time.Time `json:"last_analysis_at,omitempty"`
+	LastAnalysisErr string    `json:"last_analysis_error,omitempty"`
 	LastCollectAt   time.Time `json:"last_collect_at,omitempty"`
 }
 
@@ -116,6 +124,10 @@ type ShadowService struct {
 	path            string
 	state           ShadowState
 	analysisRunning bool
+	analysisModelID string
+	analysisStarted time.Time
+	lastAnalysisAt  time.Time
+	lastAnalysisErr string
 }
 
 func NewShadowService(path string) *ShadowService {
@@ -172,7 +184,12 @@ func (s *ShadowService) Snapshot() ShadowState {
 func (s *ShadowService) Status() ShadowStatus {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	status := ShadowStatus{Sources: len(s.state.Sources), Reports: len(s.state.Reports), BatchMin: ShadowBatchMin, BatchMax: ShadowBatchMax, AnalysisRunning: s.analysisRunning, LastCollectAt: s.state.LastCollectAt}
+	status := ShadowStatus{
+		Sources: len(s.state.Sources), Reports: len(s.state.Reports), BatchMin: ShadowBatchMin, BatchMax: ShadowBatchMax,
+		AnalysisRunning: s.analysisRunning, AutonomyEnabled: s.state.AutonomyEnabled, AutonomyModelID: s.state.AutonomyModelID,
+		AnalysisModelID: s.analysisModelID, AnalysisStarted: s.analysisStarted, LastAnalysisAt: s.lastAnalysisAt,
+		LastAnalysisErr: s.lastAnalysisErr, LastCollectAt: s.state.LastCollectAt,
+	}
 	for _, source := range s.state.Sources {
 		if source.Enabled {
 			status.EnabledSources++
@@ -186,6 +203,44 @@ func (s *ShadowService) Status() ShadowStatus {
 		}
 	}
 	return status
+}
+
+func (s *ShadowService) SetAutonomy(enabled bool, modelID string) error {
+	modelID = strings.TrimSpace(modelID)
+	if enabled && !validShadowModelID(modelID) {
+		return errors.New("invalid SHADOW autonomy model")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	previousEnabled, previousModel := s.state.AutonomyEnabled, s.state.AutonomyModelID
+	s.state.AutonomyEnabled = enabled
+	if modelID != "" {
+		s.state.AutonomyModelID = modelID
+	}
+	if err := s.saveLocked(); err != nil {
+		s.state.AutonomyEnabled, s.state.AutonomyModelID = previousEnabled, previousModel
+		return err
+	}
+	return nil
+}
+
+func (s *ShadowService) Autonomy() (bool, string) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.state.AutonomyEnabled, s.state.AutonomyModelID
+}
+
+func validShadowModelID(modelID string) bool {
+	if modelID == "" || len(modelID) > 256 {
+		return false
+	}
+	for _, char := range modelID {
+		if char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char >= '0' && char <= '9' || strings.ContainsRune("/._:-", char) {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func (s *ShadowService) UpsertSource(source ShadowSource) error {
@@ -342,7 +397,7 @@ func (s *ShadowService) Collect(ctx context.Context, sourceLimit int) (int, erro
 	return added, s.saveLocked()
 }
 
-func (s *ShadowService) PrepareBatch() ([]ShadowIntelItem, string, error) {
+func (s *ShadowService) PrepareBatch(modelID string) ([]ShadowIntelItem, string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.analysisRunning {
@@ -361,10 +416,38 @@ func (s *ShadowService) PrepareBatch() ([]ShadowIntelItem, string, error) {
 		return nil, "", fmt.Errorf("SHADOW requires at least %d pending items", ShadowBatchMin)
 	}
 	s.analysisRunning = true
+	s.analysisModelID = strings.TrimSpace(modelID)
+	s.analysisStarted = time.Now().UTC()
+	s.lastAnalysisErr = ""
 	return pending, s.state.SystemPrompt + "\n\n" + MandatoryShadowV3Contract(), nil
 }
 
-func (s *ShadowService) AbortBatch() { s.mu.Lock(); s.analysisRunning = false; s.mu.Unlock() }
+func (s *ShadowService) AbortBatch() {
+	s.mu.Lock()
+	s.analysisRunning = false
+	s.analysisModelID = ""
+	s.analysisStarted = time.Time{}
+	s.mu.Unlock()
+}
+
+func (s *ShadowService) FailBatch(err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.analysisRunning = false
+	s.analysisModelID = ""
+	s.analysisStarted = time.Time{}
+	s.lastAnalysisAt = time.Now().UTC()
+	s.lastAnalysisErr = "SHADOW analysis failed"
+	if err != nil {
+		message := strings.TrimSpace(err.Error())
+		if len(message) > 500 {
+			message = message[:500]
+		}
+		if message != "" {
+			s.lastAnalysisErr = message
+		}
+	}
+}
 
 func (s *ShadowService) CompleteBatch(items []ShadowIntelItem, report ShadowReport) (ShadowReport, error) {
 	if len(items) < ShadowBatchMin || len(items) > ShadowBatchMax {
@@ -386,7 +469,11 @@ func (s *ShadowService) CompleteBatch(items []ShadowIntelItem, report ShadowRepo
 	report.ContentSHA256 = hex.EncodeToString(sum[:])
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	defer func() { s.analysisRunning = false }()
+	defer func() {
+		s.analysisRunning = false
+		s.analysisModelID = ""
+		s.analysisStarted = time.Time{}
+	}()
 	previousBuffer := append([]ShadowIntelItem(nil), s.state.Buffer...)
 	previousReports := append([]ShadowReport(nil), s.state.Reports...)
 	for index := range s.state.Buffer {
@@ -403,6 +490,8 @@ func (s *ShadowService) CompleteBatch(items []ShadowIntelItem, report ShadowRepo
 		s.state.Reports = previousReports
 		return ShadowReport{}, err
 	}
+	s.lastAnalysisAt = time.Now().UTC()
+	s.lastAnalysisErr = ""
 	return report, nil
 }
 

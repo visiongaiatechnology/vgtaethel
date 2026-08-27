@@ -83,7 +83,7 @@ func TestShadowBatchBoundaryAndEvidenceValidation(t *testing.T) {
 	}
 	service.mu.Unlock()
 
-	items, _, err := service.PrepareBatch()
+	items, _, err := service.PrepareBatch("deepseek/deepseek-chat")
 	if err != nil || len(items) != ShadowBatchMax {
 		t.Fatalf("expected bounded 60-item batch: len=%d err=%v", len(items), err)
 	}
@@ -94,7 +94,7 @@ func TestShadowBatchBoundaryAndEvidenceValidation(t *testing.T) {
 	}
 	service.AbortBatch()
 
-	items, _, err = service.PrepareBatch()
+	items, _, err = service.PrepareBatch("deepseek/deepseek-chat")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,6 +109,24 @@ func TestShadowBatchBoundaryAndEvidenceValidation(t *testing.T) {
 	status := service.Status()
 	if status.ProcessedItems != ShadowBatchMax || status.PendingItems != 5 || status.AnalysisRunning {
 		t.Fatalf("unexpected post-analysis state: %+v", status)
+	}
+}
+
+func TestShadowAutonomyIsExplicitAndPersistsModel(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "shadow.enc")
+	service := NewShadowService(path)
+	if enabled, _ := service.Autonomy(); enabled {
+		t.Fatal("SHADOW autonomy must be opt-in")
+	}
+	if err := service.SetAutonomy(true, "deepseek/deepseek-chat"); err != nil {
+		t.Fatal(err)
+	}
+	enabled, modelID := NewShadowService(path).Autonomy()
+	if !enabled || modelID != "deepseek/deepseek-chat" {
+		t.Fatalf("sealed autonomy configuration was not restored: enabled=%v model=%q", enabled, modelID)
+	}
+	if err := service.SetAutonomy(true, "../../invalid model"); err == nil {
+		t.Fatal("unsafe autonomy model identifier was accepted")
 	}
 }
 
