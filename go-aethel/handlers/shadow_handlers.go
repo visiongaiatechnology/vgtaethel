@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,18 +28,27 @@ func RunShadowAutoAnalysis() error {
 	if shadowService == nil {
 		return errors.New("SHADOW mode unavailable")
 	}
-	items, prompt, err := shadowService.PrepareBatch()
-	if err != nil {
-		return err
+	for completed := 0; completed < 8; completed++ {
+		enabled, modelID := shadowService.Autonomy()
+		if !enabled || shadowService.Status().PendingItems < osint.ShadowBatchMin {
+			return nil
+		}
+		items, prompt, err := shadowService.PrepareBatch(modelID)
+		if err != nil {
+			return err
+		}
+		payload, _ := json.Marshal(items)
+		report, err := executeShadowModel(modelID, prompt, "SHADOW_BATCH_JSON="+string(payload))
+		if err != nil {
+			shadowService.FailBatch(err)
+			return err
+		}
+		if _, err = shadowService.CompleteBatch(items, report); err != nil {
+			shadowService.FailBatch(err)
+			return err
+		}
 	}
-	defer shadowService.AbortBatch()
-	payload, _ := json.Marshal(items)
-	report, err := executeShadowModel("", prompt, "SHADOW_BATCH_JSON="+string(payload))
-	if err != nil {
-		return err
-	}
-	_, err = shadowService.CompleteBatch(items, report)
-	return err
+	return nil
 }
 
 func handleShadow(w http.ResponseWriter, r *http.Request) {
@@ -82,6 +92,31 @@ func handleShadow(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"added": added, "status": shadowService.Status()})
+	case "autonomy":
+		if r.Method != http.MethodPut {
+			shadowMethodNotAllowed(w)
+			return
+		}
+		var input struct {
+			Enabled bool   `json:"enabled"`
+			ModelID string `json:"model_id"`
+		}
+		if err := decodeShadowJSON(w, r, &input, 4<<10); err != nil {
+			return
+		}
+		if err := shadowService.SetAutonomy(input.Enabled, input.ModelID); err != nil {
+			intelligence.WriteIntelJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(shadowService.Status())
+		if input.Enabled {
+			go func() {
+				cycleContext, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+				defer cancel()
+				_, _ = shadowService.Collect(cycleContext, 8)
+				_ = RunShadowAutoAnalysis()
+			}()
+		}
 	case "analyze":
 		if r.Method != http.MethodPost {
 			shadowMethodNotAllowed(w)
@@ -227,7 +262,7 @@ func handleShadowAnalyze(w http.ResponseWriter, r *http.Request, daily bool) {
 		_ = json.NewEncoder(w).Encode(saved)
 		return
 	}
-	items, prompt, err := shadowService.PrepareBatch()
+	items, prompt, err := shadowService.PrepareBatch(input.ModelID)
 	if err != nil {
 		intelligence.WriteIntelJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
 		return
@@ -236,11 +271,13 @@ func handleShadowAnalyze(w http.ResponseWriter, r *http.Request, daily bool) {
 	payload, _ := json.Marshal(items)
 	report, err := executeShadowModel(input.ModelID, prompt, "SHADOW_BATCH_JSON="+string(payload))
 	if err != nil {
+		shadowService.FailBatch(err)
 		intelligence.WriteIntelJSON(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
 		return
 	}
 	saved, err := shadowService.CompleteBatch(items, report)
 	if err != nil {
+		shadowService.FailBatch(err)
 		intelligence.WriteIntelJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
 		return
 	}
