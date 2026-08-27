@@ -10,27 +10,57 @@
 ```
 
 # VGT AETHEL
-### Sovereign Intelligence OS
+### Sovereign Strategic Intelligence OS
 
 [![License](https://img.shields.io/badge/License-AGPLv3-blue?style=for-the-badge)](https://www.gnu.org/licenses/agpl-3.0)
-[![Version](https://img.shields.io/badge/Version-v2.0.0--beta.2-orange?style=for-the-badge)](#)
-[![Status](https://img.shields.io/badge/Status-BETA-yellow?style=for-the-badge)](#)
-[![Go](https://img.shields.io/badge/Go-1.21-00ADD8?style=for-the-badge&logo=go)](https://golang.org)
-[![Framework](https://img.shields.io/badge/Framework-Wails_Desktop-00ADD8?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/Version-1.0.0--beta.3-D4AF37?style=for-the-badge)](#-beta-v3-changelog)
+[![Status](https://img.shields.io/badge/Status-BETA_V3-111111?style=for-the-badge)](#-beta-software--experimental-rd)
+[![Go](https://img.shields.io/badge/Go-1.26.6-00ADD8?style=for-the-badge&logo=go)](https://go.dev)
+[![Framework](https://img.shields.io/badge/Wails-2.15.0-DF0000?style=for-the-badge)](https://wails.io)
 [![Platform](https://img.shields.io/badge/Platform-Windows_10%2F11_x64-0078D4?style=for-the-badge&logo=windows)](#)
-[![Dependencies](https://img.shields.io/badge/Dependencies-Zero_(pure_stdlib)-brightgreen?style=for-the-badge)](#)
+[![Architecture](https://img.shields.io/badge/Architecture-Local--First-brightgreen?style=for-the-badge)](#-architecture)
 [![Vault](https://img.shields.io/badge/Vault-AES--256--GCM-gold?style=for-the-badge)](#)
 [![KeyStore](https://img.shields.io/badge/KeyStore-Windows_DPAPI-purple?style=for-the-badge)](#)
 [![TTS](https://img.shields.io/badge/TTS-Sherpa--ONNX_(Offline)-brightgreen?style=for-the-badge)](#-sherpa-onnx-integration-guide)
 [![Audit](https://img.shields.io/badge/Audit_Log-Blockchain--chained-purple?style=for-the-badge)](#)
-[![Orchestrator](https://img.shields.io/badge/Orchestrator-AI--Kernel--v2-cyan?style=for-the-badge)](#-orchestration--intent-routing)
+[![OSINT](https://img.shields.io/badge/OSINT-SHADOW_COMMAND-D4AF37?style=for-the-badge)](#-shadow-osint-command-mode)
+[![Orchestrator](https://img.shields.io/badge/Orchestrator-AI--Kernel--v3-cyan?style=for-the-badge)](#-orchestration--intent-routing)
 [![VGT](https://img.shields.io/badge/VGT-VisionGaiaTechnology-cyan?style=for-the-badge)](https://visiongaiatechnology.de)
 
-**SOVEREIGN AI OS · ORCHESTRATOR · PERSONAL CORE · GLOBAL WATCH · SPHERE WORKSPACE · NATIVE DESKTOP · OFFLINE TTS**
+**SOVEREIGN AI OS · SHADOW OSINT · WEBGL COMMAND GLOBE · ORCHESTRATOR · PERSONAL CORE · GLOBAL WATCH · NATIVE DESKTOP · OFFLINE TTS**
 
 <img width="50%" alt="VGT AETHEL Neural Interface" src="https://github.com/user-attachments/assets/509b3a60-ea7f-44a8-8c11-bc61bbbcc188" />
 
 </div>
+
+---
+
+## ✨ Beta V3 Changelog
+
+> **Strategic Command Build:** Beta V3 expands AETHEL from a personal intelligence workspace into an evidence-bound OSINT and operational analysis environment. Existing Beta V2 capabilities remain available.
+
+| Area | What changed in Beta V3 |
+|---|---|
+| **SHADOW OSINT** | New compartmented military OSINT mode with its own editable system doctrine and a complete black/gold strategic-command interface. |
+| **3D Command Globe** | New local WebGL globe with rotation, zoom, AI-assessed theaters, pulsing regional markers and animated great-circle conflict vectors. |
+| **Directed Conflict Graph** | Evidence-bound attacker → target relationships for attacks, invasion, strikes, blockade, occupation, proxy action, cyberattack and military support. |
+| **Epistemic Integrity** | Every regional assessment and conflict vector must cite exact batch evidence. Generic tension, historic hostility and unsupported direction are rejected. |
+| **40–60 Intelligence Batches** | Bounded collection and analysis pipeline modeled after SHADOW Intel, with encrypted state, source rotation and operator-triggered analysis. |
+| **Source Command** | Large editable registry for military, official, geopolitical, economic, energy, cyber and space sources, plus Telegram public-preview collection for `militaernews`. |
+| **Web/RSS Discovery** | Official press pages and RSS directories can securely discover advertised feeds or bounded same-origin headline links. |
+| **Daily Master Dossiers** | Daily synthesis from multiple batch reports, with evidence preservation and JSON/Markdown export including directed conflict vectors. |
+| **Global Watch Accuracy** | Regional coloring is now fail-closed: no deterministic or hybrid fallback scores. A region appears only after an evidence-bound AI assessment. |
+| **Feed Separation** | News remains in the news feed; earthquakes and volcanic events stay isolated in dedicated natural-hazard layers and are excluded from automatic AI risk context. |
+| **Full-Shell Mode Skin** | Header, sidebar, navigation, model controls, system HUD and workspace surfaces switch coherently into the SHADOW command palette. |
+| **Hardening** | Strict structured JSON, response-size limits, bounded object counts, same-origin frontend requests, timeouts, atomic report persistence and rollback on storage failure. |
+| **Release Identity** | Unified `1.0.0-beta.3` / `BETA V3` branding across frontend, backend, Wails metadata, installer, release notes and CI. |
+
+### Verification status
+
+- `go test ./... -count=1` — passed
+- `go vet -buildvcs=false ./...` — passed
+- `govulncheck ./...` — no reachable vulnerabilities
+- Wails `2.15.0` production build — passed with `Clean Bin Dir: false`
 
 ---
 
@@ -64,8 +94,8 @@ Conventional AI Agents:
   Cloud-dependent TTS             → sends voice data externally
   No intent routing               → greetings trigger tool calls
 
-VGT AETHEL v2:
-  Go Cortex (pure stdlib)         → zero external attack surface
+VGT AETHEL Beta V3:
+  Modular Go Cortex              → typed, testable security and intelligence domains
   Wails native desktop app        → embedded frontend, no browser required
   AI Orchestrator (v2)            → separate orchestrator coordinates models, tools, UI
   Intent Router                   → deterministic: chat / agent / UI / writer / watch
@@ -78,6 +108,9 @@ VGT AETHEL v2:
   Personal Core                   → identity, memory, humor, location, proactivity
   Sphere Workspace                → writer, browser, run flow, weather, market data
   Global Watch                    → 3D globe with events, news, risks, alerts
+  SHADOW OSINT                    → military command mode with evidence-bound conflict graph
+  Directed conflict vectors      → attacker → target, action, confidence, exact evidence IDs
+  AI-only regional scores        → no deterministic or hybrid map-color fallback
   Token-optimized context         → compact, goal-specific model payloads
   Capability-based agent profiles → hard permission boundaries per role
   File snapshot & restore         → automatic rollback before destructive operations
@@ -85,7 +118,7 @@ VGT AETHEL v2:
 
 AETHEL implements a **strict separation of intelligence, execution and communication** — the governance layer that most AI agent runtimes are missing.
 
-> In Beta V1, many capabilities existed in isolation. In Beta V2, they are connected for the first time into a coherent system.
+> Beta V2 connected AETHEL's core capabilities. Beta V3 adds a hardened strategic OSINT command layer without weakening operator governance.
 
 <img width="1920" height="1009" alt="image" src="https://github.com/user-attachments/assets/e0ca45ac-7157-4317-bb4c-f28b490bbc59" />
 
@@ -97,13 +130,13 @@ AETHEL implements a **strict separation of intelligence, execution and communica
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
 │                      OPERATOR (WAILS DESKTOP)                         │
-│         ES6 Frontend — 16+ Modules — Embedded via go:embed           │
-│  Chat · Sphere Workspace · Global Watch · Run Center · Agent Builder │
+│         ES6 Frontend — 59 Modules — Embedded via go:embed            │
+│  Chat · Sphere · Global Watch · SHADOW OSINT · Runs · Workbench      │
 │  Personal Mode · Voice · Security · Tasks · Memory · Diagnostics     │
 ├──────────────────────────────────────────────────────────────────────┤
 │                       REST API v1 (HTTP/JSON)                         │
 ├──────────────────────────────────────────────────────────────────────┤
-│                  GO CORTEX — MODULAR (~77+ source files)              │
+│                  GO CORTEX — MODULAR (242 Go files)                   │
 │                                                                      │
 │  ┌─────────────────┬──────────────┬────────────────┬──────────────┐ │
 │  │  AI Orchestrator│ Chat Engine  │  Guard Kernel  │  Voice       │ │
@@ -122,10 +155,10 @@ AETHEL implements a **strict separation of intelligence, execution and communica
 │  └─────────────────┴──────────────┴────────────────┴──────────────┘ │
 │                                                                      │
 │  ┌─────────────────┬──────────────┬────────────────┬──────────────┐ │
-│  │  Global Watch   │ Intelligence │  Cases &       │  Feed        │ │
-│  │  3D Globe       │ Layer        │  Evidence      │  Reader      │ │
-│  │  Events/News    │ Alerts/Risk  │  (Isolated     │  RSS/Danger  │ │
-│  │  Earthquakes    │ Briefings    │   Contexts)    │  Sources     │ │
+│  │  Global Watch   │ SHADOW OSINT │  Cases &       │  Feed        │ │
+│  │  Local Globe    │ WebGL Globe  │  Evidence      │  Reader      │ │
+│  │  News/Hazards   │ Conflict DAG │  Workbench     │  RSS/Web/TG  │ │
+│  │  AI Risk        │ 40–60 Batch  │  Chain Custody │  Sources     │ │
 │  └─────────────────┴──────────────┴────────────────┴──────────────┘ │
 ├──────────────────────────────────────────────────────────────────────┤
 │                        NEXUS MEMORY STORE                             │
@@ -138,10 +171,14 @@ AETHEL implements a **strict separation of intelligence, execution and communica
 
 ---
 
-## 📊 Beta V1 → Beta V2 — What Changed
+## 📊 Beta V3 Capability Matrix
 
-| Area | Beta V2 |
+| Area | Beta V3 |
 |---|---|
+| **SHADOW OSINT** | Compartmented military intelligence mode with dedicated doctrine, encrypted state and black/gold command interface. |
+| **Conflict Command Globe** | Local WebGL earth with evidence-bound regions and directed attacker-to-target vectors. |
+| **Batch Intelligence** | Rotating collection, strict 40–60 item analysis and daily master-dossier synthesis. |
+| **Regional Risk Authority** | AI-only, evidence-bound scores. Missing AI assessment results in no score rather than an algorithmic substitute. |
 | **AI Orchestration** | Separation between normal AI model and orchestrator. The main model generates solutions; the orchestrator coordinates AETHEL, tools, UI and execution. |
 | **Intent Routing** | Deterministic routing between chat, agent task, UI control, writer task and Global Watch. A greeting no longer accidentally triggers computer control. |
 | **Token Optimization** | Instead of always explaining the full system, the model receives compact, goal-specific context and tool packages. |
@@ -176,7 +213,7 @@ AETHEL implements a **strict separation of intelligence, execution and communica
 
 ## 🧠 Orchestration & Intent Routing
 
-Beta V2 introduces a dedicated **AI Orchestrator** that sits above the chat engine and coordinates all system components.
+Beta V3 retains the dedicated **AI Orchestrator** introduced in Beta V2 and extends its governed intelligence surfaces with SHADOW OSINT.
 
 ```
 User Input
@@ -259,7 +296,7 @@ Entry N+1: action + SHA-256(Entry N)
 <img width="1920" height="1009" alt="image" src="https://github.com/user-attachments/assets/205df63b-2f8a-428f-bcb3-56fae9316e22" />
 
 
-## 🔐 Security Architecture (Beta V2)
+## 🔐 Security Architecture (Beta V3)
 
 ### Windows DPAPI Key Store
 
@@ -273,13 +310,18 @@ Encryption:      AES-256-GCM
 Implementation:  sealed_store.go
 ```
 
-### v2 Security Hardening (new)
+### Beta V3 Security Hardening
 
 - **Path Jails:** hardened mount limits, process execution controls, browser egress restrictions
 - **Voice Uploads:** sanitized and scope-limited
 - **Authority Stores:** hardened write controls
 - **Approval Persistence:** audit entries for signed one-time approvals stored and verifiable
 - **Mail Controls:** egress limits on mail actions
+- **Evidence-bound assessments:** regional scores and conflict directions require exact batch evidence IDs
+- **Fail-closed risk display:** missing or failed AI evaluation cannot fall back to deterministic map coloring
+- **Strict SHADOW schema:** unknown fields, trailing JSON, oversized responses and out-of-batch evidence are rejected
+- **Atomic dossier persistence:** storage failures restore the previous in-memory report and processing state
+- **Bounded rendering:** coordinates, region counts and conflict-vector counts are validated before WebGL overlay rendering
 
 ### Capability-Based Agent Profiles
 
@@ -318,13 +360,38 @@ A **local, textured 3D globe** with real-time intelligence overlay — no cloud 
 | Feature | Detail |
 |---|---|
 | **Rendering** | Local WebGL, time-based rotation, capped frame rate |
-| **Data Layers** | Borders, cities, earthquakes, volcanoes, news events, regional risks |
-| **Intelligence Layer** | News correlation, risk scoring, alerts, watchlists, time windows |
+| **Data Layers** | Borders, cities, news events and isolated earthquake/volcano hazard layers |
+| **Intelligence Layer** | News correlation, evidence-bound AI risk scoring, alerts, watchlists and time windows |
 | **Briefings** | Multilingual AI-generated situation reports (DE/EN/RU/ES) |
 | **Feeds** | Configurable/removable RSS and danger sources, strict time filters |
 | **Reader** | Internal article reading mode — no external browser |
 | **Cases & Evidence** | Isolated case contexts, entities, relationships, pseudonymization |
 | **AI Map Focus** | Orchestrator-driven globe navigation based on active intelligence |
+| **Score Authority** | AI-only; no deterministic or hybrid regional fallback coloring |
+| **Hazard Isolation** | Earthquakes and volcanic events are not news and do not enter automatic AI risk context |
+
+---
+
+## 🛰️ SHADOW OSINT Command Mode
+
+SHADOW is AETHEL's compartmented military and strategic intelligence environment. It uses an independent doctrine, isolated encrypted state and an evidence-first analysis pipeline.
+
+| Capability | Detail |
+|---|---|
+| **Command Surface** | High-class black/gold strategic interface that reskins the complete AETHEL shell while active |
+| **WebGL Globe** | Local textured 3D earth with drag rotation, wheel zoom, theater markers and orbital telemetry |
+| **Conflict Vectors** | Directed attacker → target arcs with action, confidence, animation and supporting evidence IDs |
+| **Accepted Actions** | Attack, invasion, strike, blockade, occupation, proxy attack, cyberattack and military support |
+| **Evidence Gate** | A vector is rejected when its direction is inferred only from tension, rhetoric or historic hostility |
+| **Source Registry** | Editable RSS, Web and Telegram sources across military, official, geopolitical, economy, energy, cyber and space domains |
+| **Telegram** | Public-preview collection for `militaernews`; no account token required |
+| **Collection** | Bounded rotating source acquisition with concurrency and response limits |
+| **Analysis** | Exactly 40–60 pending intelligence objects per batch |
+| **Daily Dossier** | Evidence-preserving master synthesis from multiple reports generated on the same day |
+| **Exports** | JSON and Markdown, including regional assessments and directed conflict vectors |
+| **Persistence** | AES-256-GCM sealed SHADOW state with rollback on failed writes |
+
+The mandatory Beta V3 conflict contract is appended at runtime. Editing the operator doctrine cannot remove its evidence and direction requirements.
 
 ---
 
@@ -611,6 +678,21 @@ go build -ldflags="-s -w" -o aethel.exe .
 | `GET/POST/DELETE` | `/v1/watch/feeds` | Feed source management |
 | `GET/POST` | `/v1/watch/cases` | Cases and evidence |
 
+### SHADOW OSINT (Beta V3)
+
+| Method | Endpoint | Function |
+|---|---|---|
+| `GET` | `/v1/shadow/status` | Source, buffer, batch and report status |
+| `GET` | `/v1/shadow/snapshot` | Bounded operational snapshot |
+| `GET/POST/PUT/DELETE` | `/v1/shadow/sources` | Editable RSS, Web and Telegram registry |
+| `POST` | `/v1/shadow/collect` | Run bounded rotating source collection |
+| `POST` | `/v1/shadow/analyze` | Analyze the next evidence batch of 40–60 items |
+| `POST` | `/v1/shadow/daily` | Generate an evidence-preserving daily master dossier |
+| `GET` | `/v1/shadow/reports` | Retrieve batch and daily dossiers |
+| `GET` | `/v1/shadow/regions` | AI regions and directed conflict links |
+| `GET/PUT` | `/v1/shadow/prompt` | Read or update the sealed operator doctrine |
+| `GET` | `/v1/shadow/export` | Export a dossier as JSON or Markdown |
+
 ### Personal Core (v2)
 
 | Method | Endpoint | Function |
@@ -649,27 +731,30 @@ go build -ldflags="-s -w" -o aethel.exe .
 | `run_center.js` | Run state machine UI, trace logs, evidence screenshots |
 | `diagnostics.js` | Privacy-safe system report export |
 | `sphere.js` | Sphere Workspace (writer, browser, widgets) — v2 |
-| `global_watch.js` | 3D globe, intelligence overlay, feeds, cases — v2 |
+| `osint_watch.js` + `osint/*` | Global Watch globe, intelligence overlay, feeds, hazards and cases |
+| `shadow_osint.js` | SHADOW command UI, source registry, reports and operational controls — Beta V3 |
+| `shadow_globe.js` | Local WebGL sphere, region markers and directed conflict-vector rendering — Beta V3 |
 
 ---
 
 ## 🚀 Quick Start
 
-```bash
-# 1. Copy environment config
-cp .env.example .env
-# Set GROQ_API_KEY=gsk_your_key
+```powershell
+# 1. Enter the authoritative desktop runtime
+cd go-aethel
 
-# 2. Build (CGO required for Sherpa-ONNX TTS)
-set CGO_ENABLED=1
-go build -ldflags="-s -w" -o aethel.exe .
+# 2. Verify the source tree
+go test ./... -count=1
+go vet -buildvcs=false ./...
 
-# 3. Run
-./aethel.exe
-# New loader opens — click "Start" to initialize
+# 3. Build with the pinned Wails 2.15 toolchain
+wails build -o AETHEL.exe -trimpath -nocolour
+
+# 4. Start the production artifact
+.\build\bin\AETHEL.exe
 ```
 
-> Without CGO, build with `CGO_ENABLED=0` — Sherpa-ONNX replaced by stub, SAPI5 fallback active.
+API keys and provider settings are entered through AETHEL's first-run setup and encrypted local configuration. Never commit `vgt_workspace`, `.env`, keys, sessions or generated dossiers.
 
 ---
 
@@ -677,12 +762,12 @@ go build -ldflags="-s -w" -o aethel.exe .
 
 | Metric | Value |
 |---|---|
-| **Language** | Go 1.21 |
-| **Framework** | Wails Desktop (WebView2 — embedded frontend) |
-| **External Dependencies** | Zero stdlib / CGO only for Sherpa-ONNX |
+| **Language** | Go 1.26.6 |
+| **Framework** | Wails 2.15.0 Desktop (WebView2 — embedded frontend) |
+| **Architecture** | Local-first modular Go runtime with pinned Go modules and native Sherpa-ONNX runtime |
 | **Platform** | Windows 10/11 x64 (official) |
-| **Backend Source Files** | ~77+ Go source files |
-| **Frontend Modules** | 18 JS modules (embedded via `go:embed`) |
+| **Backend Source Files** | 242 Go source and test files |
+| **Frontend Modules** | 59 JavaScript modules (embedded via `go:embed`) |
 | **Vault Encryption** | AES-256-GCM |
 | **Key Storage** | Windows DPAPI (`config.key.dpapi`) |
 | **Local State** | `AETHEL-SEAL-v1:` sealed encrypted stores |
@@ -691,14 +776,29 @@ go build -ldflags="-s -w" -o aethel.exe .
 | **TTS Fallback** | Windows SAPI5 (local, no API key) |
 | **STT Primary** | Groq Whisper `whisper-large-v3-turbo` |
 | **Memory Persistence** | `./vgt_workspace` (sealed JSON / Sled DB) |
-| **Supported Languages** | DE, EN, RU, ES |
+| **Supported Languages** | DE, EN, ES, FR, RU |
 | **License** | AGPLv3 |
 
 ---
 
 ## 📋 Changelog
 
-### v2.0.0-beta.2 — Sovereign Intelligence OS *(Current)*
+### 1.0.0-beta.3 — Strategic Command Build *(Current)*
+
+- Added the compartmented SHADOW OSINT mode and independent editable doctrine.
+- Added a local WebGL 3D command globe with evidence-bound regions.
+- Added directed attacker-to-target conflict vectors and military-support relationships.
+- Added the editable military/official/geopolitical/economic/energy/cyber/space source registry.
+- Added Telegram public-preview acquisition for `militaernews`.
+- Added secure RSS discovery and bounded same-origin headline extraction for Web sources.
+- Added strict 40–60 item intelligence batches and encrypted SHADOW state.
+- Added daily master dossiers and JSON/Markdown exports.
+- Removed deterministic and hybrid regional-risk fallback coloring from Global Watch.
+- Separated natural hazards from the news feed and automatic AI risk context.
+- Added strict SHADOW JSON decoding, evidence validation, size/count boundaries and atomic persistence rollback.
+- Reskinned the full AETHEL shell in SHADOW mode and unified Beta V3 release identity.
+
+### 1.0.0-beta.2 — Sovereign Intelligence OS *(archived)*
 
 #### Orchestration & Intelligence
 
@@ -785,7 +885,7 @@ Go Cortex (pure stdlib). Guard Kernel. AES-256-GCM vault. Blockchain audit log. 
 
 ---
 
-## 🚧 Known Limitations (v2.0.0-beta.2)
+## 🚧 Known Limitations (1.0.0-beta.3)
 
 - No automatic update system
 - Single-operator only — no multi-user support
@@ -793,7 +893,8 @@ Go Cortex (pure stdlib). Guard Kernel. AES-256-GCM vault. Blockchain audit log. 
 - Sherpa-ONNX requires CGO + GCC compiler + manual DLL and model setup
 - Official platform focus: Windows 10/11 x64 (macOS/Linux builds possible without GUI control features)
 - No HTTPS (localhost only — TLS optionally upgradeable)
-- Global Watch data layers require external feed configuration
+- OSINT quality depends on source availability, provider access and evidence present in completed batches
+- Directed conflict vectors appear only in new Beta V3 analyses; archived Beta V2 dossiers are not retroactively rewritten
 
 ---
 
@@ -822,6 +923,12 @@ Go Cortex (pure stdlib). Guard Kernel. AES-256-GCM vault. Blockchain audit log. 
 | Code Cartography | ✅ Done (beta.2) |
 | Multilanguage UI (DE/EN/RU/ES) | ✅ Done (beta.2) |
 | Provider Registry & Health | ✅ Done (beta.2) |
+| SHADOW OSINT Command Mode | ✅ Done (beta.3) |
+| WebGL Conflict Command Globe | ✅ Done (beta.3) |
+| Evidence-Bound Directed Conflict Vectors | ✅ Done (beta.3) |
+| 40–60 Item Intelligence Batches | ✅ Done (beta.3) |
+| Daily Master Dossiers & Export | ✅ Done (beta.3) |
+| AI-Only Regional Risk Authority | ✅ Done (beta.3) |
 
 ---
 
@@ -867,6 +974,6 @@ Enterprise deployments, TIER-0 audits (VGT SafetySys™) and commercial exceptio
 
 [![VGT](https://img.shields.io/badge/VisionGaia-Technology-cyan?style=for-the-badge)](https://visiongaiatechnology.de)
 
-*VGT AETHEL v2.0.0-beta.2 — Sovereign AI OS // AI Orchestrator + Intent Router // Personal Core // Global Watch // Sphere Workspace // Writer Tool // Code Cartography // Wails Native Desktop // Go Pure Stdlib // DPAPI Key Store // AES-256-GCM Sealed Stores // Guard Kernel // Blockchain Audit Log // Sherpa-ONNX Offline TTS // Durable Agent Runs // Capability Profiles // File Snapshots // 18-Module Frontend // DE/EN/RU/ES // AGPLv3 // Windows 10/11 x64*
+*VGT AETHEL 1.0.0-beta.3 — Sovereign Strategic Intelligence OS // SHADOW OSINT // WebGL Command Globe // Directed Conflict Vectors // AI Orchestrator // Personal Core // Global Watch // Sphere Workspace // Intelligence Workbench // Wails 2.15 Desktop // Go 1.26.6 // DPAPI Key Store // AES-256-GCM Sealed Stores // Guard Kernel // Tamper-Evident Audit // Sherpa-ONNX Offline TTS // Durable Agent Runs // 59 Frontend Modules // DE/EN/ES/FR/RU // AGPLv3 // Windows 10/11 x64*
 
 </div>
