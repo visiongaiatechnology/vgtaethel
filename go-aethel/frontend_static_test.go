@@ -653,7 +653,7 @@ func TestShadowBetaV3CommandGlobeIsLocalAndDirectional(t *testing.T) {
 		t.Fatal(err)
 	}
 	ui, globe, css := string(uiBytes), string(globeBytes), string(cssBytes)
-	for _, marker := range []string{"ShadowCommandGlobe", "conflict_links", "shadow-conflict-overlay", "renderConflictLinks", "toggleShadowAutonomy", "'/autonomy'", "shadow-analysis-state", "LATEST INTERCEPTS", "renderLatestDossiers", "renderForecastMatrix", "market_snapshot"} {
+	for _, marker := range []string{"ShadowCommandGlobe", "conflict_links", "shadow-conflict-overlay", "renderConflictLinks", "toggleShadowAutonomy", "'/autonomy'", "shadow-analysis-state", "LATEST INTERCEPTS", "renderLatestDossiers", "renderForecastMatrix", "market_snapshot", "intake_window_hours", "CONTEXT DOSSIERS", "context_dossiers", "ALLES LÖSCHEN", "clearShadowData", "'/data'"} {
 		if !strings.Contains(ui, marker) {
 			t.Errorf("SHADOW UI missing %q", marker)
 		}
