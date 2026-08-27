@@ -57,6 +57,15 @@ func TestInvalidReasoningOverridesFallBackToProviderSafeValues(t *testing.T) {
 	}
 }
 
+func TestDeepSeekStructuredJSONContract(t *testing.T) {
+	payload := map[string]interface{}{}
+	applyStructuredResponseOptions(payload, true, ChatRequest{StructuredJSON: true})
+	format, ok := payload["response_format"].(map[string]string)
+	if !ok || format["type"] != "json_object" {
+		t.Fatalf("DeepSeek structured JSON mode missing: %+v", payload)
+	}
+}
+
 func TestProviderSpecificReasoningContracts(t *testing.T) {
 	t.Run("Groq Qwen", func(t *testing.T) {
 		payload := map[string]interface{}{}

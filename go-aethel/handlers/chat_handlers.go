@@ -27,6 +27,7 @@ type ChatRequest struct {
 	LiveOperatorActive  bool              `json:"live_operator_active"`
 	SphereActive        bool              `json:"sphere_active"`
 	TextOnly            bool              `json:"text_only,omitempty"`
+	StructuredJSON      bool              `json:"structured_json,omitempty"`
 	ToolAllowlist       *[]string         `json:"tool_allowlist,omitempty"`
 }
 
@@ -85,6 +86,12 @@ func applyReasoningOptions(payload map[string]interface{}, modelID string, reque
 			}
 			payload["reasoning_effort"] = effort
 		}
+	}
+}
+
+func applyStructuredResponseOptions(payload map[string]interface{}, isDeepSeek bool, request ChatRequest) {
+	if isDeepSeek && request.StructuredJSON {
+		payload["response_format"] = map[string]string{"type": "json_object"}
 	}
 }
 
@@ -694,6 +701,7 @@ SPHERE WORKSPACE DIRECTIVES:
 	} else if !isGPTOSS {
 		payload["temperature"] = req.Temperature
 	}
+	applyStructuredResponseOptions(payload, isDeepSeek, req)
 
 	if req.UseTools {
 		tools := requestToolDefinitions(req)

@@ -18,6 +18,7 @@ import (
 	"go-aethel/agent"
 	"go-aethel/intelligence"
 	"go-aethel/osint"
+	"go-aethel/skills"
 )
 
 var shadowService *osint.ShadowService
@@ -37,12 +38,13 @@ func RunShadowAutoAnalysis() error {
 		if err != nil {
 			return err
 		}
-		payload, _ := json.Marshal(items)
-		report, err := executeShadowModel(modelID, prompt, "SHADOW_BATCH_JSON="+string(payload))
+		payload, marketSnapshot := buildShadowAnalysisInput(items)
+		report, err := executeShadowModel(modelID, prompt, "SHADOW_ANALYSIS_INPUT_JSON="+string(payload))
 		if err != nil {
 			shadowService.FailBatch(err)
 			return err
 		}
+		report.MarketSnapshot = marketSnapshot
 		if _, err = shadowService.CompleteBatch(items, report); err != nil {
 			shadowService.FailBatch(err)
 			return err
@@ -244,12 +246,14 @@ func handleShadowAnalyze(w http.ResponseWriter, r *http.Request, daily bool) {
 			return
 		}
 		prompt := shadowService.AnalysisPrompt() + "\n\nMETA-SYNTHESE: Verdichte die folgenden Tagesdossiers. Bewahre Evidence-IDs. Setze divergences und confirmed_vectors explizit."
-		payload, _ := json.Marshal(reports)
-		report, err := executeShadowModel(input.ModelID, prompt, "SHADOW_DAILY_REPORTS_JSON="+string(payload))
+		marketSnapshot := currentShadowMarketSnapshot()
+		payload, _ := json.Marshal(map[string]any{"daily_reports": reports, "market_pulse": marketSnapshot, "forecast_horizon_hours": 72})
+		report, err := executeShadowModel(input.ModelID, prompt, "SHADOW_DAILY_ANALYSIS_INPUT_JSON="+string(payload))
 		if err != nil {
 			intelligence.WriteIntelJSON(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
 			return
 		}
+		report.MarketSnapshot = marketSnapshot
 		report.ItemsAnalyzed = 0
 		for _, entry := range reports {
 			report.ItemsAnalyzed += entry.ItemsAnalyzed
@@ -268,13 +272,14 @@ func handleShadowAnalyze(w http.ResponseWriter, r *http.Request, daily bool) {
 		return
 	}
 	defer shadowService.AbortBatch()
-	payload, _ := json.Marshal(items)
-	report, err := executeShadowModel(input.ModelID, prompt, "SHADOW_BATCH_JSON="+string(payload))
+	payload, marketSnapshot := buildShadowAnalysisInput(items)
+	report, err := executeShadowModel(input.ModelID, prompt, "SHADOW_ANALYSIS_INPUT_JSON="+string(payload))
 	if err != nil {
 		shadowService.FailBatch(err)
 		intelligence.WriteIntelJSON(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
 		return
 	}
+	report.MarketSnapshot = marketSnapshot
 	saved, err := shadowService.CompleteBatch(items, report)
 	if err != nil {
 		shadowService.FailBatch(err)
@@ -284,12 +289,40 @@ func handleShadowAnalyze(w http.ResponseWriter, r *http.Request, daily bool) {
 	_ = json.NewEncoder(w).Encode(saved)
 }
 
+func buildShadowAnalysisInput(items []osint.ShadowIntelItem) ([]byte, []osint.ShadowMarketPoint) {
+	marketSnapshot := currentShadowMarketSnapshot()
+	payload, _ := json.Marshal(map[string]any{
+		"intel_items": items, "market_pulse": marketSnapshot, "forecast_horizon_hours": 72,
+	})
+	return payload, marketSnapshot
+}
+
+func currentShadowMarketSnapshot() []osint.ShadowMarketPoint {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	quotes, err := skills.LookupMarketQuotes(ctx, []string{"BTC", "ETH", "GOLD", "BRENT", "WTI", "SP500", "NASDAQ", "DAX", "EURUSD", "USDJPY"})
+	if err != nil {
+		return []osint.ShadowMarketPoint{}
+	}
+	result := make([]osint.ShadowMarketPoint, 0, len(quotes))
+	for _, quote := range quotes {
+		if quote.Price <= 0 || quote.ObservedAt.IsZero() {
+			continue
+		}
+		result = append(result, osint.ShadowMarketPoint{
+			Symbol: quote.Symbol, Name: quote.Name, Category: quote.Category, Currency: quote.Currency,
+			Price: quote.Price, Change24H: quote.Change24H, ObservedAt: quote.ObservedAt, Source: quote.Source,
+		})
+	}
+	return result
+}
+
 func executeShadowModel(modelID, systemPrompt, userContent string) (osint.ShadowReport, error) {
 	if strings.TrimSpace(modelID) == "" {
 		modelID = "openai/gpt-oss-120b"
 	}
 	message, _ := json.Marshal(map[string]string{"role": "user", "content": userContent})
-	request := ChatRequest{ModelID: modelID, Messages: []json.RawMessage{message}, SystemPrompt: systemPrompt, Temperature: 0.2, UseTools: false, ReasoningEffort: "high", ReasoningVisibility: "hidden", TextOnly: true}
+	request := ChatRequest{ModelID: modelID, Messages: []json.RawMessage{message}, SystemPrompt: systemPrompt, Temperature: 0.2, UseTools: false, ReasoningEffort: "high", ReasoningVisibility: "hidden", TextOnly: true, StructuredJSON: true}
 	body, err := json.Marshal(request)
 	if err != nil {
 		return osint.ShadowReport{}, err
@@ -304,24 +337,93 @@ func executeShadowModel(modelID, systemPrompt, userContent string) (osint.Shadow
 	if parsed.Err != nil {
 		return osint.ShadowReport{}, parsed.Err
 	}
-	content := strings.TrimSpace(parsed.Text)
-	content = strings.TrimPrefix(content, "```json")
-	content = strings.TrimPrefix(content, "```")
-	content = strings.TrimSuffix(content, "```")
+	return decodeShadowModelReport(parsed.Text)
+}
+
+func decodeShadowModelReport(content string) (osint.ShadowReport, error) {
+	content = strings.TrimSpace(content)
 	if len(content) == 0 || len(content) > 512<<10 {
 		return osint.ShadowReport{}, errors.New("SHADOW model response outside size boundary")
 	}
-	var report osint.ShadowReport
-	decoder := json.NewDecoder(strings.NewReader(content))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&report); err != nil {
-		return osint.ShadowReport{}, errors.New("SHADOW model returned invalid structured JSON")
+	candidates := extractJSONObjectCandidates(content, 16)
+	var lastErr error
+	for _, candidate := range candidates {
+		var report osint.ShadowReport
+		decoder := json.NewDecoder(strings.NewReader(candidate))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&report); err != nil {
+			lastErr = err
+			continue
+		}
+		var trailing any
+		if err := decoder.Decode(&trailing); err != io.EOF {
+			lastErr = errors.New("trailing structured data")
+			continue
+		}
+		if strings.TrimSpace(report.ThreatLevel) == "" || strings.TrimSpace(report.Summary) == "" {
+			lastErr = errors.New("missing report identity fields")
+			continue
+		}
+		return report, nil
 	}
-	var trailing any
-	if err := decoder.Decode(&trailing); err != io.EOF {
-		return osint.ShadowReport{}, errors.New("SHADOW model returned trailing structured data")
+	if lastErr != nil {
+		message := lastErr.Error()
+		if len(message) > 180 {
+			message = message[:180]
+		}
+		return osint.ShadowReport{}, fmt.Errorf("SHADOW model returned invalid structured JSON: %s", message)
 	}
-	return report, nil
+	return osint.ShadowReport{}, errors.New("SHADOW model returned no structured JSON object")
+}
+
+func extractJSONObjectCandidates(content string, maximum int) []string {
+	if maximum < 1 {
+		return nil
+	}
+	result := make([]string, 0, min(maximum, 4))
+	start, depth := -1, 0
+	inString, escaped := false, false
+	for index := 0; index < len(content); index++ {
+		char := content[index]
+		if inString {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if char == '\\' {
+				escaped = true
+				continue
+			}
+			if char == '"' {
+				inString = false
+			}
+			continue
+		}
+		if char == '"' && depth > 0 {
+			inString = true
+			continue
+		}
+		switch char {
+		case '{':
+			if depth == 0 {
+				start = index
+			}
+			depth++
+		case '}':
+			if depth == 0 {
+				continue
+			}
+			depth--
+			if depth == 0 && start >= 0 {
+				result = append(result, content[start:index+1])
+				start = -1
+				if len(result) == maximum {
+					return result
+				}
+			}
+		}
+	}
+	return result
 }
 
 func handleShadowExport(w http.ResponseWriter, r *http.Request) {
@@ -373,6 +475,14 @@ func shadowReportMarkdown(report osint.ShadowReport) string {
 	b.WriteString("\n## Directed Conflict Vectors\n")
 	for _, link := range report.ConflictLinks {
 		fmt.Fprintf(&b, "- **%s → %s** action=%s confidence=%d — %s\n", link.AttackerName, link.TargetName, link.Action, link.Confidence, link.Assessment)
+	}
+	b.WriteString("\n## 72h Forecast Matrix\n")
+	for _, forecast := range report.Forecasts {
+		fmt.Fprintf(&b, "- **%s / %s / %s** probability=%d instruments=%s — %s\n", forecast.Sector, forecast.Horizon, forecast.Direction, forecast.Probability, strings.Join(forecast.Instruments, ", "), forecast.Prediction)
+	}
+	b.WriteString("\n## Sphere Market Pulse Snapshot\n")
+	for _, point := range report.MarketSnapshot {
+		fmt.Fprintf(&b, "- **%s** %.6f %s change24h=%+.2f%% observed=%s source=%s\n", point.Symbol, point.Price, point.Currency, point.Change24H, point.ObservedAt.Format(time.RFC3339), point.Source)
 	}
 	return b.String()
 }

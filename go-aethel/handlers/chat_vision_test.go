@@ -19,3 +19,21 @@ func TestTextOnlyRequestNeverAttachesViewportScreenshot(t *testing.T) {
 		t.Fatal("regression fixture does not exercise the automatic vision trigger")
 	}
 }
+
+func TestDecodeShadowModelReportExtractsFencedJSONAfterReasoning(t *testing.T) {
+	content := "<think>Analyse abgeschlossen.</think>\n```json\n" +
+		`{"threat_level":"HIGH","summary":"Evidence-bound summary with enough content for report identification.","situation":"Situation","cui_bono":"Interests","strategic_reality":"Projection","divergences":"None","confirmed_vectors":"None","regions":[],"conflict_links":[],"forecast_matrix":[],"evidence_ids":["item-1"]}` + "\n```"
+	report, err := decodeShadowModelReport(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.ThreatLevel != "HIGH" || len(report.EvidenceIDs) != 1 {
+		t.Fatalf("unexpected extracted report: %+v", report)
+	}
+}
+
+func TestDecodeShadowModelReportRejectsTruncatedJSON(t *testing.T) {
+	if _, err := decodeShadowModelReport(`{"threat_level":"HIGH"`); err == nil {
+		t.Fatal("truncated model JSON was accepted")
+	}
+}
