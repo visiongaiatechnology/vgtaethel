@@ -60,6 +60,11 @@ type appState struct {
 }
 
 var state *appState
+var operations *personal.OperationsStore
+
+func InitOperations(store *personal.OperationsStore) {
+	operations = store
+}
 
 func InitState(
 	guard *security.SecurityGuard,

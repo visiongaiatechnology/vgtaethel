@@ -51,6 +51,7 @@ var (
 	HandleOSINTBriefing      = handleOSINTBriefing
 	HandleOSINTArticleReader = handleOSINTArticleReader
 	HandleOSINTCollectors    = handleOSINTCollectors
+	HandleShadow             = handleShadow
 	HandleMailConfig         = handleMailConfig
 	HandleMailTest           = handleMailTest
 	HandleSetup              = handleSetup

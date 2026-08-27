@@ -6,7 +6,11 @@ import (
 )
 
 func TestEONETVolcanoAdapterTagsEruptingEvents(t *testing.T) {
-	feed := `{"events":[{"id":"EONET_999","title":"Etna Volcano","link":"https://example.invalid/etna","geometry":[{"date":"2024-06-15T12:00:00Z","coordinates":[15.0,37.75]}]}]}`
+	feed := `{"events":[
+		{"id":"EONET_999","title":"Etna Volcano","link":"https://example.invalid/etna","geometry":[{"date":"2024-06-15T12:00:00Z","coordinates":[15.0,37.75]}]},
+		{"id":"EONET_NOGEO","title":"No Geometry Volcano","link":"https://example.invalid/x","geometry":[]},
+		{"id":"EONET_BAD","title":"Bad Coords","geometry":[{"date":"2024-06-15T12:00:00Z","coordinates":[500,95]}]}
+	]}`
 	events, err := eonetVolcanoCollector{}.Parse(&IntelligenceSource{Name: "NASA EONET Volcanoes"}, strings.NewReader(feed))
 	if err != nil || len(events) != 1 {
 		t.Fatalf("volcano feed parse failed: %#v / %v", events, err)
@@ -16,6 +20,9 @@ func TestEONETVolcanoAdapterTagsEruptingEvents(t *testing.T) {
 	}
 	if !strings.Contains(events[0].Summary, "[volcano erupting]") {
 		t.Fatalf("erupting tag missing in summary: %q", events[0].Summary)
+	}
+	if !strings.Contains(events[0].Title, "[volcano erupting]") {
+		t.Fatalf("title must carry erupting tag: %q", events[0].Title)
 	}
 	if events[0].Severity != "high" {
 		t.Fatalf("open volcano should be high severity, got %q", events[0].Severity)

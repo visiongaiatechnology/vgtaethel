@@ -146,11 +146,11 @@ func toolDefinitionsForRequest(liveOperator, sphereActive bool, requestedAllowli
 	sphereAllowed := map[string]bool{
 		"fs_read_file": true, "fs_list_dir": true, "fs_write_file": true, "fs_replace_file_content": true,
 		"code_cartography": true, "nexus_save": true, "nexus_recall": true, "personal_memory_save": true,
-		"personal_memory_recall": true, "web_browser": true, "weather_lookup": true, "market_lookup": true, "sphere_write_document": true, "media_control": true,
-		"intelligence_status": true, "global_watch_nexus_context": true, "global_watch_focus": true,
+		"personal_memory_recall": true, "web_browser": true, "weather_lookup": true, "market_lookup": true, "sphere_market_overview": true, "sphere_write_document": true, "media_control": true,
+		"intelligence_status": true, "global_watch_nexus_context": true, "global_watch_natural_hazards_context": true, "global_watch_focus": true,
 		"global_watch_observe": true, "global_watch_toggle_layer": true, "global_watch_schedule_briefing": true,
 		"navigate_ui": true, "global_watch_focus_region": true, "global_watch_time_window": true, "global_watch_open_report": true,
-		"mail_list_messages": true, "mail_send_message": true,
+		"mail_list_messages": true, "mail_read_message": true, "mail_manage": true, "mail_send_message": true,
 		"intelligence_collect_source": true, "intelligence_propose_observation": true, "intelligence_create_case": true,
 		"osint_add_custom_feed": true, "osint_set_briefing_prompt": true,
 	}

@@ -135,6 +135,8 @@ func handleRunsPath(w http.ResponseWriter, r *http.Request) {
 		run, err = state.runs.Pause(id)
 	case "cancel":
 		run, err = state.runs.Cancel(id)
+	case "compensate":
+		run, err = state.runs.Compensate(id, state.policy, state.skills)
 	case "advance":
 		run, err = state.runs.Advance(id, state.policy, state.skills)
 	case "cost":

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"sort"
 	"strings"
 	"time"
 
@@ -16,6 +15,9 @@ import (
 func HandleIntelligence(w http.ResponseWriter, r *http.Request) {
 	if state == nil || state.intel == nil {
 		intelligence.WriteIntelJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "intelligence core starting"})
+		return
+	}
+	if handleAnalysisAPI(w, r) {
 		return
 	}
 	switch {
@@ -186,12 +188,8 @@ func HandleIntelligence(w http.ResponseWriter, r *http.Request) {
 		d := state.intel.Snapshot()
 		intelligence.WriteIntelJSON(w, http.StatusOK, map[string]any{"mode": "local-first", "event_bus": "active", "revision": d.Revision, "events": len(d.Events), "cases": len(d.Cases), "raw_pii": false, "external_collectors": "opt-in"})
 	case r.URL.Path == "/v1/intelligence/risks" && r.Method == http.MethodGet:
-		if intelligence.SharedIntelStore != nil {
-			intelligence.WriteIntelJSON(w, http.StatusOK, map[string]any{"risks": intelligence.SharedIntelStore.GetRiskScores()})
-			return
-		}
-		risks := state.intel.ComputeAllRegionalRisks()
-		intelligence.WriteIntelJSON(w, http.StatusOK, map[string]any{"risks": risks})
+		// AI regional evaluation (5h cache) for Global Watch HUD.
+		handleRegionalRiskGET(w, r)
 		return
 	case r.URL.Path == "/v1/intelligence/alerts" && r.Method == http.MethodGet:
 		if intelligence.SharedIntelStore != nil {
@@ -413,30 +411,8 @@ func HandleIntelligence(w http.ResponseWriter, r *http.Request) {
 		intelligence.WriteIntelJSON(w, 201, rel)
 		return
 	case r.URL.Path == "/v1/intelligence/risk" && r.Method == http.MethodGet:
-		// Prefer unified intelligence.SharedIntelStore so Risk HUD matches map/chat/explain.
-		if intelligence.SharedIntelStore != nil {
-			snap := intelligence.SharedIntelStore.GetSnapshot()
-			out := make([]intelligence.RegionalRiskData, 0, len(snap.RiskScores))
-			for id, rs := range snap.RiskScores {
-				out = append(out, intelligence.RegionalRiskData{
-					RegionID:           id,
-					RegionName:         id,
-					OverallRisk:        rs.OverallRisk,
-					GeopoliticalRisk:   rs.GeopoliticalRisk,
-					ConflictRisk:       rs.ConflictRisk,
-					CyberRisk:          rs.CyberRisk,
-					InfrastructureRisk: rs.InfrastructureRisk,
-					EconomicRisk:       rs.EconomicRisk,
-					PrimaryDrivers:     rs.PrimaryDrivers,
-					Trend:              rs.Trend,
-				})
-			}
-			sort.Slice(out, func(i, j int) bool { return out[i].OverallRisk > out[j].OverallRisk })
-			intelligence.WriteIntelJSON(w, http.StatusOK, out)
-			return
-		}
-		risks := state.intel.ComputeAllRegionalRisks()
-		intelligence.WriteIntelJSON(w, http.StatusOK, risks)
+		// AI regional evaluation (5h cache) — same path as /risks, array body for HUD.
+		handleRegionalRiskGET(w, r)
 		return
 	case r.URL.Path == "/v1/intelligence/evaluation" && r.Method == http.MethodGet:
 		eval, err := state.intel.UpdateEvaluation()

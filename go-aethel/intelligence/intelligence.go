@@ -141,10 +141,11 @@ type intelligenceState struct {
 	Evaluation NeuralCoreEvaluation `json:"evaluation"`
 }
 type IntelligenceStore struct {
-	mu   sync.RWMutex
-	path string
-	data intelligenceState
-	bus  *IntelligenceBus
+	mu        sync.RWMutex
+	path      string
+	data      intelligenceState
+	bus       *IntelligenceBus
+	canonical *Store
 
 	ChatEvaluator func(systemPrompt, userPrompt string) (string, error)
 }
@@ -164,6 +165,12 @@ func NewIntelligenceStore(path string) *IntelligenceStore {
 		s.data.Cases = []IntelligenceCase{}
 	}
 	return s
+}
+
+// NewCanonicalIntelligenceAdapter retains the public compatibility surface
+// while delegating every production intelligence mutation to one Store.
+func NewCanonicalIntelligenceAdapter(canonical *Store) *IntelligenceStore {
+	return &IntelligenceStore{canonical: canonical, bus: NewIntelligenceBus(), data: intelligenceState{Events: []IntelligenceEvent{}, Cases: []IntelligenceCase{}}}
 }
 func (s *IntelligenceStore) commitLocked(kind, subject string) error {
 	err := s.saveLocked()
@@ -204,6 +211,12 @@ func intelID(prefix string) string {
 	return prefix + "_" + hex.EncodeToString(buf)
 }
 func (s *IntelligenceStore) Snapshot() intelligenceState {
+	if s.canonical != nil {
+		s.mu.RLock()
+		evaluation := s.data.Evaluation
+		s.mu.RUnlock()
+		return canonicalCompatibilitySnapshot(s.canonical.GetSnapshot(), evaluation)
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := s.data
@@ -220,6 +233,15 @@ func (s *IntelligenceStore) CreateCaseWithID(id, title, purpose string) (Intelli
 	purpose = strings.TrimSpace(purpose)
 	if title == "" || purpose == "" {
 		return IntelligenceCase{}, errors.New("title and purpose are required")
+	}
+	if s.canonical != nil {
+		created, err := s.canonical.CreateCaseWithID(id, title, purpose)
+		if err != nil {
+			return IntelligenceCase{}, err
+		}
+		result := compatibilityCase(created)
+		s.publishCompatibility("case.created", result.ID)
+		return result, nil
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -258,6 +280,13 @@ func (s *IntelligenceStore) DeleteCase(caseID string) error {
 	if caseID == "" {
 		return errors.New("case id required")
 	}
+	if s.canonical != nil {
+		if err := s.canonical.DeleteCase(caseID); err != nil {
+			return err
+		}
+		s.publishCompatibility("case.deleted", caseID)
+		return nil
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	idx := -1
@@ -291,6 +320,17 @@ func (s *IntelligenceStore) ProposeEvent(event IntelligenceEvent) error {
 		event.ObservedAt = time.Now().UTC()
 	}
 	event.Status = "proposed"
+	if s.canonical != nil {
+		snapshot := s.canonical.GetSnapshot()
+		for _, observation := range snapshot.Observations {
+			if observation.ID == event.ID || (observation.SourceID == event.Source && strings.EqualFold(observation.FinalURL, event.SourceURL) && strings.EqualFold(safeTitle(observation.RawText), event.Title)) {
+				return ErrDuplicateObservation
+			}
+		}
+		s.canonical.IngestObservation(Observation{ID: event.ID, SourceID: event.Source, RawText: strings.TrimSpace(event.Title + " " + event.Summary), ObservedAt: event.ObservedAt, Latitude: event.Latitude, Longitude: event.Longitude, Domain: "general", OriginalURL: event.SourceURL, FinalURL: event.SourceURL, FetchedAt: time.Now().UTC(), PublishedAt: event.ObservedAt, ParserVersion: "compatibility-adapter-v2"})
+		s.publishCompatibility("observation.proposed", event.ID)
+		return nil
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -357,6 +397,21 @@ func (s *IntelligenceStore) SealEvidence(caseID, source, url, excerpt, operator 
 
 // SealEvidenceWithEvent seals evidence and optionally records promote provenance (source_event_id) in audit.
 func (s *IntelligenceStore) SealEvidenceWithEvent(caseID, source, url, excerpt, operator, sourceEventID string) (IntelligenceEvidence, error) {
+	if s.canonical != nil {
+		body := []byte(strings.TrimSpace(source) + "\n" + strings.TrimSpace(url) + "\n" + strings.TrimSpace(excerpt))
+		if len(body) == 0 {
+			return IntelligenceEvidence{}, errors.New("evidence content is required")
+		}
+		digest := sha256.Sum256(body)
+		evidenceID := intelID("ev")
+		sealed, err := s.canonical.SealCaseEvidence(caseID, evidenceID, source, url, excerpt, hex.EncodeToString(digest[:]), strings.TrimSpace(sourceEventID))
+		if err != nil {
+			return IntelligenceEvidence{}, err
+		}
+		result := compatibilityEvidence(sealed)
+		s.publishCompatibility("evidence.sealed", result.ID)
+		return result, nil
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for ci := range s.data.Cases {
@@ -397,6 +452,15 @@ func (s *IntelligenceStore) SealEvidenceWithEvent(caseID, source, url, excerpt, 
 func (s *IntelligenceStore) ValidateEvidence(caseID, evidenceID, operator, decision string) (IntelligenceEvidence, error) {
 	if decision != "verified" && decision != "disputed" && decision != "rejected" {
 		return IntelligenceEvidence{}, errors.New("validation decision is invalid")
+	}
+	if s.canonical != nil {
+		validated, err := s.canonical.ValidateCaseEvidence(caseID, evidenceID, operator, decision)
+		if err != nil {
+			return IntelligenceEvidence{}, err
+		}
+		result := compatibilityEvidence(validated)
+		s.publishCompatibility("evidence."+decision, evidenceID)
+		return result, nil
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -472,6 +536,9 @@ func (s *IntelligenceStore) Briefing() string {
 	return b.String()
 }
 func (s *IntelligenceStore) ReIDStatus(caseID string) (map[string]any, error) {
+	if s.canonical != nil {
+		return s.canonical.ReIDStatus(caseID)
+	}
 	d := s.Snapshot()
 	for _, c := range d.Cases {
 		if c.ID != caseID {
@@ -543,6 +610,13 @@ func (s *IntelligenceStore) expireReIDLocked(caseID string) {
 
 // RequestReID records a dual-approval Re-ID workflow entry (does not recover raw PII).
 func (s *IntelligenceStore) RequestReID(caseID, purpose, actor string) (IntelligenceReIDRequest, error) {
+	if s.canonical != nil {
+		request, err := s.canonical.RequestReID(caseID, purpose, actor)
+		if err == nil {
+			s.publishCompatibility("reid.requested", request.ID)
+		}
+		return request, err
+	}
 	purpose = strings.TrimSpace(purpose)
 	actor = strings.TrimSpace(actor)
 	if purpose == "" || len(purpose) < 10 {
@@ -575,6 +649,13 @@ func (s *IntelligenceStore) RequestReID(caseID, purpose, actor string) (Intellig
 // ApproveReID applies first or second approval. Second approval unlocks alias metadata for 30 minutes.
 // First and second approver must differ (dual-control).
 func (s *IntelligenceStore) ApproveReID(caseID, requestID, approver string) (IntelligenceReIDRequest, error) {
+	if s.canonical != nil {
+		request, err := s.canonical.ApproveReID(caseID, requestID, approver)
+		if err == nil {
+			s.publishCompatibility("reid."+request.Status, request.ID)
+		}
+		return request, err
+	}
 	approver = strings.TrimSpace(approver)
 	if approver == "" {
 		return IntelligenceReIDRequest{}, errors.New("approver required")
@@ -780,6 +861,7 @@ func (s *IntelligenceStore) NavigateUI(view string) error {
 	allowed := map[string]bool{
 		"core": true, "chat": true, "global_watch": true, "globe": true, "sphere": true,
 		"personal": true, "case": true, "tasks": true, "settings": true, "memory": true,
+		"mail":   true,
 		"agents": true, "agent_tracker": true,
 	}
 	if !allowed[view] {
@@ -886,6 +968,22 @@ func (s *IntelligenceStore) AddEntity(caseID, label, kind string, confidence int
 	if label == "" || (kind != "person" && kind != "organisation" && kind != "location" && kind != "asset" && kind != "event") || confidence < 0 || confidence > 100 {
 		return IntelligenceEntity{}, errors.New("entity fields are invalid")
 	}
+	if s.canonical != nil {
+		display := label
+		if kind == "person" {
+			alias, err := casePseudonym(caseID, label)
+			if err != nil {
+				return IntelligenceEntity{}, err
+			}
+			display = alias
+		}
+		entity := IntelligenceEntity{ID: intelID("ent"), Label: display, Kind: kind, Confidence: confidence}
+		if err := s.canonical.AddCaseEntity(caseID, entity.ID, entity.Label, entity.Kind, entity.Confidence); err != nil {
+			return IntelligenceEntity{}, err
+		}
+		s.publishCompatibility("entity.added", entity.ID)
+		return entity, nil
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for ci := range s.data.Cases {
@@ -918,6 +1016,14 @@ func (s *IntelligenceStore) AddEntity(caseID, label, kind string, confidence int
 func (s *IntelligenceStore) LinkEntities(caseID, from, to, relation, evidenceID string, confidence int) (IntelligenceRelation, error) {
 	if strings.TrimSpace(from) == "" || strings.TrimSpace(to) == "" || strings.TrimSpace(relation) == "" || strings.TrimSpace(evidenceID) == "" || confidence < 0 || confidence > 100 {
 		return IntelligenceRelation{}, errors.New("relationship fields are invalid")
+	}
+	if s.canonical != nil {
+		result := IntelligenceRelation{From: from, To: to, Type: strings.TrimSpace(relation), EvidenceID: evidenceID, Confidence: confidence}
+		if err := s.canonical.LinkCaseRelation(caseID, from, to, result.Type, evidenceID, confidence); err != nil {
+			return IntelligenceRelation{}, err
+		}
+		s.publishCompatibility("relationship.added", caseID)
+		return result, nil
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -992,81 +1098,89 @@ type RegionalRiskData struct {
 	EconomicRisk       float64  `json:"economic_risk"`
 	PrimaryDrivers     []string `json:"primary_drivers"`
 	Trend              string   `json:"trend"`
+	// AI evaluation metadata for Global Watch HUD
+	EvaluationSource string    `json:"evaluation_source,omitempty"`
+	AINarrative      string    `json:"ai_narrative,omitempty"`
+	AIModelID        string    `json:"ai_model_id,omitempty"`
+	AIEvaluatedAt    time.Time `json:"ai_evaluated_at,omitempty"`
+	NextRefreshAt    time.Time `json:"next_refresh_at,omitempty"`
+	CacheAgeHours    float64   `json:"cache_age_hours,omitempty"`
+	// References: event titles / source URLs for the region detail popup (never invented).
+	References []RiskReference `json:"references,omitempty"`
 }
 
 func (s *IntelligenceStore) ComputeAllRegionalRisks() []RegionalRiskData {
 	d := s.Snapshot()
-
-	regions := []struct {
-		ID             string
-		Name           string
-		MinLat, MaxLat float64
-		MinLon, MaxLon float64
-	}{
-		{"GERMANY", "Germany", 47.2, 55.0, 5.8, 15.0},
-		{"FRANCE", "France", 42.3, 51.1, -5.0, 9.5},
-		{"USA", "United States", 24.5, 49.0, -125.0, -66.9},
-		{"UKRAINE", "Ukraine", 44.3, 52.4, 22.0, 40.2},
-		{"UK", "United Kingdom", 49.9, 60.8, -8.6, 1.7},
-	}
-
-	out := []RegionalRiskData{}
+	regions := RegionalRiskCatalog()
+	out := make([]RegionalRiskData, 0, len(regions))
 	now := time.Now().UTC()
+	refsByRegion := map[string][]RiskReference{}
 
 	for _, r := range regions {
 		var geopot, conflict, cyber, infra, eco float64
 		drivers := []string{}
 
 		for _, ev := range d.Events {
-			if ev.Latitude >= r.MinLat && ev.Latitude <= r.MaxLat && ev.Longitude >= r.MinLon && ev.Longitude <= r.MaxLon {
-				dt := now.Sub(ev.ObservedAt).Hours()
-				if dt < 0 {
-					dt = 0
+			if !PointInCatalogBBox(r, ev.Latitude, ev.Longitude) {
+				continue
+			}
+			// Collect reference (title + real SourceURL only)
+			if title := strings.TrimSpace(ev.Title); title != "" {
+				ref := RiskReference{Title: TruncateIntel(title, 160), Source: strings.TrimSpace(ev.Source)}
+				if u := strings.TrimSpace(ev.SourceURL); u != "" {
+					ref.URL = TruncateIntel(u, 1024)
 				}
-				freshness := 1.0 / (1.0 + 0.02*dt)
-
-				sevMult := 1.0
-				if ev.Severity == "medium" {
-					sevMult = 1.5
-				} else if ev.Severity == "high" {
-					sevMult = 2.5
+				if len(refsByRegion[r.ID]) < 12 {
+					refsByRegion[r.ID] = append(refsByRegion[r.ID], ref)
 				}
+			}
+			dt := now.Sub(ev.ObservedAt).Hours()
+			if dt < 0 {
+				dt = 0
+			}
+			freshness := 1.0 / (1.0 + 0.02*dt)
 
-				confMult := float64(ev.Confidence) / 100.0
+			sevMult := 1.0
+			if ev.Severity == "medium" {
+				sevMult = 1.5
+			} else if ev.Severity == "high" {
+				sevMult = 2.5
+			}
 
-				weight := 10.0
-				domain := strings.ToLower(ev.Summary)
+			confMult := float64(ev.Confidence) / 100.0
 
-				if strings.Contains(domain, "cyber") || ev.ID == "watch_cyber" {
-					weight = 12.0
-					cyber += weight * sevMult * freshness * confMult
-					if ev.Severity == "high" && freshness > 0.5 {
-						drivers = append(drivers, "Cyber: "+ev.Title)
-					}
-				} else if strings.Contains(domain, "eco") || strings.Contains(domain, "econ") {
-					weight = 8.0
-					eco += weight * sevMult * freshness * confMult
-					if ev.Severity == "high" && freshness > 0.5 {
-						drivers = append(drivers, "Economic: "+ev.Title)
-					}
-				} else if strings.Contains(domain, "conflict") || strings.Contains(domain, "hum") {
-					weight = 15.0
-					conflict += weight * sevMult * freshness * confMult
-					if ev.Severity == "high" && freshness > 0.5 {
-						drivers = append(drivers, "Conflict: "+ev.Title)
-					}
-				} else if strings.Contains(domain, "geo") {
-					weight = 10.0
-					geopot += weight * sevMult * freshness * confMult
-					if ev.Severity == "high" && freshness > 0.5 {
-						drivers = append(drivers, "Geopolitical: "+ev.Title)
-					}
-				} else {
-					weight = 10.0
-					infra += weight * sevMult * freshness * confMult
-					if ev.Severity == "high" && freshness > 0.5 {
-						drivers = append(drivers, "Infrastructure: "+ev.Title)
-					}
+			weight := 10.0
+			domain := strings.ToLower(ev.Summary)
+
+			if strings.Contains(domain, "cyber") || ev.ID == "watch_cyber" {
+				weight = 12.0
+				cyber += weight * sevMult * freshness * confMult
+				if ev.Severity == "high" && freshness > 0.5 {
+					drivers = append(drivers, "Cyber: "+ev.Title)
+				}
+			} else if strings.Contains(domain, "eco") || strings.Contains(domain, "econ") {
+				weight = 8.0
+				eco += weight * sevMult * freshness * confMult
+				if ev.Severity == "high" && freshness > 0.5 {
+					drivers = append(drivers, "Economic: "+ev.Title)
+				}
+			} else if strings.Contains(domain, "conflict") || strings.Contains(domain, "hum") {
+				weight = 15.0
+				conflict += weight * sevMult * freshness * confMult
+				if ev.Severity == "high" && freshness > 0.5 {
+					drivers = append(drivers, "Conflict: "+ev.Title)
+				}
+			} else if strings.Contains(domain, "geo") {
+				weight = 10.0
+				geopot += weight * sevMult * freshness * confMult
+				if ev.Severity == "high" && freshness > 0.5 {
+					drivers = append(drivers, "Geopolitical: "+ev.Title)
+				}
+			} else {
+				weight = 10.0
+				infra += weight * sevMult * freshness * confMult
+				if ev.Severity == "high" && freshness > 0.5 {
+					drivers = append(drivers, "Infrastructure: "+ev.Title)
 				}
 			}
 		}
@@ -1125,6 +1239,8 @@ func (s *IntelligenceStore) ComputeAllRegionalRisks() []RegionalRiskData {
 			EconomicRisk:       eco,
 			PrimaryDrivers:     drivers,
 			Trend:              trend,
+			EvaluationSource:   "deterministic",
+			References:         refsByRegion[r.ID],
 		})
 	}
 	return out
@@ -1198,22 +1314,30 @@ func (s *IntelligenceStore) UpdateEvaluation() (NeuralCoreEvaluation, error) {
 		parsed.LocalState = "Lokale Implikationen konnten aufgrund eines Formatierungsfehlers nicht separat extrahiert werden."
 	}
 
-	s.mu.Lock()
-	s.data.Evaluation = NeuralCoreEvaluation{
+	evaluation := NeuralCoreEvaluation{
 		WorldState:  parsed.WorldState,
 		LocalState:  parsed.LocalState,
 		LastUpdated: time.Now().UTC(),
 	}
-	_ = s.saveLocked()
-	s.mu.Unlock()
+	if s.canonical != nil {
+		if err := s.canonical.SetEvaluation(evaluation); err != nil {
+			return NeuralCoreEvaluation{}, err
+		}
+	} else {
+		s.mu.Lock()
+		s.data.Evaluation = evaluation
+		_ = s.saveLocked()
+		s.mu.Unlock()
+	}
 
+	revision := s.Snapshot().Revision
 	s.bus.Publish(IntelligenceBusEvent{
 		Type:      "evaluation.updated",
 		SubjectID: "core",
-		Revision:  s.data.Revision,
+		Revision:  revision,
 		At:        time.Now().UTC(),
 	})
-	return s.data.Evaluation, nil
+	return evaluation, nil
 }
 
 func (s *IntelligenceStore) StartBackgroundEvaluationWorker() {

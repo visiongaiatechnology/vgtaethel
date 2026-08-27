@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"go-aethel/agent"
 	"go-aethel/personal"
 )
 
@@ -45,6 +46,9 @@ func HandlePersonalConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		cfg.WakeWord = personal.ClampPersonalText(cfg.WakeWord, 40)
+		cfg.AlarmTime = personal.ClampPersonalText(cfg.AlarmTime, 5)
+		cfg.QuietHoursStart = personal.ClampPersonalText(cfg.QuietHoursStart, 5)
+		cfg.QuietHoursEnd = personal.ClampPersonalText(cfg.QuietHoursEnd, 5)
 		cfg.PrimaryModel = personal.ClampPersonalText(cfg.PrimaryModel, 160)
 		cfg.FallbackModel = personal.ClampPersonalText(cfg.FallbackModel, 160)
 		cfg.HumorLevel = personal.ClampPersonalLevel(cfg.HumorLevel)
@@ -52,6 +56,9 @@ func HandlePersonalConfig(w http.ResponseWriter, r *http.Request) {
 		cfg.InitiativeLevel = personal.ClampPersonalLevel(cfg.InitiativeLevel)
 		if cfg.WakeWord == "" {
 			cfg.WakeWord = "aethel"
+		}
+		if cfg.AlarmTime == "" {
+			cfg.AlarmTime = "07:00"
 		}
 		if err := state.personal.SaveConfig(cfg); err != nil {
 			http.Error(w, "Config save failed", http.StatusInternalServerError)
@@ -89,6 +96,8 @@ func HandlePersonalProfile(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Profile save failed", http.StatusInternalServerError)
 			return
 		}
+		// Keep emergency sentinel home in sync with Personal Core location.
+		agent.SharedSentinel.SetLocation(profile.LocationCity, profile.LocationCountry)
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -217,6 +226,7 @@ func HandlePersonalSetup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Config setup failed", http.StatusInternalServerError)
 		return
 	}
+	agent.SharedSentinel.SetLocation(profile.LocationCity, profile.LocationCountry)
 	if profile.DisplayName != "" {
 		_, _ = state.personal.AppendMemory(personal.PersonalMemory{
 			Type:       "identity",

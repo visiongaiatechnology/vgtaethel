@@ -16,7 +16,7 @@ import (
 )
 
 // resolveBriefingPrompt implements the exact logic used for every briefing:
-// (updated for Beta V2 + testability with configurable file path)
+// (updated for Beta V3 + testability with configurable file path)
 // - prefer req body prompt
 // - else load from persisted file
 // - else default
@@ -57,6 +57,24 @@ func handleOSINTFeeds(w http.ResponseWriter, r *http.Request) {
 		hours = parsed
 	}
 	events := state.osint.GetEventsWithin(domain, hours, time.Now().UTC())
+	category := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("category")))
+	if category == "" {
+		category = "news"
+	}
+	if category != "news" && category != "hazards" && category != "all" {
+		http.Error(w, "invalid feed category", http.StatusBadRequest)
+		return
+	}
+	if category != "all" {
+		filtered := make([]intelligence.OSINTEvent, 0, len(events))
+		for _, event := range events {
+			isHazard := intelligence.DetectNaturalHazard(event.Source, event.Title, event.Summary) != ""
+			if (category == "hazards" && isHazard) || (category == "news" && !isHazard) {
+				filtered = append(filtered, event)
+			}
+		}
+		events = filtered
+	}
 
 	// Build response with last refresh time
 	resp := map[string]interface{}{
@@ -144,6 +162,13 @@ func handleOSINTBriefing(w http.ResponseWriter, r *http.Request) {
 	customSys := resolveBriefingPrompt(modelReq.SystemPrompt)
 
 	events := state.osint.GetEventsWithin("all", briefingHours, time.Now().UTC())
+	newsEvents := make([]intelligence.OSINTEvent, 0, len(events))
+	for _, event := range events {
+		if intelligence.DetectNaturalHazard(event.Source, event.Title, event.Summary) == "" {
+			newsEvents = append(newsEvents, event)
+		}
+	}
+	events = newsEvents
 	if len(events) == 0 {
 		w.Header().Set("Content-Type", "text/event-stream")
 		fmt.Fprintf(w, "data: Keine aktuellen Ereignisse im Feed vorhanden, um ein Briefing zu generieren.\n\n")
@@ -175,12 +200,21 @@ func handleOSINTBriefing(w http.ResponseWriter, r *http.Request) {
 	if intelligence.SharedIntelStore != nil {
 		snapshot := intelligence.SharedIntelStore.GetSnapshot()
 		maxRisk := 0.0
+		newsAlerts := 0
+		for _, alert := range snapshot.Alerts {
+			if !alert.Acknowledged && intelligence.DetectNaturalHazard("", alert.Reason, alert.Region) == "" {
+				newsAlerts++
+			}
+		}
 		for _, risk := range snapshot.RiskScores {
+			if intelligence.DetectNaturalHazard("", strings.Join(risk.PrimaryDrivers, " "), strings.Join(risk.MissingData, " ")) != "" {
+				continue
+			}
 			if risk.OverallRisk > maxRisk {
 				maxRisk = risk.OverallRisk
 			}
 		}
-		sb.WriteString(fmt.Sprintf("\nDETERMINISTISCHE LAGEBASIS: %d aktive Alerts; höchster berechneter Risikowert %.0f/100. Diese Werte sind Baseline, keine KI-Fakten.\n", len(snapshot.Alerts), maxRisk))
+		sb.WriteString(fmt.Sprintf("\nDETERMINISTISCHE NACHRICHTEN-LAGEBASIS: %d aktive Alerts; höchster berechneter Risikowert %.0f/100. Naturereignisse sind ausgeschlossen. Diese Werte sind Baseline, keine KI-Fakten.\n", newsAlerts, maxRisk))
 	}
 
 	sb.WriteString(fmt.Sprintf(`

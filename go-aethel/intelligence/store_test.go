@@ -365,11 +365,12 @@ func TestSealCaseEvidenceAndBatchIngest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ev, err := store.SealCaseEvidence(c.ID, "evid-1", "src-x", "https://ex.test", "excerpt body", "deadbeef", "ev_shared_1")
+	expectedHash := contentSHA256("excerpt body")
+	ev, err := store.SealCaseEvidence(c.ID, "evid-1", "src-x", "https://ex.test", "excerpt body", expectedHash, "ev_shared_1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !ev.Sealed || ev.SHA256 != "deadbeef" {
+	if !ev.Sealed || ev.SHA256 != expectedHash || len(ev.SHA256) != 64 {
 		t.Fatalf("seal incomplete: %+v", ev)
 	}
 	got, ok := store.GetCase(c.ID)
@@ -498,4 +499,61 @@ func TestLiveNexusContextLayerLabels(t *testing.T) {
 	}
 	t.Logf("EXPLAIN_SCORE_EXCERPT:\n%s", ex)
 	t.Logf("NEXUS_CONTEXT_EXCERPT:\n%s", ctx[:min(len(ctx), 800)])
+}
+
+func TestNewsAndNaturalHazardsContextsAreIsolated(t *testing.T) {
+	store := NewStore(filepath.Join(t.TempDir(), "isolated-contexts.json"), NewEventBus())
+	now := time.Now().UTC()
+	store.state.Observations = []Observation{
+		{ID: "news-observation", SourceID: "reuters-world", RawText: "Government announces election date", ObservedAt: now},
+		{ID: "quake-observation", SourceID: "usgs-earthquakes", RawText: "[earthquake] M 4.8 near coast", ObservedAt: now},
+		{ID: "volcano-observation", SourceID: "nasa-eonet-volcano", RawText: "[volcano erupting] active event", ObservedAt: now},
+	}
+	store.state.Events = []Event{
+		{ID: "news-event", SourceID: "reuters-world", Title: "Election update", ObservedAt: now},
+		{ID: "quake-event", SourceID: "usgs-earthquakes", Title: "[earthquake] M 4.8", ObservedAt: now},
+	}
+
+	news := store.LiveNexusContextWithin(20, 24)
+	for _, expected := range []string{"news-observation", "news-event", "natural hazards excluded"} {
+		if !strings.Contains(news, expected) {
+			t.Fatalf("news context missing %q: %s", expected, news)
+		}
+	}
+	for _, forbidden := range []string{"quake-observation", "volcano-observation", "quake-event"} {
+		if strings.Contains(news, forbidden) {
+			t.Fatalf("natural hazard leaked into news context: %q", forbidden)
+		}
+	}
+
+	hazards := store.LiveNaturalHazardsContextWithin(20, 24)
+	for _, expected := range []string{"quake-observation", "volcano-observation", "quake-event", "explicit operator request"} {
+		if !strings.Contains(hazards, expected) {
+			t.Fatalf("hazards context missing %q: %s", expected, hazards)
+		}
+	}
+	for _, forbidden := range []string{"news-observation", "news-event"} {
+		if strings.Contains(hazards, forbidden) {
+			t.Fatalf("news leaked into natural hazards context: %q", forbidden)
+		}
+	}
+
+	report := store.GenerateReport("Daily Global Brief")
+	for _, forbidden := range []string{"quake-observation", "volcano-observation", "quake-event"} {
+		if strings.Contains(report, forbidden) {
+			t.Fatalf("natural hazard leaked into ordinary generated report: %q", forbidden)
+		}
+	}
+}
+
+func TestDetectNaturalHazardUsesCollectorMarkers(t *testing.T) {
+	if got := DetectNaturalHazard("usgs-earthquakes", "M 5.1", ""); got != HazardEarthquake {
+		t.Fatalf("USGS earthquake classified as %q", got)
+	}
+	if got := DetectNaturalHazard("nasa-eonet-volcano", "Etna", ""); got != HazardVolcano {
+		t.Fatalf("EONET volcano classified as %q", got)
+	}
+	if got := DetectNaturalHazard("reuters-world", "Government responds to earthquake damage", ""); got != "" {
+		t.Fatalf("ordinary news article was incorrectly removed from news: %q", got)
+	}
 }

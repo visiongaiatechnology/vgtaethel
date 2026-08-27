@@ -163,6 +163,11 @@ func parseUSGSEarthquakes(body io.Reader, source *IntelligenceSource) ([]Intelli
 		if len(feature.Geometry.Coordinates) < 2 || strings.TrimSpace(feature.Properties.Title) == "" {
 			continue
 		}
+		lon, lat := feature.Geometry.Coordinates[0], feature.Geometry.Coordinates[1]
+		// Fail closed: never invent or accept out-of-range coordinates / bogus magnitude.
+		if lat < -90 || lat > 90 || lon < -180 || lon > 180 || feature.Properties.Mag < -2 || feature.Properties.Mag > 12 {
+			continue
+		}
 		severity := "low"
 		if feature.Properties.Mag >= 6 {
 			severity = "high"
@@ -170,12 +175,18 @@ func parseUSGSEarthquakes(body io.Reader, source *IntelligenceSource) ([]Intelli
 			severity = "medium"
 		}
 		magStr := strconv.FormatFloat(feature.Properties.Mag, 'f', 1, 64)
+		title := truncateIntel(feature.Properties.Title, 160)
+		if !strings.Contains(strings.ToLower(title), "earthquake") && !strings.HasPrefix(strings.ToLower(title), "m ") {
+			title = "[earthquake] " + title
+		} else if !strings.Contains(strings.ToLower(title), "[earthquake]") {
+			title = "[earthquake] " + title
+		}
 		out = append(out, IntelligenceEvent{
 			ID: "usgs_" + feature.ID,
-			Title: truncateIntel(feature.Properties.Title, 160),
+			Title: title,
 			Summary: "[earthquake] M " + magStr + " | USGS magnitude " + magStr,
 			Source: source.Name, SourceURL: feature.Properties.URL,
-			Longitude: feature.Geometry.Coordinates[0], Latitude: feature.Geometry.Coordinates[1],
+			Longitude: lon, Latitude: lat,
 			Severity: severity, Confidence: 90,
 			ObservedAt: time.UnixMilli(feature.Properties.Time).UTC(),
 		})
@@ -208,16 +219,25 @@ func (eonetVolcanoCollector) Parse(source *IntelligenceSource, body io.Reader) (
 		}
 		var lat, lon float64
 		var observed time.Time
+		found := false
 		for gi := len(ev.Geometry) - 1; gi >= 0; gi-- {
 			g := ev.Geometry[gi]
-			if len(g.Coordinates) >= 2 {
-				lon = g.Coordinates[0]
-				lat = g.Coordinates[1]
-				if t, err := time.Parse(time.RFC3339, g.Date); err == nil {
-					observed = t.UTC()
-				}
-				break
+			if len(g.Coordinates) < 2 {
+				continue
 			}
+			lon, lat = g.Coordinates[0], g.Coordinates[1]
+			if lat < -90 || lat > 90 || lon < -180 || lon > 180 {
+				continue
+			}
+			if t, err := time.Parse(time.RFC3339, g.Date); err == nil {
+				observed = t.UTC()
+			}
+			found = true
+			break
+		}
+		if !found {
+			// Fail closed: no invented coordinates for undirected volcano records.
+			continue
 		}
 		if observed.IsZero() {
 			observed = time.Now().UTC()
@@ -226,9 +246,13 @@ func (eonetVolcanoCollector) Parse(source *IntelligenceSource, body io.Reader) (
 		if id == "" {
 			id = strconv.FormatInt(observed.Unix(), 10)
 		}
+		title := truncateIntel(ev.Title, 160)
+		if !strings.Contains(strings.ToLower(title), "[volcano") {
+			title = "[volcano erupting] " + title
+		}
 		out = append(out, IntelligenceEvent{
 			ID: "volcano_" + id,
-			Title: truncateIntel(ev.Title, 160),
+			Title: title,
 			Summary: "[volcano erupting] " + ev.Title + " | NASA EONET open volcanic event",
 			Source: source.Name, SourceURL: strings.TrimSpace(ev.Link),
 			Longitude: lon, Latitude: lat,

@@ -18,7 +18,7 @@ func handleMarketQuotes(w http.ResponseWriter, r *http.Request) {
 	if len(requested) == 1 && requested[0] == "" {
 		requested = nil
 	}
-	if len(requested) > 4 {
+	if len(requested) > 50 {
 		http.Error(w, "too many market symbols", http.StatusBadRequest)
 		return
 	}

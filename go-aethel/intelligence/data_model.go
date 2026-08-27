@@ -9,6 +9,8 @@ type Source struct {
 	ID                 string    `json:"id"`
 	Name               string    `json:"name"`
 	URL                string    `json:"url"`
+	OriginalURL        string    `json:"original_url,omitempty"`
+	FinalURL           string    `json:"final_url,omitempty"`
 	SourceType         string    `json:"source_type"` // rss, api, local, database
 	Publisher          string    `json:"publisher"`
 	TrustTier          int       `json:"trust_tier"` // 1=verified, 2=community, 3=unverified
@@ -25,29 +27,48 @@ type Source struct {
 
 // Observation is raw data ingested directly from a source
 type Observation struct {
-	ID          string    `json:"id"`
-	SourceID    string    `json:"source_id"`
-	RawText     string    `json:"raw_text"`
-	ObservedAt  time.Time `json:"observed_at"`
-	Latitude    float64   `json:"latitude"`
-	Longitude   float64   `json:"longitude"`
-	ContentHash string    `json:"content_hash"`
-	Domain      string    `json:"domain"`
+	ID               string            `json:"id"`
+	SourceID         string            `json:"source_id"`
+	RawText          string            `json:"raw_text"`
+	ObservedAt       time.Time         `json:"observed_at"`
+	Latitude         float64           `json:"latitude"`
+	Longitude        float64           `json:"longitude"`
+	ContentHash      string            `json:"content_hash"`
+	Domain           string            `json:"domain"`
+	OriginalURL      string            `json:"original_url,omitempty"`
+	FinalURL         string            `json:"final_url,omitempty"`
+	FetchedAt        time.Time         `json:"fetched_at,omitempty"`
+	PublishedAt      time.Time         `json:"published_at,omitempty"`
+	MIMEType         string            `json:"mime_type,omitempty"`
+	ResponseHeaders  map[string]string `json:"response_headers,omitempty"`
+	ParserVersion    string            `json:"parser_version,omitempty"`
+	RawSHA256        string            `json:"raw_sha256,omitempty"`
+	NormalizedSHA256 string            `json:"normalized_sha256,omitempty"`
+	SnapshotID       string            `json:"snapshot_id,omitempty"`
+	InstructionFlags []string          `json:"instruction_flags,omitempty"`
+	Quarantined      bool              `json:"quarantined,omitempty"`
 }
 
 // Evidence represents sealed context inside a case
 type Evidence struct {
-	ID               string    `json:"id"`
-	CaseID           string    `json:"case_id"`
-	SourceID         string    `json:"source_id"`
-	URL              string    `json:"url,omitempty"`
-	Excerpt          string    `json:"excerpt"`
-	SHA256           string    `json:"sha256"`
-	CollectedAt      time.Time `json:"collected_at"`
-	Sealed           bool      `json:"sealed"`
-	ValidationStatus string    `json:"validation_status"` // pending, verified, disputed, rejected
-	ChainOfCustodyID string    `json:"chain_of_custody_id"`
-	SnapshotPath     string    `json:"snapshot_path,omitempty"`
+	ID                string    `json:"id"`
+	CaseID            string    `json:"case_id"`
+	SourceID          string    `json:"source_id"`
+	URL               string    `json:"url,omitempty"`
+	Excerpt           string    `json:"excerpt"`
+	SHA256            string    `json:"sha256"`
+	RawSHA256         string    `json:"raw_sha256,omitempty"`
+	NormalizedSHA256  string    `json:"normalized_sha256,omitempty"`
+	HashAlgorithm     string    `json:"hash_algorithm"`
+	CollectedAt       time.Time `json:"collected_at"`
+	Sealed            bool      `json:"sealed"`
+	ValidationStatus  string    `json:"validation_status"` // pending, verified, disputed, rejected
+	ChainOfCustodyID  string    `json:"chain_of_custody_id"`
+	SnapshotPath      string    `json:"snapshot_path,omitempty"`
+	SnapshotID        string    `json:"snapshot_id,omitempty"`
+	CaptureScope      string    `json:"capture_scope,omitempty"`
+	PreviousAuditHash string    `json:"previous_audit_hash,omitempty"`
+	AuditHash         string    `json:"audit_hash,omitempty"`
 }
 
 // Entity maps actors, organisations, or locations (pseudonymized if personal)
@@ -73,6 +94,7 @@ type Relation struct {
 // Event is a classified geopol, cyber, eco or humanitarian occurrence
 type Event struct {
 	ID         string    `json:"id"`
+	SourceID   string    `json:"source_id,omitempty"`
 	Title      string    `json:"title"`
 	Summary    string    `json:"summary"`
 	Domain     string    `json:"domain"` // geo, cyber, economic, humanitarian, general
@@ -140,7 +162,16 @@ type RiskScore struct {
 	LastUpdated            time.Time `json:"last_updated"`
 	PrimaryDrivers         []string  `json:"primary_drivers"`
 	MissingData            []string  `json:"missing_data,omitempty"`
+	// AI evaluation layer (Global Watch): refreshed at most every RegionalAIRiskTTL.
+	EvaluationSource string    `json:"evaluation_source,omitempty"` // ai | deterministic | hybrid
+	AINarrative      string    `json:"ai_narrative,omitempty"`
+	AIModelID        string    `json:"ai_model_id,omitempty"`
+	AIEvaluatedAt    time.Time `json:"ai_evaluated_at,omitempty"`
+	NextRefreshAt    time.Time `json:"next_refresh_at,omitempty"`
 }
+
+// RegionalAIRiskTTL is how long AI regional scores stay valid before re-evaluation.
+const RegionalAIRiskTTL = 5 * time.Hour
 
 // Alert is a prioritized operator notification
 type Alert struct {
@@ -186,17 +217,20 @@ type Briefing struct {
 
 // Case isolates target context and audits
 type Case struct {
-	ID             string       `json:"id"`
-	Title          string       `json:"title"`
-	Purpose        string       `json:"purpose"`
-	Classification string       `json:"classification"`
-	AllowedSources []string     `json:"allowed_sources"`
-	RetentionRules string       `json:"retention_rules,omitempty"`
-	PseudonymKey   []byte       `json:"-"`
-	Evidence       []Evidence   `json:"evidence"`
-	Entities       []Entity     `json:"entities"`
-	Relations      []Relation   `json:"relations"`
-	Audit          []AuditEvent `json:"audit"`
+	ID             string                    `json:"id"`
+	Title          string                    `json:"title"`
+	Purpose        string                    `json:"purpose"`
+	Classification string                    `json:"classification"`
+	Status         string                    `json:"status"`
+	CreatedAt      time.Time                 `json:"created_at"`
+	AllowedSources []string                  `json:"allowed_sources"`
+	RetentionRules string                    `json:"retention_rules,omitempty"`
+	PseudonymKey   []byte                    `json:"-"`
+	Evidence       []Evidence                `json:"evidence"`
+	Entities       []Entity                  `json:"entities"`
+	Relations      []Relation                `json:"relations"`
+	Audit          []AuditEvent              `json:"audit"`
+	ReIDRequests   []IntelligenceReIDRequest `json:"reid_requests,omitempty"`
 }
 
 // Watchlist defines operator-tracked targets

@@ -54,12 +54,17 @@ func handleKernelTasks(w http.ResponseWriter, r *http.Request) {
 			Text                 string   `json:"text"`
 			Objective            string   `json:"objective"`
 			ScheduleType         string   `json:"schedule_type"`
+			ScheduledTime        string   `json:"scheduled_time"`
 			IntervalSeconds      int      `json:"interval_seconds"`
+			CronExpression       string   `json:"cron_expression"`
 			RequiredCapabilities []string `json:"required_capabilities"`
+			NotifyPopup          bool     `json:"notify_popup"`
 			RiskLevel            string   `json:"risk_level"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64<<10))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&req); err != nil {
+			http.Error(w, "invalid task payload", http.StatusBadRequest)
 			return
 		}
 
@@ -89,8 +94,11 @@ func handleKernelTasks(w http.ResponseWriter, r *http.Request) {
 			Done:                 false,
 			Status:               "pending",
 			ScheduleType:         scheduleType,
+			ScheduledTime:        req.ScheduledTime,
 			IntervalSeconds:      req.IntervalSeconds,
+			CronExpression:       req.CronExpression,
 			RequiredCapabilities: req.RequiredCapabilities,
+			NotifyPopup:          req.NotifyPopup,
 			RiskLevel:            riskLevel,
 			LimitSteps:           5,
 			LimitToolCalls:       10,
@@ -98,7 +106,7 @@ func handleKernelTasks(w http.ResponseWriter, r *http.Request) {
 
 		err := state.tasks.Add(task)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 

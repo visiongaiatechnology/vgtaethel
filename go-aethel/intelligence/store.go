@@ -1,45 +1,76 @@
 package intelligence
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"math"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"go-aethel/security"
 )
 
 var SharedIntelStore *Store
 
+const CurrentStoreSchemaVersion = 4
+
 // StoreState represents the persistent state of the intelligence core
 type StoreState struct {
-	Sources      []Source             `json:"sources"`
-	Observations []Observation        `json:"observations"`
-	Events       []Event              `json:"events"`
-	Assessments  []Assessment         `json:"assessments"`
-	Evidence     []Evidence           `json:"evidence"`
-	Cases        []Case               `json:"cases"`
-	RiskScores   map[string]RiskScore `json:"risk_scores"`
-	Alerts       []Alert              `json:"alerts"`
-	AlertRules   []AlertRule          `json:"alert_rules"`
-	Watchlists   []Watchlist          `json:"watchlists"`
-	Audits       []AuditEvent         `json:"audits"`
-	AgentActions []AgentAction        `json:"agent_actions"`
-	Briefings    []Briefing           `json:"briefings"`
-	Personal     PersonalContext      `json:"personal_context,omitempty"`
-	Identity     IdentityProfile      `json:"identity,omitempty"`
+	SchemaVersion                 int                            `json:"schema_version"`
+	Revision                      uint64                         `json:"revision"`
+	Sources                       []Source                       `json:"sources"`
+	Documents                     []SourceDocument               `json:"documents"`
+	Passages                      []Passage                      `json:"passages"`
+	Observations                  []Observation                  `json:"observations"`
+	Events                        []Event                        `json:"events"`
+	Claims                        []Claim                        `json:"claims"`
+	SourceLineage                 []SourceLineage                `json:"source_lineage"`
+	Hypotheses                    []Hypothesis                   `json:"hypotheses"`
+	InformationGaps               []InformationGap               `json:"information_gaps"`
+	CollectionPlans               []CollectionPlan               `json:"collection_plans"`
+	ResolvedEntities              []ResolvedEntity               `json:"resolved_entities"`
+	ResolutionCandidates          []EntityResolutionCandidate    `json:"resolution_candidates"`
+	ResolutionDecisions           []EntityResolutionDecision     `json:"resolution_decisions"`
+	EntityVersions                []EntityVersion                `json:"entity_versions"`
+	HypothesisEvidenceAssessments []HypothesisEvidenceAssessment `json:"hypothesis_evidence_assessments"`
+	SavedSearches                 []SavedSearchMonitor           `json:"saved_searches"`
+	SearchAlerts                  []SearchMonitorAlert           `json:"search_alerts"`
+	ImageFingerprints             []ImageFingerprint             `json:"image_fingerprints"`
+	ImportedDocuments             []ImportedDocument             `json:"imported_documents"`
+	WebsiteMonitors               []WebsiteMonitor               `json:"website_monitors"`
+	WebsiteChanges                []WebsiteChange                `json:"website_changes"`
+	CustodyEvents                 []CustodyEvent                 `json:"custody_events"`
+	Migrations                    map[string]time.Time           `json:"migrations,omitempty"`
+	Evaluation                    NeuralCoreEvaluation           `json:"evaluation,omitempty"`
+	Assessments                   []Assessment                   `json:"assessments"`
+	Evidence                      []Evidence                     `json:"evidence"`
+	Cases                         []Case                         `json:"cases"`
+	RiskScores                    map[string]RiskScore           `json:"risk_scores"`
+	Alerts                        []Alert                        `json:"alerts"`
+	AlertRules                    []AlertRule                    `json:"alert_rules"`
+	Watchlists                    []Watchlist                    `json:"watchlists"`
+	Audits                        []AuditEvent                   `json:"audits"`
+	AgentActions                  []AgentAction                  `json:"agent_actions"`
+	Briefings                     []Briefing                     `json:"briefings"`
+	Personal                      PersonalContext                `json:"personal_context,omitempty"`
+	Identity                      IdentityProfile                `json:"identity,omitempty"`
 }
 
 // Store coordinates the data ingestion, geofencing, and risk scoring pipelines
 type Store struct {
-	mu      sync.RWMutex
-	path    string
-	state   StoreState
-	regions *RegionEngine
-	scoring *ScoringEngine
-	bus     *EventBus
+	mu       sync.RWMutex
+	path     string
+	state    StoreState
+	regions  *RegionEngine
+	scoring  *ScoringEngine
+	bus      *EventBus
+	index    *encryptedSearchIndex
+	semantic *localSemanticIndex
+	vault    *EvidenceVault
+	signer   *evidenceExportSigner
+	setupErr error
 }
 
 func NewStore(path string, bus *EventBus) *Store {
@@ -49,28 +80,68 @@ func NewStore(path string, bus *EventBus) *Store {
 		regions: GetDefaultRegionEngine(),
 		scoring: NewScoringEngine(0.02),
 		state: StoreState{
-			RiskScores:   make(map[string]RiskScore),
-			Alerts:       []Alert{},
-			AlertRules:   []AlertRule{},
-			Watchlists:   []Watchlist{},
-			Audits:       []AuditEvent{},
-			Assessments:  []Assessment{},
-			Evidence:     []Evidence{},
-			AgentActions: []AgentAction{},
-			Briefings:    []Briefing{},
-			Personal:     PersonalContext{LastUpdated: time.Now().UTC()},
-			Identity:     defaultIdentity(),
+			SchemaVersion:                 CurrentStoreSchemaVersion,
+			Sources:                       []Source{},
+			Documents:                     []SourceDocument{},
+			Passages:                      []Passage{},
+			Observations:                  []Observation{},
+			Events:                        []Event{},
+			Claims:                        []Claim{},
+			SourceLineage:                 []SourceLineage{},
+			Hypotheses:                    []Hypothesis{},
+			InformationGaps:               []InformationGap{},
+			CollectionPlans:               []CollectionPlan{},
+			ResolvedEntities:              []ResolvedEntity{},
+			ResolutionCandidates:          []EntityResolutionCandidate{},
+			ResolutionDecisions:           []EntityResolutionDecision{},
+			EntityVersions:                []EntityVersion{},
+			HypothesisEvidenceAssessments: []HypothesisEvidenceAssessment{},
+			SavedSearches:                 []SavedSearchMonitor{},
+			SearchAlerts:                  []SearchMonitorAlert{},
+			ImageFingerprints:             []ImageFingerprint{},
+			ImportedDocuments:             []ImportedDocument{},
+			WebsiteMonitors:               []WebsiteMonitor{},
+			WebsiteChanges:                []WebsiteChange{},
+			CustodyEvents:                 []CustodyEvent{},
+			Migrations:                    make(map[string]time.Time),
+			RiskScores:                    make(map[string]RiskScore),
+			Alerts:                        []Alert{},
+			AlertRules:                    []AlertRule{},
+			Watchlists:                    []Watchlist{},
+			Audits:                        []AuditEvent{},
+			Assessments:                   []Assessment{},
+			Evidence:                      []Evidence{},
+			AgentActions:                  []AgentAction{},
+			Briefings:                     []Briefing{},
+			Personal:                      PersonalContext{LastUpdated: time.Now().UTC()},
+			Identity:                      defaultIdentity(),
 		},
 	}
 	s.load()
+	if vault, err := NewEvidenceVault(path + ".evidence-vault"); err != nil {
+		s.setupErr = fmt.Errorf("initialize evidence vault: %w", err)
+	} else {
+		s.vault = vault
+	}
+	if signer, err := newEvidenceExportSigner(path + ".export-signing.key"); err != nil {
+		s.setupErr = errorsJoin(s.setupErr, fmt.Errorf("initialize evidence export signer: %w", err))
+	} else {
+		s.signer = signer
+	}
+	s.semantic = newLocalSemanticIndex()
+	if index, err := newEncryptedSearchIndex(path); err == nil {
+		s.index = index
+		_ = s.index.sync(s.state)
+	}
 	return s
 }
 
 func (s *Store) load() {
-	if raw, err := os.ReadFile(s.path); err == nil {
+	if raw, sealed, err := security.ReadSealedFile(s.path); err == nil {
 		var loaded StoreState
 		if json.Unmarshal(raw, &loaded) == nil {
 			s.state = loaded
+			migrated := migrateStoreState(&s.state)
 			if s.state.RiskScores == nil {
 				s.state.RiskScores = make(map[string]RiskScore)
 			}
@@ -101,17 +172,38 @@ func (s *Store) load() {
 			if s.state.Identity.Name == "" {
 				s.state.Identity = defaultIdentity()
 			}
+			if migrated || !sealed {
+				_ = s.save()
+			}
 		}
 	}
 }
 
 func (s *Store) save() error {
-	_ = os.MkdirAll(filepath.Dir(s.path), 0700)
+	next := s.state
+	next.Revision = s.state.Revision + 1
+	raw, err := json.MarshalIndent(next, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := appendStateJournal(s.path, next.Revision, raw); err != nil {
+		return err
+	}
+	if err := security.WriteSealedFile(s.path, raw); err != nil {
+		return err
+	}
+	s.state.Revision = next.Revision
+	return nil
+}
+
+func (s *Store) VerifyStateJournal() error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	raw, err := json.MarshalIndent(s.state, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.path, raw, 0600)
+	return VerifyStateJournal(s.path, s.state.Revision, raw)
 }
 
 // publish emits a typed bus message if a bus is configured (non-blocking).
@@ -159,32 +251,73 @@ func (s *Store) GetSnapshot() StoreState {
 func (s *Store) IngestObservation(obs Observation) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	for _, existing := range s.state.Observations {
+		if existing.ID == obs.ID {
+			return
+		}
+	}
+	now := time.Now().UTC()
+	if obs.FetchedAt.IsZero() {
+		obs.FetchedAt = now
+	}
+	if obs.ObservedAt.IsZero() {
+		obs.ObservedAt = obs.FetchedAt
+	}
+	if obs.ParserVersion == "" {
+		obs.ParserVersion = "ingest-v2"
+	}
+	obs.RawSHA256 = contentSHA256(obs.RawText)
+	obs.NormalizedSHA256 = contentSHA256(normalizeHashInput(obs.RawText))
+	obs.ContentHash = obs.RawSHA256
+	obs.InstructionFlags = DetectInstructionSignals(obs.RawText)
+	obs.Quarantined = len(obs.InstructionFlags) > 0
 
 	// Record raw observation (never mutate — Observation layer only)
 	s.state.Observations = append(s.state.Observations, obs)
 	s.publish("observation.created", obs.ID, obs)
+	document := SourceDocument{
+		ID:               "doc-" + obs.ID,
+		SourceID:         obs.SourceID,
+		OriginalURL:      obs.OriginalURL,
+		FinalURL:         obs.FinalURL,
+		MIMEType:         obs.MIMEType,
+		FetchedAt:        obs.FetchedAt,
+		PublishedAt:      obs.PublishedAt,
+		RawSHA256:        obs.RawSHA256,
+		NormalizedSHA256: obs.NormalizedSHA256,
+		SnapshotID:       obs.SnapshotID,
+		ParserVersion:    obs.ParserVersion,
+		ResponseHeaders:  obs.ResponseHeaders,
+		InstructionFlags: append([]string(nil), obs.InstructionFlags...),
+		Quarantined:      obs.Quarantined,
+	}
+	s.state.Documents = append(s.state.Documents, document)
+	s.publish("document.created", document.ID, document)
+	passage := Passage{
+		ID: "passage-" + obs.ID, DocumentID: document.ID, Text: obs.RawText,
+		StartOffset: 0, EndOffset: len([]rune(obs.RawText)),
+	}
+	s.state.Passages = append(s.state.Passages, passage)
+	s.publish("passage.created", passage.ID, passage)
 
 	// Content hash for provenance / multi-source corroboration (U6)
-	contentHash := obs.ContentHash
-	if contentHash == "" {
-		contentHash = shortContentHash(obs.RawText)
-	}
-	obs.ContentHash = contentHash
+	contentHash := obs.RawSHA256
 	// Update stored observation hash (already appended; fix last entry)
-	if n := len(s.state.Observations); n > 0 && s.state.Observations[n-1].ID == obs.ID {
-		s.state.Observations[n-1].ContentHash = contentHash
-	}
 
 	// Register / upsert Source with fuller provenance fields
 	src := Source{
 		ID:                 obs.SourceID,
 		Name:               obs.SourceID,
+		URL:                obs.FinalURL,
+		OriginalURL:        obs.OriginalURL,
+		FinalURL:           obs.FinalURL,
 		SourceType:         "rss",
-		FetchedAt:          time.Now().UTC(),
+		FetchedAt:          obs.FetchedAt,
+		PublishedAt:        obs.PublishedAt,
 		TrustTier:          2, // default community until configured
 		AvailabilityStatus: "ok",
 		ContentHash:        contentHash,
-		ParserVersion:      "ingest-v1",
+		ParserVersion:      obs.ParserVersion,
 		Freshness:          100,
 		PermissionStatus:   "local-approved",
 	}
@@ -205,18 +338,38 @@ func (s *Store) IngestObservation(obs Observation) {
 	}
 
 	// Evidence reference (raw level — not sealed case evidence)
+	captureScope := "excerpt"
+	if obs.SnapshotID != "" {
+		captureScope = "original"
+	}
 	evid := Evidence{
 		ID:               "evid-" + obs.ID,
 		SourceID:         obs.SourceID,
 		Excerpt:          safeTitle(obs.RawText),
 		SHA256:           contentHash,
-		CollectedAt:      time.Now().UTC(),
+		RawSHA256:        obs.RawSHA256,
+		NormalizedSHA256: obs.NormalizedSHA256,
+		HashAlgorithm:    "sha256",
+		CollectedAt:      now,
 		Sealed:           false,
 		ValidationStatus: "pending",
 		ChainOfCustodyID: "coc-" + obs.ID,
+		SnapshotID:       obs.SnapshotID,
+		CaptureScope:     captureScope,
 	}
+	custody := s.appendCustodyLocked(evid.ID, "evidence.created", "collector", "raw observation reference")
+	evid.PreviousAuditHash = custody.PreviousHash
+	evid.AuditHash = custody.EventHash
 	s.state.Evidence = append(s.state.Evidence, evid)
-	s.publish("evidence.sealed", evid.ID, evid)
+	s.publish("evidence.created", evid.ID, evid)
+	if obs.Quarantined {
+		s.state.Audits = append(s.state.Audits, AuditEvent{
+			At: now, Action: "observation.quarantined", Actor: "ingest-guard", Detail: obs.ID,
+		})
+		s.publish("observation.quarantined", obs.ID, map[string]any{"flags": obs.InstructionFlags})
+		_ = s.save()
+		return
+	}
 
 	// 1. Region Detection (deterministic polygon)
 	matchedRegions := s.regions.MatchPoint(obs.Latitude, obs.Longitude)
@@ -250,6 +403,7 @@ func (s *Store) IngestObservation(obs Observation) {
 
 	candidate := Event{
 		ID:         "ev_" + obs.ID,
+		SourceID:   obs.SourceID,
 		Title:      safeTitle(obs.RawText),
 		Summary:    obs.RawText,
 		Domain:     domain,
@@ -472,6 +626,7 @@ func (s *Store) IngestObservation(obs Observation) {
 		At: time.Now().UTC(), Action: "observation.ingested", Actor: "ingest",
 		Detail: fmt.Sprintf("Obs %s -> Event %s , regions=%d", obs.ID, candidate.ID, len(matchedRegions)),
 	})
+	s.evaluateSearchMonitorsLocked(time.Now().UTC())
 
 	_ = s.save()
 }
@@ -555,13 +710,43 @@ func (s *Store) GenerateReport(reportType string) string {
 	defer s.mu.RUnlock()
 	var b strings.Builder
 	now := time.Now().UTC()
+	isNewsObservation := func(observation Observation) bool {
+		return DetectNaturalHazard(observation.SourceID, observation.RawText, "") == ""
+	}
+	isNewsEvent := func(event Event) bool {
+		return DetectNaturalHazard(event.SourceID, event.Title, event.Summary) == ""
+	}
+	isNewsAssessment := func(assessment Assessment) bool {
+		return DetectNaturalHazard("", assessment.Statement, strings.Join(assessment.EvidenceIDs, " ")) == ""
+	}
+	isNewsRisk := func(risk RiskScore) bool {
+		return DetectNaturalHazard("", strings.Join(risk.PrimaryDrivers, " "), strings.Join(risk.MissingData, " ")) == ""
+	}
+	newsObservations := 0
+	newsEvents := 0
+	newsAlerts := 0
+	for _, observation := range s.state.Observations {
+		if isNewsObservation(observation) {
+			newsObservations++
+		}
+	}
+	for _, event := range s.state.Events {
+		if isNewsEvent(event) {
+			newsEvents++
+		}
+	}
+	for _, alert := range s.state.Alerts {
+		if DetectNaturalHazard("", alert.Reason, alert.Region) == "" {
+			newsAlerts++
+		}
+	}
 	b.WriteString(fmt.Sprintf("# AETHEL %s\n\n", reportType))
 	b.WriteString(fmt.Sprintf("Generated: %s (UTC)\n", now.Format(time.RFC3339)))
 	b.WriteString("**SOVEREIGN LOCAL REPORT — NO EXTERNAL TRANSMISSION**\n\n")
 
 	b.WriteString("## 1. Executive Summary\n")
 	b.WriteString(fmt.Sprintf("Observations (raw): %d | Events (classified): %d | Regions tracked: %d | Active Alerts: %d\n\n",
-		len(s.state.Observations), len(s.state.Events), len(s.state.RiskScores), len(s.state.Alerts)))
+		newsObservations, newsEvents, len(s.state.RiskScores), newsAlerts))
 
 	// Layer separation (always visible in operator output)
 	b.WriteString("## 1b. Layer separation (Observation vs Inference vs Verified)\n")
@@ -569,6 +754,9 @@ func (s *Store) GenerateReport(reportType string) string {
 	obsShown := 0
 	for i := len(s.state.Observations) - 1; i >= 0 && obsShown < 5; i-- {
 		o := s.state.Observations[i]
+		if !isNewsObservation(o) {
+			continue
+		}
 		b.WriteString(fmt.Sprintf("  - [%s] src=%s @ %.2f,%.2f — %s\n", o.ID, o.SourceID, o.Latitude, o.Longitude, safeTitle(o.RawText)))
 		obsShown++
 	}
@@ -576,13 +764,18 @@ func (s *Store) GenerateReport(reportType string) string {
 		b.WriteString("  - (none)\n")
 	}
 	b.WriteString("- **INFERENCES / ASSESSMENTS** (rule-engine classification — status never auto-verified):\n")
-	for i, a := range s.state.Assessments {
-		if i >= 5 {
+	assessmentShown := 0
+	for _, a := range s.state.Assessments {
+		if assessmentShown >= 5 {
 			break
 		}
+		if !isNewsAssessment(a) {
+			continue
+		}
 		b.WriteString(fmt.Sprintf("  - [%s] status=%s conf=%d%% — %s (evidence: %v)\n", a.ID, a.Status, a.Confidence, a.Statement, a.EvidenceIDs))
+		assessmentShown++
 	}
-	if len(s.state.Assessments) == 0 {
+	if assessmentShown == 0 {
 		b.WriteString("  - (none)\n")
 	}
 	b.WriteString("- **VERIFIED FINDINGS**: none unless operator/evidence review sets Assessment.Status=verified.\n\n")
@@ -592,6 +785,9 @@ func (s *Store) GenerateReport(reportType string) string {
 	recentCount := 0
 	olderCount := 0
 	for _, ev := range s.state.Events {
+		if !isNewsEvent(ev) {
+			continue
+		}
 		dt := now.Sub(ev.ObservedAt).Hours()
 		if dt < 24 && dt >= 0 {
 			recentCount++
@@ -609,6 +805,9 @@ func (s *Store) GenerateReport(reportType string) string {
 	// 3 Risk sections
 	b.WriteString("## 3. Globale / Regionale Risikolage (multi-dimensional, erklärbar)\n")
 	for id, rs := range s.state.RiskScores {
+		if !isNewsRisk(rs) {
+			continue
+		}
 		b.WriteString(fmt.Sprintf("**%s**: Overall=%.1f%% (trend=%s, conf=%d%%)\n", id, rs.OverallRisk, rs.Trend, rs.Confidence))
 		b.WriteString(fmt.Sprintf("  Drivers: %v\n", rs.PrimaryDrivers))
 		b.WriteString(fmt.Sprintf("  GeoPol=%.0f Conflict=%.0f Cyber=%.0f Infra=%.0f Econ=%.0f Energy=%.0f Supply=%.0f\n\n",
@@ -621,6 +820,9 @@ func (s *Store) GenerateReport(reportType string) string {
 	b.WriteString("## 4. Konflikte und Eskalationsindikatoren\n")
 	conflictN := 0
 	for _, ev := range s.state.Events {
+		if !isNewsEvent(ev) {
+			continue
+		}
 		if ev.Domain == "humanitarian" || ev.Severity == "high" {
 			b.WriteString(fmt.Sprintf("- %s (sev=%s) @ %.1f,%.1f [INFERENCE]\n", safeTitle(ev.Title), ev.Severity, ev.Latitude, ev.Longitude))
 			conflictN++
@@ -635,7 +837,7 @@ func (s *Store) GenerateReport(reportType string) string {
 	for _, domain := range []string{"economic", "infrastructure", "cyber", "geo"} {
 		n := 0
 		for _, ev := range s.state.Events {
-			if ev.Domain == domain {
+			if isNewsEvent(ev) && ev.Domain == domain {
 				n++
 			}
 		}
@@ -677,15 +879,21 @@ func (s *Store) GenerateReport(reportType string) string {
 		if i > 4 {
 			break
 		}
+		if DetectNaturalHazard(src.ID, src.Name, src.SourceType) != "" {
+			continue
+		}
 		b.WriteString(fmt.Sprintf("- %s (type=%s, trust=%d, fetched=%s)\n", src.ID, src.SourceType, src.TrustTier, src.FetchedAt.Format(time.RFC3339)))
 	}
 	for i, e := range s.state.Evidence {
 		if i > 4 {
 			break
 		}
+		if DetectNaturalHazard(e.SourceID, e.Excerpt, "") != "" {
+			continue
+		}
 		b.WriteString(fmt.Sprintf("- Evidence %s src=%s status=%s coc=%s — %s\n", e.ID, e.SourceID, e.ValidationStatus, e.ChainOfCustodyID, safeTitle(e.Excerpt)))
 	}
-	b.WriteString(fmt.Sprintf("Raw Observations: %d | Events (classified): %d | Evidence: %d\n\n", len(s.state.Observations), len(s.state.Events), len(s.state.Evidence)))
+	b.WriteString(fmt.Sprintf("Raw news observations: %d | News events (classified): %d | Evidence: %d\n\n", newsObservations, newsEvents, len(s.state.Evidence)))
 
 	b.WriteString("## 14. Empfohlene Beobachtungspunkte / Handlungsempfehlungen\n")
 	b.WriteString("**Diese sind Empfehlungen, keine Fakten oder Anweisungen.**\n")
@@ -696,19 +904,18 @@ func (s *Store) GenerateReport(reportType string) string {
 	b.WriteString("---\n**Provenance note**: Alle Werte stammen aus IngestObservation (RSS→Observation raw → region+event) oder manuellem Operator-Input. Keine LLM-Erfindungen. Scores deterministisch via ScoringEngine (0.6*max + 0.4*avg, freshness decay). Observation (raw) strikt getrennt von Event/Assessment/Risk (Inference).\n")
 
 	if s.bus != nil {
-		s.bus.PublishEvent("briefing.generated", reportType, map[string]any{"sections": 14, "observations": len(s.state.Observations)})
+		s.bus.PublishEvent("briefing.generated", reportType, map[string]any{"sections": 14, "observations": newsObservations, "natural_hazards_excluded": true})
 	}
 	return b.String()
 }
 
-// shortContentHash is a non-crypto-strength fingerprint for local provenance (hex prefix of FNV-like mix).
-func shortContentHash(raw string) string {
-	var h uint64 = 14695981039346656037
-	for i := 0; i < len(raw); i++ {
-		h ^= uint64(raw[i])
-		h *= 1099511628211
-	}
-	return fmt.Sprintf("%016x", h)
+func contentSHA256(raw string) string {
+	digest := sha256.Sum256([]byte(raw))
+	return fmt.Sprintf("%x", digest[:])
+}
+
+func normalizeHashInput(raw string) string {
+	return strings.Join(strings.Fields(strings.ToLower(strings.TrimSpace(raw))), " ")
 }
 
 // normalizeRegionKey maps common aliases onto RiskScore keys used by the region pack.
@@ -748,8 +955,16 @@ func min(a, b int) int {
 
 // titlesAreSimilar and haversineDistance for deterministic dedup (no external deps)
 func titlesAreSimilar(t1, t2 string) bool {
-	w1 := strings.Fields(strings.ToLower(t1))
-	w2 := strings.Fields(strings.ToLower(t2))
+	left := normalizeEntityName(t1)
+	right := normalizeEntityName(t2)
+	if left == "" || right == "" {
+		return false
+	}
+	if left == right || tokenJaccard(left, right) >= 0.60 || bigramDice(left, right) >= 0.76 {
+		return true
+	}
+	w1 := strings.Fields(left)
+	w2 := strings.Fields(right)
 	m1 := make(map[string]bool)
 	for _, w := range w1 {
 		if len(w) > 3 {
@@ -879,6 +1094,24 @@ func (s *Store) ExplainScore(regionID string) string {
 	}
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("## Why is this score this high?\nRegion %s OverallRisk=%.1f%% (trend %s, conf %d%%)\n", regionID, rs.OverallRisk, rs.Trend, rs.Confidence))
+	if rs.EvaluationSource != "" {
+		b.WriteString(fmt.Sprintf("Evaluation source: %s", rs.EvaluationSource))
+		if rs.AIModelID != "" {
+			b.WriteString(" · model " + rs.AIModelID)
+		}
+		if !rs.AIEvaluatedAt.IsZero() {
+			b.WriteString(fmt.Sprintf(" · evaluated %s", rs.AIEvaluatedAt.UTC().Format(time.RFC3339)))
+		}
+		if !rs.NextRefreshAt.IsZero() {
+			b.WriteString(fmt.Sprintf(" · next AI refresh %s", rs.NextRefreshAt.UTC().Format(time.RFC3339)))
+		}
+		b.WriteString("\n")
+	}
+	if strings.TrimSpace(rs.AINarrative) != "" {
+		b.WriteString("### KI-Lagebewertung\n")
+		b.WriteString(strings.TrimSpace(rs.AINarrative))
+		b.WriteString("\n\n")
+	}
 	b.WriteString(fmt.Sprintf("Primary drivers: %v\n", rs.PrimaryDrivers))
 	if len(rs.PrimaryDrivers) == 0 {
 		b.WriteString("Primary drivers: (none — no high-severity fresh signals)\n")
@@ -887,10 +1120,71 @@ func (s *Store) ExplainScore(regionID string) string {
 	b.WriteString(fmt.Sprintf("Geopol=%.0f Conflict=%.0f Cyber=%.0f Infra=%.0f Econ=%.0f Energy=%.0f\n",
 		rs.GeopoliticalRisk, rs.ConflictRisk, rs.CyberRisk, rs.InfrastructureRisk, rs.EconomicRisk, rs.EnergyRisk))
 	b.WriteString(fmt.Sprintf("Data freshness ~%.0f%%. MissingData: %v\n", rs.DataFreshness, rs.MissingData))
-	b.WriteString("Formula: OverallRisk = 0.6*max(dims) + 0.4*avg(dims); per-event weight * severity * e^(-λ·hours) * confidence.\n")
+	if rs.EvaluationSource == "ai" || rs.EvaluationSource == "hybrid" {
+		b.WriteString("AI scores are model inferences over current Global Watch data; cache TTL 5h. Raw observations remain UNVERIFIED.\n")
+	} else {
+		b.WriteString("Formula: OverallRisk = 0.6*max(dims) + 0.4*avg(dims); per-event weight * severity * e^(-λ·hours) * confidence.\n")
+	}
 	b.WriteString("Layer note: score is DERIVED (inference). Raw observations feeding it remain UNVERIFIED.\n")
 	b.WriteString("Evidence: see EvidenceIDs on related Alerts/Assessments; source trust tier factors confidence.\n")
 	return b.String()
+}
+
+// ApplyAIRegionalRiskScores writes AI (or fallback) regional scores into the shared store.
+func (s *Store) ApplyAIRegionalRiskScores(scores map[string]RiskScore) {
+	if s == nil || len(scores) == 0 {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.state.RiskScores == nil {
+		s.state.RiskScores = make(map[string]RiskScore)
+	}
+	for id, rs := range scores {
+		id = strings.ToUpper(strings.TrimSpace(id))
+		if id == "" {
+			continue
+		}
+		s.state.RiskScores[id] = rs
+		s.publish("risk.changed", id, map[string]any{
+			"region_id":   id,
+			"new_score":   rs.OverallRisk,
+			"source":      rs.EvaluationSource,
+			"last_update": rs.LastUpdated,
+		})
+	}
+}
+
+// AIRegionalRisksFresh reports whether a successful AI/hybrid regional evaluation
+// is still within TTL. Pure "deterministic" fallbacks never count as AI-fresh,
+// so a later configured Groq/DeepSeek key can retry instead of waiting 5h.
+func (s *Store) AIRegionalRisksFresh(ttl time.Duration) (fresh bool, evaluatedAt time.Time) {
+	if s == nil {
+		return false, time.Time{}
+	}
+	if ttl <= 0 {
+		ttl = RegionalAIRiskTTL
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var newest time.Time
+	count := 0
+	for _, rs := range s.state.RiskScores {
+		if rs.EvaluationSource != "ai" && rs.EvaluationSource != "hybrid" {
+			continue
+		}
+		if rs.AIEvaluatedAt.IsZero() {
+			continue
+		}
+		count++
+		if rs.AIEvaluatedAt.After(newest) {
+			newest = rs.AIEvaluatedAt
+		}
+	}
+	if count == 0 || newest.IsZero() {
+		return false, time.Time{}
+	}
+	return time.Since(newest) < ttl, newest
 }
 
 // QueryRegionSecurity answers the §19 operator query style (e.g. security developments in Germany last 24h)
@@ -1111,10 +1405,13 @@ func (s *Store) CreateCaseWithID(id, title, purpose string) (Case, error) {
 		Title:          title,
 		Purpose:        purpose,
 		Classification: "operator-controlled",
+		Status:         "open",
+		CreatedAt:      now,
 		AllowedSources: []string{},
 		Evidence:       []Evidence{},
 		Entities:       []Entity{},
 		Relations:      []Relation{},
+		ReIDRequests:   []IntelligenceReIDRequest{},
 		Audit: []AuditEvent{{
 			At: now, Action: "case.created", Actor: "operator",
 			Detail: "Case opened with stated purpose (isolated from personal memory).",
@@ -1133,6 +1430,11 @@ func (s *Store) CreateCaseWithID(id, title, purpose string) (Case, error) {
 
 // AddCaseEntity mirrors a root-case entity into the shared case shell (same case id).
 func (s *Store) AddCaseEntity(caseID, entityID, label, kind string, confidence int) error {
+	label = strings.TrimSpace(label)
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	if entityID == "" || label == "" || confidence < 0 || confidence > 100 {
+		return fmt.Errorf("entity fields are invalid")
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for i := range s.state.Cases {
@@ -1158,11 +1460,30 @@ func (s *Store) AddCaseEntity(caseID, entityID, label, kind string, confidence i
 
 // LinkCaseRelation mirrors a root relation into the shared case shell.
 func (s *Store) LinkCaseRelation(caseID, from, to, relType, evidenceID string, confidence int) error {
+	if strings.TrimSpace(from) == "" || strings.TrimSpace(to) == "" || strings.TrimSpace(relType) == "" || strings.TrimSpace(evidenceID) == "" || confidence < 0 || confidence > 100 {
+		return fmt.Errorf("relationship fields are invalid")
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for i := range s.state.Cases {
 		if s.state.Cases[i].ID != caseID {
 			continue
+		}
+		fromFound, toFound, evidenceFound := false, false, false
+		for _, entity := range s.state.Cases[i].Entities {
+			fromFound = fromFound || entity.ID == from
+			toFound = toFound || entity.ID == to
+		}
+		for _, evidence := range s.state.Cases[i].Evidence {
+			evidenceFound = evidenceFound || evidence.ID == evidenceID
+		}
+		if !fromFound || !toFound || !evidenceFound {
+			return fmt.Errorf("relationship must reference case-local entities and sealed evidence")
+		}
+		for _, existing := range s.state.Cases[i].Relations {
+			if existing.FromEntity == from && existing.ToEntity == to && existing.RelationType == relType && len(existing.EvidenceIDs) == 1 && existing.EvidenceIDs[0] == evidenceID {
+				return nil
+			}
 		}
 		s.state.Cases[i].Relations = append(s.state.Cases[i].Relations, Relation{
 			FromEntity: from, ToEntity: to, RelationType: relType,
@@ -1172,6 +1493,69 @@ func (s *Store) LinkCaseRelation(caseID, from, to, relType, evidenceID string, c
 		return nil
 	}
 	return fmt.Errorf("case not found")
+}
+
+func (s *Store) MigrationApplied(id string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	_, exists := s.state.Migrations[id]
+	return exists
+}
+
+func (s *Store) MarkMigration(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.state.Migrations == nil {
+		s.state.Migrations = make(map[string]time.Time)
+	}
+	s.state.Migrations[id] = time.Now().UTC()
+	return s.save()
+}
+
+func (s *Store) SetEvaluation(evaluation NeuralCoreEvaluation) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.state.Evaluation = evaluation
+	return s.save()
+}
+
+func (s *Store) ValidateCaseEvidence(caseID, evidenceID, operator, decision string) (Evidence, error) {
+	if decision != "verified" && decision != "disputed" && decision != "rejected" {
+		return Evidence{}, fmt.Errorf("validation decision is invalid")
+	}
+	if strings.TrimSpace(operator) == "" {
+		operator = "operator"
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for caseIndex := range s.state.Cases {
+		if s.state.Cases[caseIndex].ID != caseID {
+			continue
+		}
+		for evidenceIndex := range s.state.Cases[caseIndex].Evidence {
+			evidence := &s.state.Cases[caseIndex].Evidence[evidenceIndex]
+			if evidence.ID != evidenceID {
+				continue
+			}
+			evidence.ValidationStatus = decision
+			custody := s.appendCustodyLocked(evidenceID, "evidence."+decision, operator, caseID)
+			evidence.PreviousAuditHash = custody.PreviousHash
+			evidence.AuditHash = custody.EventHash
+			s.state.Cases[caseIndex].Audit = append(s.state.Cases[caseIndex].Audit, AuditEvent{At: custody.At, Action: "evidence." + decision, Actor: operator, Detail: evidenceID})
+			for worldIndex := range s.state.Evidence {
+				if s.state.Evidence[worldIndex].ID == evidenceID {
+					s.state.Evidence[worldIndex] = *evidence
+				}
+			}
+			if err := s.save(); err != nil {
+				return Evidence{}, err
+			}
+			s.publish("evidence."+decision, evidenceID, *evidence)
+			return *evidence, nil
+		}
+		return Evidence{}, fmt.Errorf("evidence not found")
+	}
+	return Evidence{}, fmt.Errorf("case not found")
 }
 
 // SealCaseEvidence adds sealed evidence into the shared case graph (same id as root).
@@ -1191,14 +1575,43 @@ func (s *Store) SealCaseEvidence(caseID, evidenceID, sourceID, url, excerpt, sha
 		if evidenceID == "" {
 			evidenceID = "case-evid-" + fmt.Sprintf("%d", now.UnixNano())
 		}
+		if len(sha256hex) != sha256.Size*2 {
+			sha256hex = contentSHA256(excerpt)
+		}
 		e := Evidence{
 			ID: evidenceID, CaseID: caseID, SourceID: sourceID, URL: url, Excerpt: excerpt,
-			SHA256: sha256hex, CollectedAt: now, Sealed: true, ValidationStatus: "pending",
+			SHA256: sha256hex, RawSHA256: sha256hex, HashAlgorithm: "sha256", CollectedAt: now, Sealed: true, ValidationStatus: "pending",
 			ChainOfCustodyID: "coc-" + evidenceID,
+			CaptureScope:     "excerpt",
 		}
+		worldEvidenceIndex := -1
+		for index := range s.state.Evidence {
+			if s.state.Evidence[index].ID != evidenceID {
+				continue
+			}
+			worldEvidenceIndex = index
+			source := s.state.Evidence[index]
+			e.RawSHA256 = firstNonEmpty(source.RawSHA256, e.RawSHA256)
+			e.NormalizedSHA256 = source.NormalizedSHA256
+			e.SnapshotID = source.SnapshotID
+			e.SnapshotPath = source.SnapshotPath
+			e.CaptureScope = firstNonEmpty(source.CaptureScope, e.CaptureScope)
+			if source.SHA256 != "" {
+				e.SHA256 = source.SHA256
+			}
+			break
+		}
+		custody := s.appendCustodyLocked(evidenceID, "evidence.sealed", "operator", caseID)
+		e.PreviousAuditHash = custody.PreviousHash
+		e.AuditHash = custody.EventHash
 		s.state.Cases[i].Evidence = append(s.state.Cases[i].Evidence, e)
-		// Also keep a world-level evidence ref for provenance lists
-		s.state.Evidence = append(s.state.Evidence, e)
+		// Promote an existing world evidence reference in place; do not create a
+		// second object with the same identifier and divergent provenance.
+		if worldEvidenceIndex >= 0 {
+			s.state.Evidence[worldEvidenceIndex] = e
+		} else {
+			s.state.Evidence = append(s.state.Evidence, e)
+		}
 		detail := evidenceID
 		if sourceEventID != "" {
 			detail += " source_event_id=" + sourceEventID
@@ -1709,6 +2122,16 @@ func (s *Store) LiveNexusContext(limit int) string {
 // LiveNexusContextWithin applies a strict event-time window. Missing, future
 // and stale timestamps never enter a "latest" intelligence answer.
 func (s *Store) LiveNexusContextWithin(limit int, hours float64) string {
+	return s.liveNexusContextWithin(limit, hours, false)
+}
+
+// LiveNaturalHazardsContextWithin is isolated from the ordinary news context
+// and is exposed only through an explicit natural-hazards tool.
+func (s *Store) LiveNaturalHazardsContextWithin(limit int, hours float64) string {
+	return s.liveNexusContextWithin(limit, hours, true)
+}
+
+func (s *Store) liveNexusContextWithin(limit int, hours float64, naturalHazardsOnly bool) string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if limit < 1 {
@@ -1725,38 +2148,49 @@ func (s *Store) LiveNexusContextWithin(limit int, hours float64) string {
 	inWindow := func(timestamp time.Time) bool {
 		return !timestamp.IsZero() && !timestamp.Before(cutoff) && !timestamp.After(now.Add(10*time.Minute))
 	}
+	include := func(source, title, summary string) bool {
+		isHazard := DetectNaturalHazard(source, title, summary) != ""
+		if naturalHazardsOnly {
+			return isHazard
+		}
+		return !isHazard
+	}
 	windowObservations := 0
 	windowEvents := 0
 	windowAssessments := 0
 	windowAlerts := 0
 	windowRisks := 0
 	for _, observation := range s.state.Observations {
-		if inWindow(observation.ObservedAt) {
+		if inWindow(observation.ObservedAt) && include(observation.SourceID, observation.RawText, "") {
 			windowObservations++
 		}
 	}
 	for _, event := range s.state.Events {
-		if inWindow(event.ObservedAt) {
+		if inWindow(event.ObservedAt) && include(event.SourceID, event.Title, event.Summary) {
 			windowEvents++
 		}
 	}
 	for _, assessment := range s.state.Assessments {
-		if inWindow(assessment.CreatedAt) {
+		if inWindow(assessment.CreatedAt) && include("", assessment.Statement, strings.Join(assessment.EvidenceIDs, " ")) {
 			windowAssessments++
 		}
 	}
 	for _, alert := range s.state.Alerts {
-		if !alert.Acknowledged && inWindow(alert.CreatedAt) {
+		if !alert.Acknowledged && inWindow(alert.CreatedAt) && include("", alert.Reason, alert.Region) {
 			windowAlerts++
 		}
 	}
 	for _, risk := range s.state.RiskScores {
-		if inWindow(risk.LastUpdated) {
+		if inWindow(risk.LastUpdated) && include("", strings.Join(risk.PrimaryDrivers, " "), strings.Join(risk.MissingData, " ")) {
 			windowRisks++
 		}
 	}
 	var b strings.Builder
-	b.WriteString("UNIFIED INTELLIGENCE LIVE NEXUS CONTEXT (SharedIntelStore only)\n")
+	if naturalHazardsOnly {
+		b.WriteString("UNIFIED NATURAL HAZARDS CONTEXT (explicit operator request; SharedIntelStore only)\n")
+	} else {
+		b.WriteString("UNIFIED NEWS INTELLIGENCE CONTEXT (natural hazards excluded; SharedIntelStore only)\n")
+	}
 	b.WriteString("Layers: RAW OBSERVATION | INFERENCE (unverified classification) | VERIFIED FINDING (operator/evidence only)\n")
 	b.WriteString(fmt.Sprintf("Strict event-time window: %.0fh | generated_at=%s\n", hours, now.Format(time.RFC3339)))
 	b.WriteString(fmt.Sprintf("Registered sources: %d | Window raw observations: %d | Window classified events: %d | Window assessments: %d | Active window alerts: %d | Fresh risk regions: %d\n\n",
@@ -1766,7 +2200,7 @@ func (s *Store) LiveNexusContextWithin(limit int, hours float64) string {
 	rawN := 0
 	for i := len(s.state.Observations) - 1; i >= 0 && rawN < limit; i-- {
 		o := s.state.Observations[i]
-		if !inWindow(o.ObservedAt) {
+		if !inWindow(o.ObservedAt) || !include(o.SourceID, o.RawText, "") {
 			continue
 		}
 		b.WriteString(fmt.Sprintf("- [RAW][%s] src=%s @ %.2f,%.2f — %s\n", o.ID, o.SourceID, o.Latitude, o.Longitude, safeTitle(o.RawText)))
@@ -1780,7 +2214,7 @@ func (s *Store) LiveNexusContextWithin(limit int, hours float64) string {
 	evN := 0
 	for i := len(s.state.Events) - 1; i >= 0 && evN < limit; i-- {
 		e := s.state.Events[i]
-		if !inWindow(e.ObservedAt) {
+		if !inWindow(e.ObservedAt) || !include(e.SourceID, e.Title, e.Summary) {
 			continue
 		}
 		b.WriteString(fmt.Sprintf("- [INFERENCE][%s] domain=%s sev=%s conf=%d%% — %s\n", e.ID, e.Domain, e.Severity, e.Confidence, safeTitle(e.Title)))
@@ -1794,7 +2228,7 @@ func (s *Store) LiveNexusContextWithin(limit int, hours float64) string {
 	asN := 0
 	for i := len(s.state.Assessments) - 1; i >= 0 && asN < limit; i-- {
 		a := s.state.Assessments[i]
-		if !inWindow(a.CreatedAt) {
+		if !inWindow(a.CreatedAt) || !include("", a.Statement, strings.Join(a.EvidenceIDs, " ")) {
 			continue
 		}
 		b.WriteString(fmt.Sprintf("- [ASSESSMENT][%s] status=%s conf=%d%% evidence=%v — %s\n", a.ID, a.Status, a.Confidence, a.EvidenceIDs, a.Statement))
@@ -1807,7 +2241,7 @@ func (s *Store) LiveNexusContextWithin(limit int, hours float64) string {
 	b.WriteString("\n## VERIFIED FINDINGS\n")
 	verifiedN := 0
 	for _, a := range s.state.Assessments {
-		if inWindow(a.CreatedAt) && (a.Status == "verified" || a.Status == "corroborated") {
+		if inWindow(a.CreatedAt) && include("", a.Statement, strings.Join(a.EvidenceIDs, " ")) && (a.Status == "verified" || a.Status == "corroborated") {
 			b.WriteString(fmt.Sprintf("- [VERIFIED][%s] status=%s — %s\n", a.ID, a.Status, a.Statement))
 			verifiedN++
 		}
@@ -1820,7 +2254,7 @@ func (s *Store) LiveNexusContextWithin(limit int, hours float64) string {
 	alN := 0
 	for i := len(s.state.Alerts) - 1; i >= 0 && alN < limit; i-- {
 		a := s.state.Alerts[i]
-		if a.Acknowledged || !inWindow(a.CreatedAt) {
+		if a.Acknowledged || !inWindow(a.CreatedAt) || !include("", a.Reason, a.Region) {
 			continue
 		}
 		b.WriteString(fmt.Sprintf("- [ALERT][%s] region=%s sev=%s conf=%d%% — %s\n", a.ID, a.Region, a.Severity, a.Confidence, safeTitle(a.Reason)))
@@ -1836,7 +2270,7 @@ func (s *Store) LiveNexusContextWithin(limit int, hours float64) string {
 		if rsN >= 6 {
 			break
 		}
-		if !inWindow(rs.LastUpdated) {
+		if !inWindow(rs.LastUpdated) || !include("", strings.Join(rs.PrimaryDrivers, " "), strings.Join(rs.MissingData, " ")) {
 			continue
 		}
 		b.WriteString(fmt.Sprintf("- [RISK][%s] overall=%.1f%% trend=%s drivers=%v missing=%v\n", id, rs.OverallRisk, rs.Trend, rs.PrimaryDrivers, rs.MissingData))
@@ -1847,16 +2281,21 @@ func (s *Store) LiveNexusContextWithin(limit int, hours float64) string {
 	}
 
 	b.WriteString("\n## SOURCES (registry)\n")
-	for i, src := range s.state.Sources {
-		if i >= limit {
+	sourceN := 0
+	for _, src := range s.state.Sources {
+		if sourceN >= limit {
 			break
 		}
+		if !include(src.ID, src.Name, src.SourceType) {
+			continue
+		}
 		b.WriteString(fmt.Sprintf("- [SOURCE][%s] type=%s trust_tier=%d status=%s\n", src.ID, src.SourceType, src.TrustTier, src.AvailabilityStatus))
+		sourceN++
 	}
-	if len(s.state.Sources) == 0 {
+	if sourceN == 0 {
 		b.WriteString("- (none)\n")
 	}
 
-	b.WriteString("\n**Provenance:** All rows come from SharedIntelStore (RSS→Observation→Ingest). Map pins and chat use this same model. Do not invent sources or treat INFERENCE as VERIFIED.\n")
+	b.WriteString("\n**Provenance:** All rows come from SharedIntelStore (RSS→Observation→Ingest). News and natural hazards use isolated contexts. Do not invent sources or treat INFERENCE as VERIFIED.\n")
 	return b.String()
 }
