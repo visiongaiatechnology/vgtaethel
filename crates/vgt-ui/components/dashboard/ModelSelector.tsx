@@ -16,7 +16,7 @@ export function ModelSelector({ models, activeModelId, onSelectModel }: ModelSel
         <div className="flex flex-col gap-2">
             {models.length === 0 ? (
                 <div className="text-xs text-vgt-text-dim animate-pulse p-2">
-                    > CONNECTING TO VGT CORE...
+                    &gt; CONNECTING TO VGT CORE...
                 </div>
             ) : (
                 models.map((m) => (

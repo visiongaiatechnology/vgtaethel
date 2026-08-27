@@ -10,11 +10,7 @@
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      rgb(var(--background-start-rgb)),
-      rgb(var(--background-end-rgb))
-    );
+  background: radial-gradient(circle at 50% 50%, #080517 0%, #020106 100%);
   min-height: 100vh;
   font-family: 'Inter', sans-serif; /* Oder eine Monospace Font für Terminal Look */
   overflow-x: hidden;
@@ -23,7 +19,13 @@ body {
 /* VGT UTILITIES - SUPREME GLASS */
 @layer utilities {
   .vgt-glass {
-    @apply bg-vgt-glass backdrop-blur-md border border-vgt-border shadow-2xl;
+    background: rgba(8, 6, 20, 0.45);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 
+      inset 0 1px 0px 0px rgba(255, 255, 255, 0.05),
+      0 15px 45px rgba(0, 0, 0, 0.55);
   }
   
   .vgt-glass-hover {
@@ -37,8 +39,5 @@ body {
 
 /* SUBTLE GRID BACKGROUND */
 .bg-grid-pattern {
-  background-size: 40px 40px;
-  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+  display: none;
 }

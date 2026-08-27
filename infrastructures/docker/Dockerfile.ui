@@ -12,6 +12,7 @@ FROM base AS builder
 WORKDIR /app
 COPY crates/vgt-ui/ .
 COPY --from=deps /app/node_modules ./node_modules
+RUN mkdir -p public
 
 # Next.js Telemetry abschalten für Souveränität
 ENV NEXT_TELEMETRY_DISABLED 1

@@ -15,7 +15,10 @@ export class SignalProvider extends ChannelProvider {
         console.log('Initializing Signal (JSON RPC)...');
         
         // Start signal-cli in daemon mode JSON-RPC
-        this.process = spawn('signal-cli', ['-u', this.user, '--output=json', 'daemon']);
+        const signalCLIPath = process.platform === 'win32'
+            ? 'C:\\Program Files\\signal-cli\\bin\\signal-cli.bat'
+            : '/usr/local/bin/signal-cli';
+        this.process = spawn(signalCLIPath, ['-u', this.user, '--output=json', 'daemon']);
 
         this.process.stdout.on('data', (data: Buffer) => {
             const lines = data.toString().split('\n');

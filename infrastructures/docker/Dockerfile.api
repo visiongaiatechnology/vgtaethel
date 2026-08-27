@@ -32,6 +32,10 @@ COPY --from=builder /app/target/release/vgt-api /app/vgt-api
 # Kopiere Env-Beispiel (Muss im Container gesetzt werden)
 COPY --from=builder /app/.env.example ./.env
 
+# Distroless provides this unprivileged identity. The service owns no mutable
+# system paths and starts without root privileges.
+USER nonroot:nonroot
+
 # Ports
 EXPOSE 3000
 

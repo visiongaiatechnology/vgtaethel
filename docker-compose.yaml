@@ -3,7 +3,7 @@ services:
   vgt-api:
     build:
       context: .
-      dockerfile: infrastructure/docker/Dockerfile.api
+      dockerfile: infrastructures/docker/Dockerfile.api
     container_name: vgt_omega_core
     restart: unless-stopped
     ports:
@@ -21,7 +21,7 @@ services:
   vgt-ui:
     build:
       context: .
-      dockerfile: infrastructure/docker/Dockerfile.ui
+      dockerfile: infrastructures/docker/Dockerfile.ui
     container_name: vgt_omega_interface
     restart: unless-stopped
     ports:

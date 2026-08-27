@@ -2,6 +2,7 @@ import { Terminal, Activity } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Message, ToolCallRequest } from "@/hooks/useVgtEngine";
 import { ToolRequestCard } from "./ToolRequestCard";
+import { MarkdownRenderer } from "./MarkdownRenderer";
 
 interface TerminalOutputProps {
     messages: Message[];
@@ -58,9 +59,8 @@ export function TerminalOutput({ messages, isStreaming, currentResponse, onToolA
                     </div>
                     <div className="flex-1">
                         <p className="text-vgt-cyan text-[10px] mb-1 tracking-wider opacity-70">GENERATING SEQUENCE...</p>
-                        <div className="opacity-90 leading-relaxed whitespace-pre-wrap border-l-2 border-vgt-cyan pl-3 text-vgt-text-primary">
-                            {currentResponse}
-                            <span className="inline-block w-2 h-4 bg-vgt-cyan ml-1 animate-pulse align-middle"/>
+                        <div className="border-l-2 border-vgt-cyan pl-3 text-vgt-text-primary">
+                            <MarkdownRenderer content={currentResponse} isStreaming />
                         </div>
                     </div>
                 </div>
@@ -89,9 +89,9 @@ function MessageBubble({ message }: { message: Message }) {
                 <p className={`text-[10px] mb-1 font-bold tracking-wider opacity-70 ${isUser ? 'text-vgt-purple' : 'text-vgt-cyan'}`}>
                     {isUser ? 'OPERATOR :: ID_01' : 'AETHEL :: CORE'}
                 </p>
-                <div className={`opacity-90 leading-relaxed whitespace-pre-wrap transition-all duration-300
+                <div className={`transition-all duration-300
                     ${isUser ? 'text-vgt-text-dim group-hover:text-white' : 'text-white'}`}>
-                    {message.content}
+                    <MarkdownRenderer content={message.content} />
                 </div>
             </div>
         </div>
