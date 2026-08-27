@@ -1,0 +1,17 @@
+GW LAYOUT: SETTINGS + FEED RIGHT
+================================
+index.html structure:
+
+1) Data Configuration (id=gw-intel-detail) and Alerts (id=gw-alerts-center)
+   live INSIDE #gw-settings-modal (settings body grid). Not main-stage clutter.
+
+2) Meldungsfeed (#gw-feed-panel) is the right column:
+   class="gw-right-rail gw-feed-dock" inside .gw-body-triple
+   Grid: left layers | center globe | right feed
+
+3) CSS:
+   .gw-body-triple → minmax(168-200) | 1fr | minmax(300-360)
+   .gw-feed-dock full-height column list
+   Removed freestanding .gw-feed-float overlay as primary layout
+
+4) Personal Impact also under Settings for clarity.

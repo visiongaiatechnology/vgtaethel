@@ -1,0 +1,23 @@
+=== go toolchain check (2026-07-12) ===
+Environment: Windows session agent shell fails with "IO Error: program not found"
+for ALL terminal invocations (powershell, cmd, full paths, go.exe itself).
+
+go.exe EXISTS on disk at:
+  C:\Program Files\Go\bin\go.exe
+  (also gofmt.exe)
+
+Honest status: could not execute go test / go version in this session despite binary present.
+
+Fallback verification (plan.md §1): static proof that committed test sources assert
+the vertical path against real package functions — see:
+- intel_vertical_tests.log
+- explain_score.txt
+- unified_consumers.txt
+- go_test_all_intel.log
+- go_test_run_live.log
+- docs_list.txt
+
+Operator re-run when agent shell works:
+  cd C:\Users\Masterboard\Downloads\vgtaethel-main\vgtaethel-main\go-aethel
+  & "C:\Program Files\Go\bin\go.exe" test ./intelligence/ -count=2 -v
+  & "C:\Program Files\Go\bin\go.exe" test . -count=1 -run "TestIngest|TestRSS|TestGlobe|TestExtract|TestCompute|Berlin"

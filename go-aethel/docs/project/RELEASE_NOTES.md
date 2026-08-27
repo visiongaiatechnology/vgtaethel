@@ -1,12 +1,22 @@
-# VGT AETHEL 1.0.0-beta.2 — BETA V2
+# VGT AETHEL 1.0.0-beta.3 — BETA V3
 
-**Sovereign Personal Intelligence OS · Production Candidate**
+**Sovereign Strategic Intelligence OS · Strategic Command Build**
 
-Beta V2 turns AETHEL from a broad alpha workspace into a governed, persistent intelligence
+Beta V3 evolves AETHEL into a governed, persistent strategic intelligence
 runtime. Conversation, orchestration, computer control, memory, writing and operational
 awareness now share explicit effect contracts instead of relying on model claims.
 
 ## Highlights
+
+- Dedicated SHADOW OSINT command environment with a local WebGL 3D globe, evidence-bound
+  regional assessments and directional attacker-to-target conflict vectors.
+- Military black/gold command skin across the complete AETHEL shell, sidebar and status HUD.
+- Editable military, geopolitical, economic, energy, cyber and official-source registry,
+  including Telegram public-preview collection and safe RSS discovery from directory pages.
+- Strict 40–60 item analysis batches, encrypted operational state, daily master dossiers and
+  JSON/Markdown exports.
+- Fail-closed Global Watch scores: no deterministic or hybrid regional coloring without an
+  evidence-bound AI assessment.
 
 - Separate Domain Model and Orchestrator selections with provider-aware routing and bounded
   context packages.
@@ -26,7 +36,7 @@ awareness now share explicit effect contracts instead of relying on model claims
 
 ## Experience improvements
 
-- Unified Beta V2 identity across splash, disclosure, shell, backend, installer and CI.
+- Unified Beta V3 identity across splash, disclosure, shell, backend, installer and CI.
 - Loader retains the manual **Starten** transition after initialization.
 - Idle globe movement now uses a time-based 25 FPS cadence and a faster natural rotation.
 - Failures and unavailable capabilities remain visible rather than being reported as active.
@@ -52,4 +62,4 @@ go vet -buildvcs=false ./...
 govulncheck ./...
 ```
 
-Release tag: `aethel-v1.0.0-beta.2`.
+Release tag: `aethel-v1.0.0-beta.3`.

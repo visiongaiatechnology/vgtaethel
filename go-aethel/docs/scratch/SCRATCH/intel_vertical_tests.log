@@ -1,0 +1,57 @@
+=== Static proof: vertical path tests (go unavailable — source inspection) ===
+
+Committed tests that drive SHIPPED functions (not reimplementations):
+
+1) intelligence/store_test.go
+   - TestIngestObservationPipeline
+     store.IngestObservation(obs @ GERMANY lat/lon)
+     asserts: RiskScores["GERMANY"], Observations, Events, Evidence, Assessments
+     Assessment.Status == "unverified"
+     Audits, Sources non-empty
+     ExplainScore contains OverallRisk, drivers/freshness/missing, "unverified"
+     GenerateReport contains Executive Summary, Uncertainties, RAW OBSERVATIONS, INFERENCE, Provenance
+     bus emits observation.created (and prefers risk.changed / assessment.updated / event.created)
+   - TestQueryRegionSecurityGermany24h
+     two IngestObservations (prior 36h + now 2h Berlin)
+     QueryRegionSecurity("GERMANY", 24) asserts RAW OBSERVATIONS, INFERENCE/unverified,
+     Evidence, Uncertainties, Change vs prior, risk
+   - TestDedupNearDuplicateEvents
+   - TestExplainScoreMissingRegion
+
+2) globe_math_runtime_test.go (package main)
+   - RSSCollector.parseRSS(rssBerlinXML embed) real fixture
+   - enrich → HasGeo Berlin
+   - intelligence.NewStore + IngestObservation from parsed event
+   - RiskScores, ExplainScore (unverified + freshness/missing), QueryRegionSecurity
+   - GenerateReport RAW OBSERVATIONS
+   - Evidence + Assessment + Audit required
+   - buildGlobePins via goja on shared Event lat/lon → Berlin x range
+
+3) osint_geo_test.go
+   - TestRSSCollectorParse_BerlinFixture
+   - extractGeoFromText Berlin/Paris/Tokyo table
+
+4) intelligence/scoring_test.go
+   - deterministic CyberRisk 27.0 for fixture events
+
+5) intelligence/regions_test.go
+   - point-in-polygon region match
+
+Vertical chain (code path in intelligence/store.go IngestObservation):
+  Observation append → publish observation.created
+  Source upsert → publish source.fetched
+  Evidence pending → publish evidence.sealed
+  RegionEngine.MatchPoint
+  classifyDomain/Severity + TrustTier → Event (dedup titlesAreSimilar+haversine)
+  Assessment Status=unverified → publish assessment.updated
+  ScoringEngine.ComputeRiskScore multi-dim → publish risk.changed
+  Alert if delta/threshold → publish alert.created + AuditEvent
+  Audit observation.ingested + save
+
+Wiring (app.go):
+  SharedIntelStore = intelligence.NewStore(...)
+  osintEngine.SetRefreshHook → Observation from OSINTEvent → IngestObservation
+  bridge ProposeEvent to root for compat; handlers prefer SharedIntelStore
+
+CONCLUSION: tests would fail if Obs/Assessment separation or vertical chain removed.
+Cannot confirm exit 0 without go binary in this session.

@@ -1,0 +1,43 @@
+=== AETHEL go test run attempt (2026-07-12) ===
+Working directory (intended): C:\Users\Masterboard\Downloads\vgtaethel-main\vgtaethel-main\go-aethel
+Log path: C:\Users\Masterboard\Downloads\vgtaethel-main\vgtaethel-main\go-aethel\SCRATCH\go_test_run_live.log
+
+=== Step 1: Locate go.exe ===
+PATH probe via shell: FAILED (shell unavailable — see below)
+where.exe go via shell: FAILED (shell unavailable)
+Checked filesystem: C:\Program Files\Go\bin\go.exe EXISTS
+  Sibling binaries present: gofmt.exe
+Result: go.exe FOUND at C:\Program Files\Go\bin\go.exe
+
+=== Step 2: Run tests ===
+Intended commands (not executed):
+  "C:\Program Files\Go\bin\go.exe" test ./intelligence/ -count=1
+  "C:\Program Files\Go\bin\go.exe" test . -count=1 -run "TestIngest|TestRSS|TestGlobe|TestExtract|TestCompute|Berlin"
+
+Shell invocation attempts (all failed before any process stdout/stderr):
+  1. PowerShell default shell: IO Error: program not found
+  2. cmd /c "where go ...": IO Error: program not found
+  3. echo hello: IO Error: program not found
+  4. C:\Windows\System32\cmd.exe /c "echo hello": IO Error: program not found
+  5. C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -Command ...: IO Error: program not found
+  6. whoami: IO Error: program not found
+  7. "C:\Program Files\Go\bin\go.exe" version: IO Error: program not found
+
+Cause: agent terminal/runtime cannot spawn any host process in this session
+(same class of failure as SCRATCH\go_unavailable.log from earlier today).
+No go test process was started. No test stdout/stderr captured.
+
+=== Step 3–5: Results ===
+go.exe found: YES (C:\Program Files\Go\bin\go.exe)
+Tests executed: NO
+Exit code go test ./intelligence/ -count=1: N/A (not run)
+Exit code go test . -count=1 -run "TestIngest|TestRSS|TestGlobe|TestExtract|TestCompute|Berlin": N/A (not run)
+
+Summary: PASS/FAIL UNKNOWN — toolchain present on disk but agent shell cannot execute binaries, so live go test output could not be produced.
+
+Operator re-run (local PowerShell/cmd with Go on PATH or full path):
+  cd C:\Users\Masterboard\Downloads\vgtaethel-main\vgtaethel-main\go-aethel
+  & "C:\Program Files\Go\bin\go.exe" test ./intelligence/ -count=1
+  & "C:\Program Files\Go\bin\go.exe" test . -count=1 -run "TestIngest|TestRSS|TestGlobe|TestExtract|TestCompute|Berlin"
+  # or redirect:
+  # & "C:\Program Files\Go\bin\go.exe" test ./intelligence/ -count=1 *>&1 | Tee-Object SCRATCH\go_test_run_live.log

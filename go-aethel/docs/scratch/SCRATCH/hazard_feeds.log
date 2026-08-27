@@ -1,0 +1,18 @@
+HAZARD FEEDS INGESTION PATH
+===========================
+BuiltIn connectors (osint/connector_extra.go):
+- builtin-usgs → USGS all_day.geojson, RawText "[earthquake] M x.x | ..."
+- builtin-eonet → NASA EONET open events; volcanoes tagged [volcano erupting]
+- builtin-volcano → EONET category=volcanoes dedicated feed
+
+Intelligence source registry (intelligence_sources.go):
+- usgs-earthquakes adapter usgs_geojson (summary carries [earthquake] M tag)
+- eonet-volcanoes adapter eonet_volcano
+
+Frontend boot: silent fetch of builtin-usgs, builtin-volcano, builtin-eonet
+after Global Watch init; Settings "Alle Quellen laden" includes same set.
+
+Unit tests:
+- intelligence/volcano_parse_test.go
+- intelligence/usgs_parse_test.go (existing + summary tag test in volcano_parse_test)
+- globe_math_runtime_test.go goja magnitude/volcano/datetime

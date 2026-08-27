@@ -1,0 +1,22 @@
+UI SHELL / DESIGN SYSTEM
+========================
+Product: go-aethel frontend
+
+Shared tokens in style.css :root:
+- --vgt-bg, --vgt-bg-elevated, --vgt-bg-gradient
+- --vgt-cyan / purple / green / orange / red (+ glow)
+- Hazard: --hz-green, --hz-orange, --hz-red
+- Type scale: --text-xs..xl, --leading-body
+- Spacing: --space-1..8
+- Radius: --radius-sm/md/lg/xl/pill
+- Elevation: --shadow-sm/md/lg, --shadow-glow-cyan
+- Controls: --control-h, --ease-out
+- Surfaces: --ds-surface, --ds-panel
+
+Applied app-wide patterns:
+- .glass-card uses --radius-lg
+- .nav-menu-btn, .cyber-button, .gw-briefing-btn, .gw-tool-btn shared control polish
+- GW layout, settings modal, feed dock, research reader consume same tokens
+
+Major surfaces restyled for layperson-friendly German copy on Global Watch
+(Kartenebenen, Themenfilter, Meldungsfeed, Settings titles).

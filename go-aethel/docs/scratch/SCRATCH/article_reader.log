@@ -1,0 +1,19 @@
+ARTICLE / RESEARCH READER
+=========================
+DOM:
+- #gw-report-reader full-stage overlay (backdrop + shell)
+- #gw-report-reader-title
+- Meta grid: #gw-reader-source, #gw-reader-date, #gw-reader-time,
+  #gw-reader-domain, #gw-reader-coords, #gw-reader-layer
+- Body: #gw-report-reader-body (15px, line-height 1.7, scroll)
+- Footer: ID + external source link
+
+JS:
+- openGwReportReader(event|title, md?)
+- formatArticleDateTime(raw) → { date, time, iso, display } de-DE
+- Feed card click opens full reader (not tiny popup expand)
+- Selection panel "READER" button
+- Esc / backdrop close
+
+CSS scale:
+- shell width min(920px, 96%), max-height ~92% — research readable surface

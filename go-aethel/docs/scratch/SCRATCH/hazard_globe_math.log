@@ -1,0 +1,17 @@
+HAZARD GLOBE MATH (pure helpers in osint_watch.js)
+==================================================
+magnitudeColorBand(mag):
+  M ≤ 2.5 → green
+  2.5 < M ≤ 4.5 → orange
+  M > 4.5 → red
+
+Fixtures for goja TestGlobeMathRuntimeFromShippedJS:
+  2.0 green, 2.5 green, 3.5 orange, 4.5 orange, 5.0 red, 7.2 red
+
+volcanoMarkerColor(true) → band red (erupting always red)
+
+Globe layers:
+- earthquakes: animated epicenter + 3 radiating rings tinted by band
+- volcanoes: red triangle + glow for erupting/open volcanic events
+
+parseMagnitudeFromEvent: "M 5.1" / "magnitude 5.1" from title/summary

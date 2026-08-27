@@ -1,0 +1,14 @@
+ENV LIMITS
+==========
+Agent shell cannot spawn processes (IO Error: program not found) including go.exe / cmd.
+Live `go test` and headless UI screenshots not executed in this session.
+
+Gating rests on:
+- static structure tests (frontend_static_test.go updated)
+- goja pure-helper assertions (globe_math_runtime_test.go extended)
+- unit parse tests for volcano/USGS tags
+- SCRATCH logs above
+
+When local Go is available, recommended:
+  go test ./... -count=1
+  go test -run 'GlobeMath|OSINTFrontend|GlobalWatch|USGS|Volcano' -count=1

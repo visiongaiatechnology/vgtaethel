@@ -1,0 +1,12 @@
+FULL APP UI OVERHAUL (goal)
+===========================
+Shipped:
+- frontend/aethel-ui-production.css (app-wide production layer)
+- frontend/index.html (link + German nav + view title polish)
+- frontend/modules/chat_addmessage.js (Du/Aethel headers)
+- frontend_static_test.go → TestFullAppProductionUILayer
+
+Agent scratch evidence:
+C:\Users\MASTER~1\AppData\Local\Temp\grok-goal-5f4ecbd1e68c\implementer\
+  splash_preserved.log, ui_design_system.log, ui_views_inventory.log,
+  ui_chat_agent_settings.log, nav_ids_intact.log, env_limits.log

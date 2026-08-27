@@ -1,0 +1,19 @@
+=== go test packages (attempted 2026-07-12) ===
+RESULT: NOT EXECUTED — shell tool IO Error: program not found (all invocations).
+
+Intended commands:
+  go test ./intelligence/ -count=2
+  go test ./intelligence/alerts/ ./intelligence/cases/ ./intelligence/connectors/ ./intelligence/briefings/
+  go test . -count=1 -run "TestIngest|TestRSS|TestGlobe|TestExtract|TestCompute"
+
+Packages with intelligence-related tests:
+  intelligence/store_test.go
+  intelligence/scoring_test.go
+  intelligence/regions_test.go
+  osint_geo_test.go
+  globe_math_runtime_test.go
+  frontend_static_test.go (if present)
+
+connectors package: now valid Go (import go-aethel/intelligence). Register validation only.
+
+Re-run when Go available; capture stdout here on success.

@@ -1,0 +1,4 @@
+=== Optional second run ===
+Not executed (go unavailable). Static analysis is deterministic; committed tests have
+no flaky sleeps beyond bus drain 200ms timeout. Re-run:
+  go test ./intelligence/ -count=2 -run TestIngestObservationPipeline

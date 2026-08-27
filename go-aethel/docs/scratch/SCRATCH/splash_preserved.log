@@ -1,0 +1,11 @@
+SPLASH PRESERVED (goal gating)
+==============================
+Date: 2026-07-12
+
+Checked paths:
+- frontend/index.html → id="startup-splash-screen" class="startup-splash" still present
+- frontend/style.css → .startup-splash { ... } block and related splash-* rules unchanged in intent
+- frontend/app.js → splash dismiss path still references startup-splash-screen
+
+No redesign, removal, or alternate boot UI introduced.
+Article reader / GW settings / design tokens do not touch splash markup or behavior.
