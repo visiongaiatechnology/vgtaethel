@@ -57,6 +57,149 @@ func (p *ShadowPercent) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+type ShadowText string
+
+func (t *ShadowText) UnmarshalJSON(data []byte) error {
+	decoder := json.NewDecoder(strings.NewReader(string(data)))
+	decoder.UseNumber()
+	var value any
+	if err := decoder.Decode(&value); err != nil {
+		return errors.New("invalid SHADOW narrative")
+	}
+	normalized, err := normalizeShadowText(value, 0)
+	if err != nil {
+		return err
+	}
+	*t = ShadowText(normalized)
+	return nil
+}
+
+func normalizeShadowText(value any, depth int) (string, error) {
+	if depth > 4 {
+		return "", errors.New("SHADOW narrative nesting boundary exceeded")
+	}
+	switch typed := value.(type) {
+	case nil:
+		return "", nil
+	case string:
+		return strings.TrimSpace(typed), nil
+	case json.Number:
+		return typed.String(), nil
+	case bool:
+		return strconv.FormatBool(typed), nil
+	case []any:
+		if len(typed) > 64 {
+			return "", errors.New("SHADOW narrative list boundary exceeded")
+		}
+		parts := make([]string, 0, len(typed))
+		for _, entry := range typed {
+			text, err := normalizeShadowText(entry, depth+1)
+			if err != nil {
+				return "", err
+			}
+			if text != "" {
+				parts = append(parts, text)
+			}
+		}
+		return strings.Join(parts, "\n- "), nil
+	case map[string]any:
+		if len(typed) > 64 {
+			return "", errors.New("SHADOW narrative object boundary exceeded")
+		}
+		keys := make([]string, 0, len(typed))
+		for key := range typed {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		parts := make([]string, 0, len(keys))
+		for _, key := range keys {
+			text, err := normalizeShadowText(typed[key], depth+1)
+			if err != nil {
+				return "", err
+			}
+			if text != "" {
+				parts = append(parts, strings.TrimSpace(key)+": "+text)
+			}
+		}
+		return strings.Join(parts, "\n"), nil
+	default:
+		return "", errors.New("unsupported SHADOW narrative type")
+	}
+}
+
+type ShadowStringList []string
+
+func (s *ShadowStringList) UnmarshalJSON(data []byte) error {
+	var values []string
+	if err := json.Unmarshal(data, &values); err == nil {
+		*s = cleanShadowStringList(values)
+		return nil
+	}
+	var value string
+	if err := json.Unmarshal(data, &value); err != nil {
+		return errors.New("invalid SHADOW string list")
+	}
+	*s = cleanShadowStringList([]string{value})
+	return nil
+}
+
+func cleanShadowStringList(values []string) ShadowStringList {
+	if len(values) > 80 {
+		values = values[:80]
+	}
+	result := make(ShadowStringList, 0, len(values))
+	for _, value := range values {
+		if value = strings.TrimSpace(value); value != "" && len(value) <= 512 {
+			result = append(result, value)
+		}
+	}
+	return result
+}
+
+type ShadowRegions []ShadowRegionAssessment
+type ShadowConflictLinks []ShadowConflictLink
+type ShadowForecasts []ShadowForecast
+
+func (v *ShadowRegions) UnmarshalJSON(data []byte) error {
+	values, err := unmarshalShadowOneOrMany[ShadowRegionAssessment](data)
+	*v = values
+	return err
+}
+
+func (v *ShadowConflictLinks) UnmarshalJSON(data []byte) error {
+	values, err := unmarshalShadowOneOrMany[ShadowConflictLink](data)
+	*v = values
+	return err
+}
+
+func (v *ShadowForecasts) UnmarshalJSON(data []byte) error {
+	values, err := unmarshalShadowOneOrMany[ShadowForecast](data)
+	*v = values
+	return err
+}
+
+func unmarshalShadowOneOrMany[T any](data []byte) ([]T, error) {
+	trimmed := strings.TrimSpace(string(data))
+	if trimmed == "" || trimmed == "null" {
+		return []T{}, nil
+	}
+	if strings.HasPrefix(trimmed, "[") {
+		var values []T
+		if err := json.Unmarshal(data, &values); err != nil {
+			return nil, err
+		}
+		return values, nil
+	}
+	if strings.HasPrefix(trimmed, "{") {
+		var value T
+		if err := json.Unmarshal(data, &value); err != nil {
+			return nil, err
+		}
+		return []T{value}, nil
+	}
+	return nil, errors.New("SHADOW collection must be an object or array")
+}
+
 type ShadowIntelItem struct {
 	ID          string    `json:"id"`
 	SourceID    string    `json:"source_id"`
@@ -71,26 +214,26 @@ type ShadowIntelItem struct {
 }
 
 type ShadowRegionAssessment struct {
-	RegionID      string        `json:"region_id"`
-	RegionName    string        `json:"region_name"`
-	Latitude      float64       `json:"latitude"`
-	Longitude     float64       `json:"longitude"`
-	SecurityScore ShadowPercent `json:"security_score"`
-	ConflictLevel string        `json:"conflict_level"`
-	Confidence    ShadowPercent `json:"confidence"`
-	Trend         string        `json:"trend"`
-	EvidenceIDs   []string      `json:"evidence_ids"`
-	Assessment    string        `json:"assessment"`
+	RegionID      string           `json:"region_id"`
+	RegionName    string           `json:"region_name"`
+	Latitude      float64          `json:"latitude"`
+	Longitude     float64          `json:"longitude"`
+	SecurityScore ShadowPercent    `json:"security_score"`
+	ConflictLevel string           `json:"conflict_level"`
+	Confidence    ShadowPercent    `json:"confidence"`
+	Trend         string           `json:"trend"`
+	EvidenceIDs   ShadowStringList `json:"evidence_ids"`
+	Assessment    ShadowText       `json:"assessment"`
 }
 
 type ShadowForecast struct {
-	Sector      string        `json:"sector"`
-	Horizon     string        `json:"horizon"`
-	Prediction  string        `json:"prediction"`
-	Probability ShadowPercent `json:"probability"`
-	Direction   string        `json:"direction,omitempty"`
-	Instruments []string      `json:"instruments,omitempty"`
-	EvidenceIDs []string      `json:"evidence_ids"`
+	Sector      string           `json:"sector"`
+	Horizon     string           `json:"horizon"`
+	Prediction  ShadowText       `json:"prediction"`
+	Probability ShadowPercent    `json:"probability"`
+	Direction   string           `json:"direction,omitempty"`
+	Instruments ShadowStringList `json:"instruments,omitempty"`
+	EvidenceIDs ShadowStringList `json:"evidence_ids"`
 }
 
 type ShadowMarketPoint struct {
@@ -105,36 +248,36 @@ type ShadowMarketPoint struct {
 }
 
 type ShadowConflictLink struct {
-	AttackerName      string        `json:"attacker_name"`
-	TargetName        string        `json:"target_name"`
-	AttackerLatitude  float64       `json:"attacker_latitude"`
-	AttackerLongitude float64       `json:"attacker_longitude"`
-	TargetLatitude    float64       `json:"target_latitude"`
-	TargetLongitude   float64       `json:"target_longitude"`
-	Action            string        `json:"action"`
-	Confidence        ShadowPercent `json:"confidence"`
-	EvidenceIDs       []string      `json:"evidence_ids"`
-	Assessment        string        `json:"assessment"`
+	AttackerName      string           `json:"attacker_name"`
+	TargetName        string           `json:"target_name"`
+	AttackerLatitude  float64          `json:"attacker_latitude"`
+	AttackerLongitude float64          `json:"attacker_longitude"`
+	TargetLatitude    float64          `json:"target_latitude"`
+	TargetLongitude   float64          `json:"target_longitude"`
+	Action            string           `json:"action"`
+	Confidence        ShadowPercent    `json:"confidence"`
+	EvidenceIDs       ShadowStringList `json:"evidence_ids"`
+	Assessment        ShadowText       `json:"assessment"`
 }
 
 type ShadowReport struct {
-	ID               string                   `json:"id"`
-	Kind             string                   `json:"kind"`
-	ThreatLevel      string                   `json:"threat_level"`
-	Summary          string                   `json:"summary"`
-	Situation        string                   `json:"situation"`
-	CuiBono          string                   `json:"cui_bono"`
-	StrategicReality string                   `json:"strategic_reality"`
-	Divergences      string                   `json:"divergences,omitempty"`
-	ConfirmedVectors string                   `json:"confirmed_vectors,omitempty"`
-	Regions          []ShadowRegionAssessment `json:"regions"`
-	ConflictLinks    []ShadowConflictLink     `json:"conflict_links"`
-	Forecasts        []ShadowForecast         `json:"forecast_matrix"`
-	MarketSnapshot   []ShadowMarketPoint      `json:"market_snapshot,omitempty"`
-	EvidenceIDs      []string                 `json:"evidence_ids"`
-	ItemsAnalyzed    int                      `json:"items_analyzed"`
-	CreatedAt        time.Time                `json:"created_at"`
-	ContentSHA256    string                   `json:"content_sha256"`
+	ID               string              `json:"id"`
+	Kind             string              `json:"kind"`
+	ThreatLevel      string              `json:"threat_level"`
+	Summary          ShadowText          `json:"summary"`
+	Situation        ShadowText          `json:"situation"`
+	CuiBono          ShadowText          `json:"cui_bono"`
+	StrategicReality ShadowText          `json:"strategic_reality"`
+	Divergences      ShadowText          `json:"divergences,omitempty"`
+	ConfirmedVectors ShadowText          `json:"confirmed_vectors,omitempty"`
+	Regions          ShadowRegions       `json:"regions"`
+	ConflictLinks    ShadowConflictLinks `json:"conflict_links"`
+	Forecasts        ShadowForecasts     `json:"forecast_matrix"`
+	MarketSnapshot   []ShadowMarketPoint `json:"market_snapshot,omitempty"`
+	EvidenceIDs      ShadowStringList    `json:"evidence_ids"`
+	ItemsAnalyzed    int                 `json:"items_analyzed"`
+	CreatedAt        time.Time           `json:"created_at"`
+	ContentSHA256    string              `json:"content_sha256"`
 }
 
 type ShadowState struct {
@@ -550,7 +693,7 @@ func validateShadowReport(report *ShadowReport, allowed map[string]bool) error {
 	if len([]rune(report.Summary)) < 40 || len([]rune(report.Summary)) > 12000 {
 		return errors.New("invalid SHADOW summary")
 	}
-	for _, section := range []string{report.Situation, report.CuiBono, report.StrategicReality, report.Divergences, report.ConfirmedVectors} {
+	for _, section := range []ShadowText{report.Situation, report.CuiBono, report.StrategicReality, report.Divergences, report.ConfirmedVectors} {
 		if len([]rune(section)) > 24000 {
 			return errors.New("SHADOW report section boundary exceeded")
 		}
@@ -594,7 +737,7 @@ func validateShadowReport(report *ShadowReport, allowed map[string]bool) error {
 		link.AttackerName = strings.TrimSpace(link.AttackerName)
 		link.TargetName = strings.TrimSpace(link.TargetName)
 		link.Action = strings.ToUpper(strings.TrimSpace(link.Action))
-		link.Assessment = strings.TrimSpace(link.Assessment)
+		link.Assessment = ShadowText(strings.TrimSpace(string(link.Assessment)))
 		if link.AttackerName == "" || link.TargetName == "" || strings.EqualFold(link.AttackerName, link.TargetName) ||
 			len([]rune(link.AttackerName)) > 120 || len([]rune(link.TargetName)) > 120 ||
 			link.AttackerLatitude < -90 || link.AttackerLatitude > 90 || link.TargetLatitude < -90 || link.TargetLatitude > 90 ||
@@ -621,6 +764,16 @@ func validateShadowReport(report *ShadowReport, allowed map[string]bool) error {
 		forecast.Sector = strings.ToUpper(strings.TrimSpace(forecast.Sector))
 		forecast.Horizon = strings.TrimSpace(forecast.Horizon)
 		forecast.Direction = strings.ToUpper(strings.TrimSpace(forecast.Direction))
+		switch forecast.Direction {
+		case "BULLISH", "RISING", "POSITIVE":
+			forecast.Direction = "UP"
+		case "BEARISH", "FALLING", "NEGATIVE":
+			forecast.Direction = "DOWN"
+		case "NEUTRAL", "UNCHANGED", "FLAT":
+			forecast.Direction = "SIDEWAYS"
+		case "DE-ESCALATION", "DEESCALATION", "DE_ESCALATION":
+			forecast.Direction = "IMPROVEMENT"
+		}
 		if forecast.Probability < 0 || forecast.Probability > 100 {
 			return errors.New("invalid SHADOW forecast probability")
 		}
