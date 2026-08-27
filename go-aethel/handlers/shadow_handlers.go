@@ -252,7 +252,7 @@ func executeShadowModel(modelID, systemPrompt, userContent string) (osint.Shadow
 		modelID = "openai/gpt-oss-120b"
 	}
 	message, _ := json.Marshal(map[string]string{"role": "user", "content": userContent})
-	request := ChatRequest{ModelID: modelID, Messages: []json.RawMessage{message}, SystemPrompt: systemPrompt, Temperature: 0.2, UseTools: false, ReasoningEffort: "high", ReasoningVisibility: "hidden"}
+	request := ChatRequest{ModelID: modelID, Messages: []json.RawMessage{message}, SystemPrompt: systemPrompt, Temperature: 0.2, UseTools: false, ReasoningEffort: "high", ReasoningVisibility: "hidden", TextOnly: true}
 	body, err := json.Marshal(request)
 	if err != nil {
 		return osint.ShadowReport{}, err

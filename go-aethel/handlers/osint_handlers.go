@@ -249,6 +249,7 @@ Kennzeichne RAW-Beobachtungen, Schlussfolgerungen und bestätigte Aussagen einde
 		ReasoningVisibility: "hidden",
 		LiveOperatorActive:  false,
 		SphereActive:        false,
+		TextOnly:            true,
 	}
 
 	executeBriefing := func(targetModel string) (string, error) {

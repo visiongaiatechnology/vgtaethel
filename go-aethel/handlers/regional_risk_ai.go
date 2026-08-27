@@ -279,6 +279,7 @@ func invokeRegionalRiskChat(modelID, prompt string) (string, error) {
 		UseTools:            false,
 		ReasoningEffort:     "low",
 		ReasoningVisibility: "hidden",
+		TextOnly:            true,
 	}
 	body, err := json.Marshal(chatReq)
 	if err != nil {

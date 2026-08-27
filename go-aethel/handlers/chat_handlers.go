@@ -26,6 +26,7 @@ type ChatRequest struct {
 	ReasoningVisibility string            `json:"reasoning_visibility,omitempty"`
 	LiveOperatorActive  bool              `json:"live_operator_active"`
 	SphereActive        bool              `json:"sphere_active"`
+	TextOnly            bool              `json:"text_only,omitempty"`
 	ToolAllowlist       *[]string         `json:"tool_allowlist,omitempty"`
 }
 
@@ -264,6 +265,9 @@ func messageTextForVisionTrigger(content interface{}) string {
 }
 
 func shouldAttachViewportScreenshot(req ChatRequest, modelID string, messages []map[string]interface{}) bool {
+	if req.TextOnly {
+		return false
+	}
 	if !isVisionModel(modelID) {
 		return false
 	}
