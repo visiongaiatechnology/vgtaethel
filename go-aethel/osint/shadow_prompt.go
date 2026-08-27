@@ -21,6 +21,7 @@ DOKTRIN
 
 ANTWORT
 Antworte ausschließlich als valides JSON ohne Markdown-Fences:
+Alle Felder security_score, confidence und probability sind Ganzzahlen von 0 bis 100, niemals Bruchteile von 0 bis 1.
 {
   "threat_level":"LOW|MEDIUM|HIGH|CRITICAL",
   "summary":"Executive Summary",

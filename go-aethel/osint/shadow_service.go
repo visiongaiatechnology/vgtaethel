@@ -9,8 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +25,37 @@ const (
 	ShadowBatchMin = 40
 	ShadowBatchMax = 60
 )
+
+type ShadowPercent int
+
+func (p *ShadowPercent) UnmarshalJSON(data []byte) error {
+	text := strings.TrimSpace(string(data))
+	if text == "" || text == "null" {
+		return errors.New("SHADOW percentage is missing")
+	}
+	percentSuffix := false
+	if strings.HasPrefix(text, "\"") {
+		var value string
+		if err := json.Unmarshal(data, &value); err != nil {
+			return errors.New("invalid SHADOW percentage string")
+		}
+		text = strings.TrimSpace(value)
+		percentSuffix = strings.HasSuffix(text, "%")
+		text = strings.TrimSpace(strings.TrimSuffix(text, "%"))
+	}
+	value, err := strconv.ParseFloat(text, 64)
+	if err != nil || math.IsNaN(value) || math.IsInf(value, 0) {
+		return errors.New("invalid SHADOW percentage")
+	}
+	if !percentSuffix && value >= 0 && value <= 1 {
+		value *= 100
+	}
+	if value < 0 || value > 100 {
+		return errors.New("SHADOW percentage outside 0-100 boundary")
+	}
+	*p = ShadowPercent(math.Round(value))
+	return nil
+}
 
 type ShadowIntelItem struct {
 	ID          string    `json:"id"`
@@ -38,26 +71,26 @@ type ShadowIntelItem struct {
 }
 
 type ShadowRegionAssessment struct {
-	RegionID      string   `json:"region_id"`
-	RegionName    string   `json:"region_name"`
-	Latitude      float64  `json:"latitude"`
-	Longitude     float64  `json:"longitude"`
-	SecurityScore int      `json:"security_score"`
-	ConflictLevel string   `json:"conflict_level"`
-	Confidence    int      `json:"confidence"`
-	Trend         string   `json:"trend"`
-	EvidenceIDs   []string `json:"evidence_ids"`
-	Assessment    string   `json:"assessment"`
+	RegionID      string        `json:"region_id"`
+	RegionName    string        `json:"region_name"`
+	Latitude      float64       `json:"latitude"`
+	Longitude     float64       `json:"longitude"`
+	SecurityScore ShadowPercent `json:"security_score"`
+	ConflictLevel string        `json:"conflict_level"`
+	Confidence    ShadowPercent `json:"confidence"`
+	Trend         string        `json:"trend"`
+	EvidenceIDs   []string      `json:"evidence_ids"`
+	Assessment    string        `json:"assessment"`
 }
 
 type ShadowForecast struct {
-	Sector      string   `json:"sector"`
-	Horizon     string   `json:"horizon"`
-	Prediction  string   `json:"prediction"`
-	Probability int      `json:"probability"`
-	Direction   string   `json:"direction,omitempty"`
-	Instruments []string `json:"instruments,omitempty"`
-	EvidenceIDs []string `json:"evidence_ids"`
+	Sector      string        `json:"sector"`
+	Horizon     string        `json:"horizon"`
+	Prediction  string        `json:"prediction"`
+	Probability ShadowPercent `json:"probability"`
+	Direction   string        `json:"direction,omitempty"`
+	Instruments []string      `json:"instruments,omitempty"`
+	EvidenceIDs []string      `json:"evidence_ids"`
 }
 
 type ShadowMarketPoint struct {
@@ -72,16 +105,16 @@ type ShadowMarketPoint struct {
 }
 
 type ShadowConflictLink struct {
-	AttackerName      string   `json:"attacker_name"`
-	TargetName        string   `json:"target_name"`
-	AttackerLatitude  float64  `json:"attacker_latitude"`
-	AttackerLongitude float64  `json:"attacker_longitude"`
-	TargetLatitude    float64  `json:"target_latitude"`
-	TargetLongitude   float64  `json:"target_longitude"`
-	Action            string   `json:"action"`
-	Confidence        int      `json:"confidence"`
-	EvidenceIDs       []string `json:"evidence_ids"`
-	Assessment        string   `json:"assessment"`
+	AttackerName      string        `json:"attacker_name"`
+	TargetName        string        `json:"target_name"`
+	AttackerLatitude  float64       `json:"attacker_latitude"`
+	AttackerLongitude float64       `json:"attacker_longitude"`
+	TargetLatitude    float64       `json:"target_latitude"`
+	TargetLongitude   float64       `json:"target_longitude"`
+	Action            string        `json:"action"`
+	Confidence        ShadowPercent `json:"confidence"`
+	EvidenceIDs       []string      `json:"evidence_ids"`
+	Assessment        string        `json:"assessment"`
 }
 
 type ShadowReport struct {

@@ -3,6 +3,7 @@ package osint
 // STATUS: DIAMANT VGT SUPREME
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -160,6 +161,23 @@ func TestShadowMarketSnapshotAndForecastDirectionsAreBounded(t *testing.T) {
 	report.MarketSnapshot[0].Symbol = "UNTRUSTED"
 	if err := validateShadowReport(&report, map[string]bool{"evidence-1": true}); err == nil {
 		t.Fatal("untrusted market symbol was accepted")
+	}
+}
+
+func TestShadowPercentAcceptsFractionIntegerAndPercentString(t *testing.T) {
+	var decoded struct {
+		Fraction ShadowPercent `json:"fraction"`
+		Integer  ShadowPercent `json:"integer"`
+		Text     ShadowPercent `json:"text"`
+	}
+	if err := json.Unmarshal([]byte(`{"fraction":0.7,"integer":70,"text":"85%"}`), &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded.Fraction != 70 || decoded.Integer != 70 || decoded.Text != 85 {
+		t.Fatalf("percentage normalization failed: %+v", decoded)
+	}
+	if err := json.Unmarshal([]byte(`{"fraction":1.2,"integer":101,"text":"85%"}`), &decoded); err == nil {
+		t.Fatal("out-of-range percentage was accepted")
 	}
 }
 
