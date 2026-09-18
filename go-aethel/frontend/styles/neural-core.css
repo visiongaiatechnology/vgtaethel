@@ -1,0 +1,30 @@
+/* STATUS: DIAMANT VGT SUPREME — Neural Core command deck. */
+#view-core { height:100%; overflow:auto; padding:0 0 24px; background:transparent !important; }
+.neural-core-hero { position:relative; min-height:390px !important; padding:32px 28px 24px !important; overflow:hidden; }
+.neural-core-hero::before { content:""; position:absolute; inset:16px 20px 0; border:1px solid rgba(176,224,237,.055); border-radius:var(--a-radius-xl); background:linear-gradient(112deg,rgba(20,52,66,.22),rgba(3,13,21,.05) 45%,rgba(76,46,103,.07)); box-shadow:inset 0 1px rgba(255,255,255,.025); }
+.neural-core-hero::after { content:""; position:absolute; left:6%; right:6%; bottom:-32%; height:64%; pointer-events:none; background:repeating-linear-gradient(90deg,rgba(106,214,238,.065) 0 1px,transparent 1px 62px),repeating-linear-gradient(0deg,rgba(106,214,238,.065) 0 1px,transparent 1px 48px); transform:perspective(620px) rotateX(64deg); transform-origin:center bottom; mask-image:linear-gradient(to top,#000,transparent 82%); opacity:.52; }
+.neural-core-hero-grid { display:none; }
+.neural-core-hero-inner { position:relative; z-index:2; display:grid !important; grid-template-columns:minmax(220px,.72fr) minmax(480px,1.72fr) minmax(220px,.72fr) !important; align-items:center; gap:28px !important; max-width:1460px; min-height:330px; margin:0 auto; }
+.neural-core-bubble-stage { align-self:center; filter:drop-shadow(0 26px 36px rgba(0,0,0,.42)); }
+.neural-core-bubble .voice-sphere { width:180px; height:180px; transform:none; animation:aethel-core-breathe 16s ease-in-out infinite; box-shadow:0 0 54px rgba(85,229,255,.17),0 0 95px rgba(165,140,255,.1); }
+.sphere-status { color:var(--a-text-soft); font-size:10px; letter-spacing:.12em; }
+.neural-core-welcome { position:relative; padding:28px 30px !important; border-color:rgba(182,225,237,.25) !important; border-radius:var(--a-radius-lg) !important; background:linear-gradient(145deg,rgba(31,63,77,.55),rgba(9,23,34,.48)) !important; backdrop-filter:blur(24px) saturate(125%); box-shadow:var(--a-shadow-elevated) !important; overflow:hidden; }
+.neural-core-welcome::before { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(115deg,rgba(255,255,255,.055),transparent 36%,rgba(165,140,255,.035)); }
+.neural-core-kicker { font-size:8px; letter-spacing:.17em; color:var(--a-cyan); }
+.neural-core-greeting { position:relative; margin:6px 0 2px; font-size:clamp(28px,3vw,43px) !important; line-height:1.06; font-weight:720; letter-spacing:-.035em !important; color:var(--a-text); text-shadow:0 0 28px rgba(85,229,255,.08); }
+.neural-core-subline { position:relative; max-width:650px; font-size:12px !important; color:var(--a-text-soft) !important; }
+.neural-core-cta-row { position:relative; margin-top:10px; }
+.neural-core-cta { min-height:33px !important; padding:7px 13px !important; font-size:8px !important; }
+.neural-core-first-run { position:relative; margin-top:12px; padding:10px 12px; border:1px dashed rgba(85,229,255,.28); border-radius:var(--a-radius-sm); background:rgba(7,24,33,.35); }
+.neural-core-hud { padding:17px 18px !important; border-color:rgba(177,223,236,.21) !important; background:linear-gradient(145deg,rgba(24,49,62,.52),rgba(6,19,28,.48)) !important; backdrop-filter:blur(20px); box-shadow:var(--a-shadow-panel) !important; }
+.neural-core-hud-title { font-size:9px; color:var(--a-cyan); letter-spacing:.14em; }
+.neural-core-hud-row { min-height:28px; align-items:center; border-color:var(--a-border-soft); font-size:9px; }
+.neural-module { width:auto; margin:0 28px 14px !important; overflow:hidden; backdrop-filter:blur(18px) saturate(118%); }
+.neural-module-header { min-height:55px; padding:10px 15px !important; background:linear-gradient(90deg,rgba(85,229,255,.055),rgba(165,140,255,.025),transparent) !important; border-bottom:1px solid var(--a-border-soft); }
+.neural-module-kicker { color:var(--a-text-micro); font-size:7px; letter-spacing:.15em; }
+.neural-module h3 { margin:2px 0 0; color:var(--a-text); font-size:12px; }
+.neural-state-grid { gap:12px; padding:12px; }
+.neural-state-card { min-height:115px; padding:13px 15px; border:1px solid var(--a-border-soft) !important; border-radius:var(--a-radius-sm); background:rgba(4,16,24,.34) !important; }
+.neural-state-card h4 { color:var(--a-cyan); font-size:10px; letter-spacing:.08em; }
+.neural-voice-grid { padding:12px; }
+@keyframes aethel-core-breathe { 0%,100%{transform:translateY(0) scale(1);filter:saturate(1)} 50%{transform:translateY(-5px) scale(1.018);filter:saturate(1.12)} }

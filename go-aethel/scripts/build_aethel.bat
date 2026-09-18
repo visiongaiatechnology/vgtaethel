@@ -10,9 +10,10 @@ set GOTOOLCHAIN=go1.26.5+auto
 echo Bereinige go.mod dependencies...
 go mod tidy
 
-echo Starte nicht-destruktiven Wails Build...
+echo Starte archivierenden, nicht-destruktiven Wails Build...
+echo [SCHUTZ] Vorhandene EXE-Dateien werden vor Wails ausserhalb von build\bin gespiegelt.
 echo [SCHUTZ] build\bin\vgt_workspace wird weder bereinigt noch verschoben.
-wails build -platform windows/amd64
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0build_preserve.ps1" -OutputName "AETHEL.exe"
 
 if %ERRORLEVEL% NEQ 0 (
     echo.

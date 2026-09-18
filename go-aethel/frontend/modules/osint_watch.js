@@ -81,8 +81,6 @@ export {
 export {
   requestGlobeRender,
   focusGlobeOnLonLat,
-  drawPureLocalGlobe,
-  initPureLocalGlobe,
 } from './osint/globe_render.js';
 
 export {

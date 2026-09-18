@@ -1,0 +1,13 @@
+/* STATUS: DIAMANT VGT SUPREME — shared module migration. */
+#view-chat:not(.hidden),#view-agent:not(.hidden),#view-control:not(.hidden),#view-security:not(.hidden),#view-memory:not(.hidden),#view-personal:not(.hidden),#view-sphere:not(.hidden),#view-mail:not(.hidden),#view-tasks:not(.hidden),#view-settings:not(.hidden),#view-personas:not(.hidden),#view-archive:not(.hidden),#view-case:not(.hidden),#view-workbench:not(.hidden) { background:transparent !important; }
+#view-security:not(.hidden),#view-memory:not(.hidden),#view-personal:not(.hidden),#view-tasks:not(.hidden),#view-settings:not(.hidden),#view-personas:not(.hidden),#view-archive:not(.hidden),#view-case:not(.hidden) { padding:18px !important; gap:14px !important; }
+.chat-workspace,.agent-workspace-view,.operator-workspace,.security-workspace,.memory-workspace,.personal-workspace,.mail-workspace,.run-workspace,.settings-view,.persona-registry-view,.archive-workspace { background:radial-gradient(ellipse 70% 55% at 50% 0,rgba(76,207,234,.045),transparent 68%) !important; }
+.chat-header,.chat-input-container,.agent-team-config,.agent-plan-panel,.agent-run-console,.browser-address-bar,.security-panel,.memory-panel,.personal-panel,.mail-list-panel,.mail-reader-panel,.run-panel,.settings-card,.persona-card,.archive-panel,.case-sidebar,.case-details-panel { border-color:var(--a-border) !important; background:linear-gradient(145deg,rgba(15,34,46,.53),rgba(5,16,24,.48)) !important; box-shadow:var(--a-shadow-panel) !important; }
+.chat-input-container { margin:10px 16px 14px; border-radius:var(--a-radius-md) !important; backdrop-filter:blur(var(--a-blur-md)); }
+.chat-message,.message-bubble,.agent-role-card,.task-card,.memory-card,.persona-card,.case-card { border-color:var(--a-border-soft) !important; background:rgba(8,22,31,.46) !important; }
+.settings-tabs,.persona-tabs,.security-tabs,.memory-tabs { border-bottom:1px solid var(--a-border-soft); }
+.tab-btn,.settings-tab,.persona-tab { color:var(--a-text-dim); background:transparent; border-color:transparent; }
+.tab-btn.active,.settings-tab.active,.persona-tab.active { color:var(--a-text); border-color:var(--a-border-active); background:rgba(85,229,255,.06); }
+.sphere-workspace,.space-dashboard-view { background:radial-gradient(ellipse 55% 50% at 50% 40%,rgba(83,162,255,.08),transparent 70%) !important; }
+.shadow-osint-view { background:linear-gradient(rgba(7,11,12,.24),rgba(5,8,10,.38)) !important; }
+.shadow-panel,.shadow-command-card { background:linear-gradient(145deg,rgba(32,29,19,.6),rgba(10,14,14,.62)) !important; border-color:rgba(239,187,97,.18) !important; box-shadow:var(--a-shadow-panel) !important; }

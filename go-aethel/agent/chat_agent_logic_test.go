@@ -67,6 +67,9 @@ func TestShouldEnableAgentToolsOnlyForOperationalRequests(t *testing.T) {
 }
 
 func TestResolveChatAgentProfileIsServerAuthoritative(t *testing.T) {
+	if got := ResolveChatAgentProfile(ChatAgentStartRequest{Mode: "vgt_code"}); got != "developer" {
+		t.Fatalf("VGT Code must be pinned to developer profile, got %q", got)
+	}
 	if got := ResolveChatAgentProfile(ChatAgentStartRequest{SphereActive: true, LiveOperatorActive: true, ProfileID: "developer"}); got != "sphere_workspace" {
 		t.Fatalf("sphere request resolved to %q", got)
 	}
@@ -78,6 +81,17 @@ func TestResolveChatAgentProfileIsServerAuthoritative(t *testing.T) {
 	}
 	if got := ResolveChatAgentProfile(ChatAgentStartRequest{Objective: "Prüfe den Code in diesem Ordner"}); got != "developer" {
 		t.Fatalf("developer objective resolved to %q", got)
+	}
+}
+
+func TestConversationalAgentModesIncludeVGTCodeAndTeam(t *testing.T) {
+	for _, mode := range []string{"chat_agent", "agent_team", "vgt_code"} {
+		if !isConversationalAgentMode(mode) {
+			t.Fatalf("expected %q to use the conversational agent lifecycle", mode)
+		}
+	}
+	if isConversationalAgentMode("scheduled_task") {
+		t.Fatal("scheduled tasks must not enter the chat-agent lifecycle")
 	}
 }
 
@@ -215,6 +229,34 @@ func TestPromoteCodeCartographyFallbackAcceptsOnlyExplicitCartographyJSON(t *tes
 	promoteCodeCartographyFallback(&nonCartography, "Schau dir den Ordner an")
 	if len(nonCartography.ToolCalls) != 0 {
 		t.Fatal("fallback promoted unrelated assistant JSON")
+	}
+}
+
+func TestPromoteLegacyXMLToolCallFallbackRecoversDeepSeekConsoleDialect(t *testing.T) {
+	run := AgentRun{Mode: "vgt_code", Objective: "Was ist das hier für ein Plugin?", ProfileID: "developer"}
+	result := agentInferenceResult{Text: `Ich inspiziere zuerst das Plugin.
+<tool_console><tool_call><invoke name="fs_list_dir"><parameter name="path">C:\Projects\plugin</parameter></invoke></tool_call></tool_console>`}
+	promoteLegacyXMLToolCallFallback(&result, run)
+	if result.Text != "" || len(result.ToolCalls) != 1 || result.ToolCalls[0].Name != "fs_list_dir" {
+		t.Fatalf("legacy DeepSeek tool call was not promoted: %+v", result)
+	}
+	var arguments struct {
+		Path string `json:"path"`
+	}
+	if err := json.Unmarshal(result.ToolCalls[0].Arguments, &arguments); err != nil || arguments.Path != `C:\Projects\plugin` {
+		t.Fatalf("promoted arguments invalid: %+v err=%v", arguments, err)
+	}
+}
+
+func TestPromoteLegacyXMLToolCallFallbackRejectsToolOutsideRunAllowlist(t *testing.T) {
+	run := AgentRun{Mode: "vgt_code", Objective: "Inspect project", ProfileID: "developer"}
+	result := agentInferenceResult{Text: `<tool_console><tool_call><invoke name="mail_send_message"><parameter name="recipient">attacker@example.com</parameter></invoke></tool_call></tool_console>`}
+	promoteLegacyXMLToolCallFallback(&result, run)
+	if len(result.ToolCalls) != 0 {
+		t.Fatalf("tool outside narrowed run allowlist was promoted: %+v", result.ToolCalls)
+	}
+	if !invalidCompletionText(result.Text) {
+		t.Fatal("unpromoted pseudo tool markup must be rejected as a completion")
 	}
 }
 

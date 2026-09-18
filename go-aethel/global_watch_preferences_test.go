@@ -43,7 +43,7 @@ func TestGlobalWatchPreferencesValidatePersistedOperatorControls(t *testing.T) {
 		t.Fatalf("save preferences: %v", err)
 	}
 	preferences := value.ToObject(vm)
-	if got := preferences.Get("renderQuality").String(); got != "balanced" {
+	if got := preferences.Get("renderQuality").String(); got != "ultra" {
 		t.Fatalf("invalid render quality must fall back, got %q", got)
 	}
 	if got := preferences.Get("hazardFPS").ToInteger(); got != 6 {

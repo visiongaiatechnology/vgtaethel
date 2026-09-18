@@ -1,3 +1,4 @@
+// STATUS: DIAMANT VGT SUPREME
 package main
 
 import (
@@ -6,11 +7,13 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
 
 	"go-aethel/agent"
+	"go-aethel/handlers"
 	"go-aethel/intelligence"
 	"go-aethel/memory"
 	"go-aethel/osint"
@@ -25,13 +28,14 @@ import (
 const configFile = "./vgt_workspace/aethel_config.json"
 
 type Config struct {
-	APIKey         string       `json:"api_key"`
-	OpenAIAPIKey   string       `json:"openai_api_key,omitempty"`
-	DeepSeekAPIKey string       `json:"deepseek_api_key,omitempty"`
-	GeminiAPIKey   string       `json:"gemini_api_key,omitempty"`
-	ClaudeAPIKey   string       `json:"claude_api_key,omitempty"`
-	MountedDirs    []string     `json:"mounted_dirs,omitempty"`
+	APIKey         string                `json:"api_key"`
+	OpenAIAPIKey   string                `json:"openai_api_key,omitempty"`
+	DeepSeekAPIKey string                `json:"deepseek_api_key,omitempty"`
+	GeminiAPIKey   string                `json:"gemini_api_key,omitempty"`
+	ClaudeAPIKey   string                `json:"claude_api_key,omitempty"`
+	MountedDirs    []string              `json:"mounted_dirs,omitempty"`
 	Mounts         []security.MountGrant `json:"mounts,omitempty"`
+	PermissionMode string                `json:"permission_mode,omitempty"`
 }
 
 type AppState struct {
@@ -88,13 +92,14 @@ func maybeDecrypt(val string) string {
 	return val
 }
 
-func loadConfig() (string, string, string, string, string, []string, []security.MountGrant) {
+func loadConfig() (string, string, string, string, string, []string, []security.MountGrant, string) {
 	key := os.Getenv("GROQ_API_KEY")
 	oKey := os.Getenv("OPENAI_API_KEY")
 	dsKey := os.Getenv("DEEPSEEK_API_KEY")
 	var gemKey, claudeKey string
 	var mountedDirs []string
 	var mounts []security.MountGrant
+	var permMode string
 
 	data, err := os.ReadFile(configFile)
 	if err == nil {
@@ -113,6 +118,7 @@ func loadConfig() (string, string, string, string, string, []string, []security.
 			claudeKey = maybeDecrypt(cfg.ClaudeAPIKey)
 			mountedDirs = cfg.MountedDirs
 			mounts = cfg.Mounts
+			permMode = cfg.PermissionMode
 
 			hasPlainKey := (cfg.APIKey != "" && cfg.APIKey != "local" && !strings.HasPrefix(cfg.APIKey, "AQ") && isPlainKey(cfg.APIKey, "gsk_")) ||
 				(cfg.OpenAIAPIKey != "" && isPlainKey(cfg.OpenAIAPIKey, "sk-")) ||
@@ -133,6 +139,7 @@ func loadConfig() (string, string, string, string, string, []string, []security.
 					APIKey: encKey, OpenAIAPIKey: encOKey,
 					DeepSeekAPIKey: encDsKey, GeminiAPIKey: encGemKey,
 					ClaudeAPIKey: encClaudeKey, MountedDirs: mountedDirs,
+					PermissionMode: permMode,
 				}
 				if migratedData, err := json.MarshalIndent(migratedCfg, "", "  "); err == nil {
 					_ = os.WriteFile(configFile, migratedData, 0600)
@@ -152,7 +159,7 @@ func loadConfig() (string, string, string, string, string, []string, []security.
 			}
 		}
 	}
-	return key, oKey, dsKey, gemKey, claudeKey, mountedDirs, mounts
+	return key, oKey, dsKey, gemKey, claudeKey, mountedDirs, mounts, permMode
 }
 
 func (s *AppState) saveConfig(key, oKey, dsKey, gemKey, claudeKey string) error {
@@ -193,7 +200,15 @@ func (s *AppState) persistConfigLocked() error {
 		return err
 	}
 	mounts := s.activeMountsLocked()
-	cfg := Config{APIKey: encKey, OpenAIAPIKey: encOKey, DeepSeekAPIKey: encDsKey, GeminiAPIKey: encGemKey, ClaudeAPIKey: encClaudeKey, MountedDirs: mountedDirsFromGrants(mounts), Mounts: mounts}
+	mode := ""
+	if s.policy != nil {
+		mode = string(s.policy.GetMode())
+	}
+	cfg := Config{
+		APIKey: encKey, OpenAIAPIKey: encOKey, DeepSeekAPIKey: encDsKey, GeminiAPIKey: encGemKey, ClaudeAPIKey: encClaudeKey,
+		MountedDirs: mountedDirsFromGrants(mounts), Mounts: mounts,
+		PermissionMode: mode,
+	}
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return err
@@ -224,7 +239,7 @@ func (s *AppState) activeMountsLocked() []security.MountGrant {
 }
 
 func (s *AppState) AddMount(dir string, access security.MountAccess, duration time.Duration) error {
-	if access != security.MountRead && access != security.MountWrite || duration < time.Minute || duration > 24*time.Hour {
+	if access != security.MountRead && access != security.MountWrite || duration < time.Minute || duration > 168*time.Hour {
 		return errors.New("invalid mount access or duration")
 	}
 	s.mu.Lock()
@@ -248,6 +263,34 @@ func (s *AppState) AddMount(dir string, access security.MountAccess, duration ti
 	}
 	s.mountedDirs = mountedDirsFromGrants(s.activeMountsLocked())
 	return s.persistConfigLocked()
+}
+
+func (s *AppState) RemoveMount(dir string, access security.MountAccess) error {
+	canonical, err := security.CanonicalDir(dir)
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	filtered := s.mounts[:0]
+	for _, mount := range s.mounts {
+		if codeMountPathEqual(mount.Path, canonical) && mount.Access == access {
+			continue
+		}
+		filtered = append(filtered, mount)
+	}
+	s.mounts = filtered
+	s.mountedDirs = mountedDirsFromGrants(s.activeMountsLocked())
+	return s.persistConfigLocked()
+}
+
+func codeMountPathEqual(left, right string) bool {
+	left = filepath.Clean(left)
+	right = filepath.Clean(right)
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(left, right)
+	}
+	return left == right
 }
 
 func (s *AppState) GetMountedDirs() []string {
@@ -277,10 +320,13 @@ func (s *AppState) MountAllows(path string, access security.MountAccess) bool {
 			return true
 		}
 	}
+	if root, err := handlers.CurrentCodeWorkspaceRoot(); err == nil && root != "" {
+		if base, err := security.CanonicalDir(root); err == nil && security.IsPathInside(base, canonicalPath) {
+			return true
+		}
+	}
 	return false
 }
-
-
 
 func (s *AppState) GetAPIKey() string {
 	s.mu.RLock()

@@ -1,8 +1,8 @@
-# VGT AETHEL 1.0.0-beta.3 — BETA V3
+# VGT AETHEL 1.0.0-beta.4 — BETA V4
 
 **Sovereign Strategic Intelligence OS · Strategic Command Build**
 
-Beta V3 evolves AETHEL into a governed, persistent strategic intelligence
+Beta V4 evolves AETHEL into a spatial, governed sovereign intelligence
 runtime. Conversation, orchestration, computer control, memory, writing and operational
 awareness now share explicit effect contracts instead of relying on model claims.
 
@@ -36,7 +36,7 @@ awareness now share explicit effect contracts instead of relying on model claims
 
 ## Experience improvements
 
-- Unified Beta V3 identity across splash, disclosure, shell, backend, installer and CI.
+- Unified Beta V4 identity across splash, disclosure, shell, backend, installer and CI.
 - Loader retains the manual **Starten** transition after initialization.
 - Idle globe movement now uses a time-based 25 FPS cadence and a faster natural rotation.
 - Failures and unavailable capabilities remain visible rather than being reported as active.
@@ -62,4 +62,4 @@ go vet -buildvcs=false ./...
 govulncheck ./...
 ```
 
-Release tag: `aethel-v1.0.0-beta.3`.
+Release tag: `aethel-v1.0.0-beta.4`.

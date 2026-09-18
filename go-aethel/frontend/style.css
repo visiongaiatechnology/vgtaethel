@@ -1664,7 +1664,7 @@ h2 {
     white-space: pre-wrap;
 }
 
-/* ── Beta V3 Strategic Command Visual System ───────────────────────────── */
+/* ── Beta V4 Sovereign Intelligence Visual System ─────────────────────── */
 body::before {
     content: '';
     position: fixed;
@@ -1943,7 +1943,7 @@ body::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:
 
 #sphere-app-layer { position:absolute; inset:0; pointer-events:none; }
 #sphere-app-layer .sphere-window { pointer-events:auto; }
-.sphere-dock { position:relative; z-index:9; display:flex; justify-content:center; align-items:center; gap:6px; min-height:62px; padding:8px; border-top:1px solid rgba(113,235,255,.12); background:linear-gradient(180deg,rgba(7,11,23,.74),rgba(2,4,10,.96)); }
+.sphere-dock { position:absolute; bottom:14px; left:50%; transform:translateX(-50%); z-index:90; display:flex; justify-content:center; align-items:center; gap:6px; min-height:52px; padding:6px 10px; border:1px solid rgba(113,235,255,.16); border-radius:18px; background:rgba(6,11,22,.92); backdrop-filter:blur(20px); box-shadow:0 20px 50px rgba(0,0,0,.6); pointer-events:auto; }
 .sphere-dock-app { display:grid; place-items:center; gap:3px; min-width:72px; padding:5px 8px; border:1px solid transparent; border-radius:8px; color:var(--vgt-text-dim); background:transparent; font:700 7px var(--font-mono); letter-spacing:.08em; cursor:pointer; }
 .sphere-dock-app span { color:#c6faff; font-size:15px; line-height:1; }
 .sphere-dock-app:hover,.sphere-dock-app.active { color:#fff; background:rgba(0,240,255,.08); border-color:rgba(0,240,255,.25); }
@@ -2710,7 +2710,7 @@ body::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:
     width: 100%;
     height: 100%;
 }
-#osint-globe canvas {
+#osint-globe > canvas {
     display: block;
     width: 100% !important;
     height: 100% !important;
@@ -2889,6 +2889,14 @@ body::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:
     right: 14px;
 }
 .gw-selection-panel.hidden { display: none; }
+.gw-camera-popup-player {
+    display: block;
+    width: 100%;
+    max-height: 240px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #02060c;
+}
 .gw-selection-head {
     display: flex;
     justify-content: space-between;
@@ -3507,13 +3515,38 @@ body::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:
     color: var(--vgt-text-dark);
     letter-spacing: 0.08em;
 }
+.gw-splitter-v {
+    height: 10px;
+    cursor: ns-resize;
+    background: rgba(244, 63, 94, 0.15);
+    border-top: 1px solid rgba(244, 63, 94, 0.4);
+    border-bottom: 1px solid rgba(244, 63, 94, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    user-select: none;
+    z-index: 5;
+}
+.gw-splitter-v:hover, .gw-splitter-v.dragging {
+    background: rgba(244, 63, 94, 0.45);
+    border-color: #ff9a72;
+}
+.gw-splitter-handle {
+    width: 38px;
+    height: 3px;
+    background: #ff9a72;
+    border-radius: 3px;
+    box-shadow: 0 0 6px rgba(255, 154, 114, 0.8);
+}
 .gw-hazard-panel {
-    flex: 0 1 38%;
-    min-height: 180px;
+    flex: 0 0 var(--gw-hazard-height, 220px);
+    min-height: 100px;
+    max-height: 85%;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border-top: 1px solid rgba(244, 63, 94, 0.28);
     background: linear-gradient(180deg, rgba(244, 63, 94, 0.055), rgba(8, 12, 24, 0.96));
 }
 .gw-hazard-panel .gw-hazard-header {
@@ -3522,6 +3555,23 @@ body::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:
 }
 .gw-hazard-panel .gw-feed-title { color: #ff9a72; }
 .gw-hazard-panel .gw-feed-count { color: rgba(255, 154, 114, 0.78); }
+.gw-feed-dock > .gw-feed-list,
+.gw-feed-dock > .gw-hazard-panel {
+    flex: 1 1 50% !important;
+    min-height: 0;
+    max-height: none;
+}
+.gw-feed-dock > .gw-splitter-v { display: none; }
+.gw-left-rail .gw-contact-hud {
+    position: static !important;
+    width: 100%;
+    max-height: 280px;
+    margin-top: 10px;
+    border-radius: 8px;
+    box-shadow: none;
+    box-sizing: border-box;
+}
+.gw-left-rail .gw-contact-hud-body { max-height: 210px; }
 .gw-feed-dock .gw-hazard-list {
     flex: 1 1 auto;
     min-height: 0;
@@ -3529,6 +3579,111 @@ body::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:
 }
 .gw-hazard-card { border-left-color: rgba(255, 123, 0, 0.58); }
 .gw-hazard-card[data-hazard="volcano"] { border-left-color: rgba(244, 63, 94, 0.72); }
+
+/* Extended GEOINT view: Cesium owns the workspace; controls remain glass widgets. */
+#view-global-watch.gw-extended-mode .gw-header,
+#view-global-watch.gw-extended-mode .gw-command-bar {
+    display: none;
+}
+#view-global-watch.gw-extended-mode .gw-body-triple {
+    display: block;
+    position: relative;
+    isolation: isolate;
+}
+#view-global-watch.gw-extended-mode .gw-globe-panel {
+    position: absolute;
+    inset: 0;
+    border: 0;
+}
+#view-global-watch.gw-extended-mode .gw-left-rail,
+#view-global-watch.gw-extended-mode .gw-feed-dock {
+    position: absolute;
+    top: 14px;
+    bottom: 68px;
+    z-index: 80;
+    border: 1px solid rgba(114, 217, 255, 0.24);
+    border-radius: 14px;
+    background: linear-gradient(145deg, rgba(5, 13, 25, 0.78), rgba(2, 7, 16, 0.62));
+    box-shadow: 0 18px 55px rgba(0, 0, 0, 0.48), inset 0 1px rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(18px) saturate(135%);
+}
+#view-global-watch.gw-extended-mode .gw-left-rail {
+    left: 14px;
+    width: 210px;
+}
+#view-global-watch.gw-extended-mode .gw-feed-dock {
+    right: 14px;
+    width: min(350px, 30vw);
+}
+#view-global-watch.gw-extended-mode .gw-globe-footer {
+    position: absolute;
+    left: 238px;
+    right: 378px;
+    bottom: 10px;
+    z-index: 82;
+    border: 1px solid rgba(114, 217, 255, 0.18);
+    border-radius: 12px;
+    background: rgba(3, 10, 20, 0.72);
+    backdrop-filter: blur(16px);
+}
+#view-global-watch.gw-extended-mode .gw-map-coords {
+    top: 68px;
+    left: 238px;
+    transform: none;
+}
+#view-global-watch .gw-extended-commandbar { display: none; }
+#view-global-watch.gw-extended-mode .gw-extended-commandbar {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    top: 14px;
+    left: 238px;
+    right: 378px;
+    min-height: 38px;
+    padding: 6px 8px 6px 14px;
+    z-index: 96;
+    color: #9beaff;
+    font: 700 9px var(--font-mono);
+    letter-spacing: .12em;
+    border: 1px solid rgba(114, 217, 255, .26);
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(4, 15, 29, .86), rgba(3, 8, 18, .70));
+    box-shadow: 0 12px 38px rgba(0, 0, 0, .42);
+    backdrop-filter: blur(18px) saturate(140%);
+}
+#view-global-watch.gw-extended-mode #gw-extended-mode-btn { display: none; }
+#view-global-watch.gw-extended-mode .gw-risk-hud {
+    top: 96px !important;
+    left: 238px !important;
+    right: auto !important;
+    max-height: min(330px, 45%) !important;
+}
+#view-global-watch.gw-extended-mode .gw-selection-panel {
+    top: 96px !important;
+    left: 500px !important;
+    right: auto !important;
+    max-height: min(430px, 52%) !important;
+}
+#view-global-watch.gw-extended-mode .gw-contact-hud {
+    right: 378px !important;
+    bottom: 92px !important;
+    max-height: min(340px, 40%) !important;
+}
+#view-global-watch.gw-extended-mode .gw-explain-drawer {
+    left: 238px !important;
+    bottom: 92px !important;
+    max-height: 34% !important;
+}
+@media (max-width: 1050px) {
+    #view-global-watch.gw-extended-mode .gw-left-rail { width: 180px; }
+    #view-global-watch.gw-extended-mode .gw-feed-dock { width: 290px; }
+    #view-global-watch.gw-extended-mode .gw-globe-footer { left: 194px; right: 304px; }
+    #view-global-watch.gw-extended-mode .gw-extended-commandbar { left: 194px; right: 304px; }
+    #view-global-watch.gw-extended-mode .gw-risk-hud { left: 194px !important; }
+    #view-global-watch.gw-extended-mode .gw-selection-panel { left: 450px !important; }
+    #view-global-watch.gw-extended-mode .gw-contact-hud { right: 304px !important; }
+}
 .gw-feed-title {
     font-size: 13px;
     font-weight: 700;
@@ -3878,4 +4033,126 @@ body::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:
 @media (max-width: 980px) {
     .neural-core-hero-inner { grid-template-columns: 1fr; text-align: center; }
     .neural-core-cta-row { justify-content: center; }
+}
+
+/* ─── GEOINT & DUAL GLOBE STYLING ─── */
+.gw-mode-btn {
+    background: rgba(0, 200, 255, 0.1) !important;
+    border-color: rgba(0, 200, 255, 0.4) !important;
+    color: var(--vgt-cyan) !important;
+    font-weight: 700;
+}
+.gw-mode-btn.active-3d {
+    background: rgba(255, 170, 0, 0.15) !important;
+    border-color: rgba(255, 170, 0, 0.6) !important;
+    color: #ffaa00 !important;
+    box-shadow: 0 0 10px rgba(255, 170, 0, 0.25);
+}
+.gw-sensor-select {
+    background: rgba(4, 10, 20, 0.85);
+    border: 1px solid var(--vgt-border);
+    color: var(--vgt-cyan);
+    font-size: 8px;
+    padding: 3px 6px;
+    border-radius: var(--radius-sm);
+    outline: none;
+    cursor: pointer;
+}
+.gw-sensor-select:focus {
+    border-color: var(--vgt-cyan);
+}
+
+/* 250km Contact Roster HUD */
+.gw-contact-hud {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    width: 280px;
+    max-height: 380px;
+    background: rgba(4, 10, 22, 0.92);
+    border: 1px solid rgba(0, 200, 255, 0.3);
+    border-radius: var(--radius-md);
+    backdrop-filter: blur(10px);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+.gw-contact-hud-head {
+    padding: 8px 12px;
+    background: rgba(0, 200, 255, 0.08);
+    border-bottom: 1px solid rgba(0, 200, 255, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--vgt-cyan);
+    font-weight: 700;
+    cursor: move;
+}
+.gw-contact-hud-body {
+    padding: 8px 10px;
+    overflow-y: auto;
+    max-height: 320px;
+    font-size: 9px;
+}
+.gw-contact-roster-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.gw-roster-header {
+    font-size: 8px;
+    color: var(--vgt-text-dim);
+    letter-spacing: 0.1em;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.gw-roster-sec {
+    font-size: 8px;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    margin-top: 6px;
+    text-transform: uppercase;
+}
+.gw-roster-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 6px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.gw-roster-row:hover {
+    background: rgba(0, 200, 255, 0.1);
+    border-color: rgba(0, 200, 255, 0.35);
+}
+.gw-roster-lbl {
+    color: #fff;
+    font-size: 9px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+}
+.gw-roster-dist {
+    color: var(--vgt-text-dim);
+    font-size: 8px;
+}
+.gw-contact-empty {
+    color: var(--vgt-text-dim);
+    font-size: 9px;
+    text-align: center;
+    padding: 12px;
+}
+
+.cesium-stage-container {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
 }

@@ -38,12 +38,24 @@ export function updateVoiceSphereUI(statusText, classState) {
 
     // Support for the Sphere Workspace background canvas
     const workspaceSphere = document.getElementById("workspace-sphere");
+    let workState = "idle";
+    if (classState.includes("speaking") || classState.includes("active-speech")) workState = "speaking";
+    else if (classState.includes("processing")) workState = "processing";
+    else if (classState.includes("listening")) workState = "listening";
     if (workspaceSphere) {
-        let workState = "idle";
-        if (classState.includes("listening")) workState = "listening";
-        else if (classState.includes("speaking")) workState = "speaking";
-        else if (classState.includes("processing")) workState = "processing";
         workspaceSphere.className = "sphere-canvas " + workState;
+    }
+    const aethelCore = document.getElementById('sphere-aethel-core');
+    const aethelCoreStatus = document.getElementById('sphere-aethel-core-status');
+    if (aethelCore) {
+        if (!state.isVoiceCallActive) {
+            aethelCore.dataset.state = 'muted';
+            if (aethelCoreStatus) aethelCoreStatus.textContent = 'STUMM';
+        } else {
+            const coreState = workState === 'processing' ? 'working' : workState === 'speaking' ? 'answering' : (state.isWakeSessionActive ? 'listening' : 'standby');
+            aethelCore.dataset.state = coreState;
+            if (aethelCoreStatus) aethelCoreStatus.textContent = coreState === 'listening' ? 'HÖRT ZU' : coreState === 'working' ? 'ARBEITET' : coreState === 'answering' ? 'ANTWORTET' : 'BEREIT';
+        }
     }
 }
 
@@ -93,9 +105,7 @@ export function handleAethelSpeechCompleted() {
     
     state.speechCooldownActive = true;
     
-    if (state.isSphereActive) {
-        updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
-    } else if (state.isVoiceCallActive && state.isWakeSessionActive) {
+    if (state.isVoiceCallActive && state.isWakeSessionActive) {
         updateVoiceSphereUI("CORE LISTENING...", "voice-sphere listening");
     } else if (state.isVoiceCallActive) {
         updateVoiceSphereUI("WAKE STANDBY", "voice-sphere listening");
@@ -106,7 +116,7 @@ export function handleAethelSpeechCompleted() {
     setTimeout(() => {
         state.speechCooldownActive = false;
         
-        if (state.isSphereActive && state.isVoiceCallActive && !state.isWakeSessionActive) {
+        if (state.isVoiceCallActive && !state.isWakeSessionActive) {
             try { activateWakeSession(); } catch(e) {}
         } else if (localRecFallbackActive && state.isVoiceCallActive) {
             try { state.recognition.start(); } catch(e) {}
@@ -530,10 +540,6 @@ export function stopWakeWordListener() {
 }
 
 export function endWakeSession() {
-    if (state.isSphereActive) {
-        extendWakeSession();
-        return;
-    }
     state.isWakeSessionActive = false;
     if (state.wakeSessionTimer) {
         clearTimeout(state.wakeSessionTimer);
@@ -568,11 +574,7 @@ export function activateWakeSession() {
     const elSpeechIndicator = document.getElementById("speech-indicator");
     if (elSpeechIndicator) elSpeechIndicator.textContent = "Aethel aktiv. Whisper wird aktiviert...";
     if (!localRecFallbackActive) {
-        if (state.isSphereActive) {
-            speak("Sphere-Modus aktiv.");
-        } else {
-            speak("Ja, ich höre.");
-        }
+        speak("Ja, ich höre.");
     }
     setTimeout(() => {
         if (state.isVoiceCallActive && state.isWakeSessionActive) {
@@ -859,3 +861,67 @@ export async function handleWhisperTranscript(transcript) {
         }
     }
 }
+
+/**
+ * Toggle Aethel voice listening / active wake session on and off
+ */
+export function toggleVoiceListening() {
+    state.isVoiceCallActive = !state.isVoiceCallActive;
+    stopSpeaking();
+
+    const btnVoiceLink = document.getElementById("btn-voice-link");
+    const aethelCore = document.getElementById("sphere-aethel-core");
+    const aethelCoreStatus = document.getElementById("sphere-aethel-core-status");
+
+    if (state.isVoiceCallActive) {
+        if (btnVoiceLink) btnVoiceLink.classList.add("active");
+        if (aethelCore) aethelCore.dataset.state = "listening";
+        if (aethelCoreStatus) aethelCoreStatus.textContent = "HÖRT ZU";
+        
+        updateVoiceSphereUI("CORE INITIALIZING...", "voice-sphere processing");
+        speak("Aethel Sprachdienst aktiviert.");
+        setTimeout(() => {
+            if (state.isVoiceCallActive) {
+                activateWakeSession();
+            }
+        }, 800);
+    } else {
+        if (btnVoiceLink) btnVoiceLink.classList.remove("active");
+        if (aethelCore) aethelCore.dataset.state = "muted";
+        if (aethelCoreStatus) aethelCoreStatus.textContent = "STUMM";
+
+        stopWakeWordListener();
+        endWakeSession();
+        stopWhisperVad();
+        if (state.recognition) {
+            try { state.recognition.stop(); } catch(e) {}
+        }
+        updateVoiceSphereUI("VOICE DEAKTIVIERT", "voice-sphere");
+        window.dispatchEvent(new CustomEvent('aethel:toast', {
+            detail: { message: 'Aethel Sprachdienst stummgeschaltet / deaktiviert.', type: 'info' }
+        }));
+    }
+}
+
+// Global hook & click event on Sphere central core orb
+window.toggleVoiceListening = toggleVoiceListening;
+
+if (typeof document !== 'undefined') {
+    const bindCoreClick = () => {
+        const core = document.getElementById('sphere-aethel-core');
+        if (core && core.dataset.vgtVoiceBound !== 'true') {
+            core.dataset.vgtVoiceBound = 'true';
+            core.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleVoiceListening();
+            });
+        }
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindCoreClick);
+    } else {
+        bindCoreClick();
+    }
+}
+

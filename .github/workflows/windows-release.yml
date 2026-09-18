@@ -1,0 +1,128 @@
+name: Windows Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["aethel-v*"]
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    runs-on: windows-2022
+    env:
+      WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+    defaults:
+      run:
+        working-directory: go-aethel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-aethel/go.mod
+          cache-dependency-path: go-aethel/go.sum
+          check-latest: true
+      - name: Resolve release version
+        shell: pwsh
+        run: |
+          $version = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}" -replace '^aethel-v', '' } else { "1.0.0-beta.4-dev" }
+          if ($version -notmatch '^\d+\.\d+\.\d+-(?:alpha|beta|rc)(?:\.[0-9A-Za-z.-]+)?$') { throw "Invalid release version: $version" }
+          "AETHEL_VERSION=$version" >> $env:GITHUB_ENV
+      - name: Stage pinned native voice runtime
+        shell: pwsh
+        run: |
+          $module = 'github.com/k2-fsa/sherpa-onnx-go-windows@v1.13.3'
+          go mod download $module
+          $moduleRoot = go list -m -f '{{.Dir}}' $module
+          if ([string]::IsNullOrWhiteSpace($moduleRoot) -or -not (Test-Path -LiteralPath $moduleRoot -PathType Container)) {
+            throw "Pinned native module is unavailable: $module"
+          }
+          foreach ($file in @('onnxruntime.dll', 'sherpa-onnx-c-api.dll', 'sherpa-onnx-cxx-api.dll')) {
+            $source = Join-Path $moduleRoot $file
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Pinned native runtime is incomplete: $file" }
+            Copy-Item -LiteralPath $source -Destination $file -Force
+          }
+      - name: Test
+        run: go test ./...
+      - name: Race test
+        run: go test -race ./...
+      - name: Vulnerability gate
+        shell: pwsh
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          govulncheck ./...
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
+      - name: Build application
+        run: wails build -platform windows/amd64
+      - name: Assemble native runtime
+        shell: pwsh
+        run: |
+          $runtime = @('onnxruntime.dll', 'sherpa-onnx-c-api.dll', 'sherpa-onnx-cxx-api.dll')
+          foreach ($file in $runtime) {
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Required native runtime is missing: $file" }
+            Copy-Item -LiteralPath $file -Destination (Join-Path 'build\bin' $file) -Force
+          }
+      - name: Require release signing material
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_BASE64) -or [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
+            throw 'Tagged releases require WINDOWS_CERTIFICATE_BASE64 and WINDOWS_CERTIFICATE_PASSWORD.'
+          }
+      - name: Restore signing certificate
+        if: ${{ env.WINDOWS_CERTIFICATE_BASE64 != '' }}
+        shell: pwsh
+        run: |
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\aethel-signing.pfx", [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64))
+      - name: Sign executable
+        if: ${{ env.WINDOWS_CERTIFICATE_BASE64 != '' }}
+        shell: pwsh
+        run: signtool sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /f "$env:RUNNER_TEMP\aethel-signing.pfx" /p "$env:WINDOWS_CERTIFICATE_PASSWORD" build\bin\AETHEL.exe
+      - name: Build installer
+        shell: pwsh
+        run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$env:AETHEL_VERSION" build\windows\installer\aethel.iss'
+      - name: Sign installer
+        if: ${{ env.WINDOWS_CERTIFICATE_BASE64 != '' }}
+        shell: pwsh
+        run: signtool sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /f "$env:RUNNER_TEMP\aethel-signing.pfx" /p "$env:WINDOWS_CERTIFICATE_PASSWORD" build\bin\installer\*.exe
+      - name: Generate checksums
+        shell: pwsh
+        run: |
+          $portable = "build\bin\AETHEL-$env:AETHEL_VERSION-windows-x64-portable.zip"
+          Compress-Archive -Path build\bin\AETHEL.exe,build\bin\onnxruntime.dll,build\bin\sherpa-onnx-c-api.dll,build\bin\sherpa-onnx-cxx-api.dll -DestinationPath $portable -CompressionLevel Optimal -Force
+          go version -m build\bin\AETHEL.exe | Set-Content build\bin\BUILDINFO.txt -Encoding utf8
+          go list -m all | Set-Content build\bin\DEPENDENCIES.txt -Encoding utf8
+          Get-FileHash $portable,build\bin\installer\*.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $([IO.Path]::GetFileName($_.Path))" } | Set-Content build\bin\SHA256SUMS.txt -Encoding ascii
+      - name: Attest portable build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: go-aethel/build/bin/AETHEL-*-windows-x64-portable.zip
+      - name: Attest installer build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: go-aethel/build/bin/installer/*.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aethel-windows-x64
+          path: |
+            go-aethel/build/bin/AETHEL-*-windows-x64-portable.zip
+            go-aethel/build/bin/installer/*.exe
+            go-aethel/build/bin/SHA256SUMS.txt
+            go-aethel/build/bin/BUILDINFO.txt
+            go-aethel/build/bin/DEPENDENCIES.txt
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          draft: true
+          generate_release_notes: true
+          files: |
+            go-aethel/build/bin/AETHEL-*-windows-x64-portable.zip
+            go-aethel/build/bin/installer/*.exe
+            go-aethel/build/bin/SHA256SUMS.txt
+            go-aethel/build/bin/BUILDINFO.txt
+            go-aethel/build/bin/DEPENDENCIES.txt

@@ -2,7 +2,7 @@
 
 ## Supported version
 
-Security fixes are developed for AETHEL Beta V3 (`1.0.0-beta.3`). Older alpha and beta
+Security fixes are developed for AETHEL Beta V4 (`1.0.0-beta.4`). Older alpha and beta
 builds are unsupported.
 
 ## Reporting a vulnerability

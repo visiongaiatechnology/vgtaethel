@@ -22,6 +22,8 @@ import {
   safeExternalURL
 } from './projection.js';
 import { drawLocalAtlasBorders } from './texture_atlas.js';
+import { getGlyphImage, classifyEntityGlyph } from '../geo_renderer/aircraft_icons.js';
+import { sharedGeoManager } from '../geo_renderer/geo_manager.js';
 
 export const globeLayers = {
   borders: {
@@ -177,35 +179,249 @@ export const globeLayers = {
       });
     }
   },
+  aircraft: {
+    visible: true,
+    draw(ctx, cw, ch, rotY, rotX, scale) {
+      if (!sharedGeoManager || !Array.isArray(sharedGeoManager.entities)) return;
+      const list = sharedGeoManager.entities.filter(e => e.type === 'AIRCRAFT');
+      for (const ent of list) {
+        if (!ent.position) continue;
+        const p = projectLatLon(ent.position.lat, ent.position.lon, rotY, rotX, scale, cw, ch);
+        if (!p.visible) continue;
+        const glyph = classifyEntityGlyph(ent);
+        const img = getGlyphImage(glyph, '#00d2ff', 32);
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        const heading = ((ent.position.heading || 0) * Math.PI) / 180;
+        ctx.rotate(heading);
+        const sz = Math.max(14, Math.min(26, 18 * scale));
+        ctx.drawImage(img, -sz / 2, -sz / 2, sz, sz);
+        ctx.restore();
+
+        if (scale > 1.3 && ent.label) {
+          ctx.fillStyle = 'rgba(0, 210, 255, 0.9)';
+          ctx.font = '8px monospace';
+          const alt = ent.position.alt ? ` FL${Math.round(ent.position.alt * 0.0328)}` : '';
+          ctx.fillText(`${ent.label}${alt}`, p.x + sz / 2 + 2, p.y + 3);
+        }
+
+        window.__globePins.push({
+          x: p.x, y: p.y, r: 8,
+          entity: ent,
+          title: ent.label || 'AIRCRAFT',
+          category: 'AIRCRAFT'
+        });
+      }
+    }
+  },
+  military: {
+    visible: true,
+    draw(ctx, cw, ch, rotY, rotX, scale) {
+      if (!sharedGeoManager || !Array.isArray(sharedGeoManager.entities)) return;
+      const list = sharedGeoManager.entities.filter(e => e.type === 'MIL_AIRCRAFT');
+      for (const ent of list) {
+        if (!ent.position) continue;
+        const p = projectLatLon(ent.position.lat, ent.position.lon, rotY, rotX, scale, cw, ch);
+        if (!p.visible) continue;
+        const glyph = classifyEntityGlyph(ent);
+        const img = getGlyphImage(glyph, '#ffaa00', 36);
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        const heading = ((ent.position.heading || 0) * Math.PI) / 180;
+        ctx.rotate(heading);
+        const sz = Math.max(16, Math.min(30, 20 * scale));
+        ctx.drawImage(img, -sz / 2, -sz / 2, sz, sz);
+        ctx.restore();
+
+        // Amber halo ring
+        ctx.strokeStyle = 'rgba(255, 170, 0, 0.5)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, sz * 0.75, 0, Math.PI * 2);
+        ctx.stroke();
+
+        if (scale > 1.1 && ent.label) {
+          ctx.fillStyle = '#ffaa00';
+          ctx.font = 'bold 8px monospace';
+          const cls = ent.classification ? ` [${ent.classification}]` : '';
+          ctx.fillText(`${ent.label}${cls}`, p.x + sz / 2 + 2, p.y + 3);
+        }
+
+        window.__globePins.push({
+          x: p.x, y: p.y, r: 10,
+          entity: ent,
+          title: `[MIL] ${ent.label || 'TACTICAL ASSET'}`,
+          category: 'MIL_AIRCRAFT'
+        });
+      }
+    }
+  },
+  vessels: {
+    visible: true,
+    draw(ctx, cw, ch, rotY, rotX, scale) {
+      if (!sharedGeoManager || !Array.isArray(sharedGeoManager.entities)) return;
+      const list = sharedGeoManager.entities.filter(e => e.type === 'VESSEL');
+      for (const ent of list) {
+        if (!ent.position) continue;
+        const p = projectLatLon(ent.position.lat, ent.position.lon, rotY, rotX, scale, cw, ch);
+        if (!p.visible) continue;
+        const img = getGlyphImage('ship', '#39ffd5', 28);
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        const heading = ((ent.position.heading || 0) * Math.PI) / 180;
+        ctx.rotate(heading);
+        const sz = Math.max(12, Math.min(22, 16 * scale));
+        ctx.drawImage(img, -sz / 2, -sz / 2, sz, sz);
+        ctx.restore();
+
+        if (scale > 1.4 && ent.label) {
+          ctx.fillStyle = '#39ffd5';
+          ctx.font = '8px monospace';
+          ctx.fillText(ent.label, p.x + sz / 2 + 2, p.y + 3);
+        }
+
+        window.__globePins.push({
+          x: p.x, y: p.y, r: 8,
+          entity: ent,
+          title: ent.label || 'VESSEL',
+          category: 'VESSEL'
+        });
+      }
+    }
+  },
+  fires: {
+    visible: true,
+    draw(ctx, cw, ch, rotY, rotX, scale) {
+      if (!sharedGeoManager || !Array.isArray(sharedGeoManager.entities)) return;
+      const list = sharedGeoManager.entities.filter(e => e.type === 'FIRE');
+      for (const ent of list) {
+        if (!ent.position) continue;
+        const p = projectLatLon(ent.position.lat, ent.position.lon, rotY, rotX, scale, cw, ch);
+        if (!p.visible) continue;
+        const pulse = 1.0 + 0.3 * Math.sin(Date.now() * 0.005);
+        const r = Math.max(3, 4 * scale * pulse);
+        const grad = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, r * 2.5);
+        grad.addColorStop(0, 'rgba(255, 68, 0, 0.9)');
+        grad.addColorStop(0.5, 'rgba(255, 120, 0, 0.4)');
+        grad.addColorStop(1, 'rgba(255, 68, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        window.__globePins.push({
+          x: p.x, y: p.y, r: 8,
+          entity: ent,
+          title: ent.label || 'THERMAL ANOMALY',
+          category: 'FIRE'
+        });
+      }
+    }
+  },
   cameras: {
     visible: true,
     draw(ctx, cw, ch, rotY, rotX, scale) {
+      // 1. Static user / pre-configured cameras
       cameraData.forEach((cam) => {
         const p = projectLatLon(cam.lat, cam.lon, rotY, rotX, scale, cw, ch);
         if (p.visible) {
-          ctx.fillStyle = "#ff0";
-          ctx.fillRect(p.x - 5, p.y - 5, 10, 10);
-          ctx.strokeStyle = "#000";
-          ctx.lineWidth = 0.5;
-          ctx.strokeRect(p.x - 5, p.y - 5, 10, 10);
-          ctx.fillStyle = "#000";
-          ctx.font = "6px monospace";
-          ctx.fillText("C", p.x - 2, p.y + 2);
+          const img = getGlyphImage('camera', '#ffff00', 24);
+          const sz = Math.max(12, Math.min(20, 14 * scale));
+          ctx.drawImage(img, p.x - sz / 2, p.y - sz / 2, sz, sz);
         }
       });
+      // 2. Live mesh cameras from sharedGeoManager
+      if (sharedGeoManager && Array.isArray(sharedGeoManager.entities)) {
+        const list = sharedGeoManager.entities.filter(e => e.type === 'CAMERA');
+        for (const cam of list) {
+          if (!cam.position) continue;
+          const p = projectLatLon(cam.position.lat, cam.position.lon, rotY, rotX, scale, cw, ch);
+          if (!p.visible) continue;
+          const img = getGlyphImage('camera', '#ffff00', 24);
+          const sz = Math.max(12, Math.min(20, 14 * scale));
+          ctx.drawImage(img, p.x - sz / 2, p.y - sz / 2, sz, sz);
+
+          // Viewshed FOV cone
+          if (scale > 1.3 && cam.metadata?.azimuth != null) {
+            const az = (Number(cam.metadata.azimuth) * Math.PI) / 180;
+            const fov = ((Number(cam.metadata.fov) || 60) * Math.PI) / 180;
+            const range = 24 * scale;
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.15)';
+            ctx.strokeStyle = 'rgba(255, 255, 0, 0.4)';
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.arc(p.x, p.y, range, az - fov / 2, az + fov / 2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          window.__globePins.push({
+            x: p.x, y: p.y, r: 8,
+            entity: cam,
+            title: cam.label || 'SURVEILLANCE CAMERA',
+            category: 'CAMERA'
+          });
+        }
+      }
     }
   },
   satellites: {
     visible: true,
     draw(ctx, cw, ch, rotY, rotX, scale) {
+      // 1. Static fallback satellites
       satData.forEach(s => {
         const p = projectLatLon(s.lat, s.lon, rotY, rotX, scale, cw, ch);
         if (p.visible) {
-          ctx.fillStyle = "#0f0";
-          ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill();
-          ctx.fillStyle = "#0f0"; ctx.font="6px monospace"; ctx.fillText("S", p.x+5, p.y);
+          const img = getGlyphImage('satellite', '#00ff66', 28);
+          const sz = Math.max(12, Math.min(22, 16 * scale));
+          ctx.drawImage(img, p.x - sz / 2, p.y - sz / 2, sz, sz);
         }
       });
+      // 2. Live propagated satellites from sharedGeoManager
+      if (sharedGeoManager && Array.isArray(sharedGeoManager.entities)) {
+        const list = sharedGeoManager.entities.filter(e => e.type === 'SATELLITE');
+        for (const sat of list) {
+          if (!sat.position) continue;
+          const p = projectLatLon(sat.position.lat, sat.position.lon, rotY, rotX, scale, cw, ch);
+          if (!p.visible) continue;
+          const img = getGlyphImage('satellite', '#00ff66', 28);
+          const sz = Math.max(12, Math.min(22, 16 * scale));
+          ctx.drawImage(img, p.x - sz / 2, p.y - sz / 2, sz, sz);
+
+          const isISS = sat.id === 'sat:25544' || (sat.label && sat.label.includes('ISS'));
+          if (isISS) {
+            ctx.strokeStyle = 'rgba(0, 255, 100, 0.8)';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, sz * 0.85, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#00ff66';
+            ctx.font = 'bold 8px monospace';
+            ctx.fillText(sat.label || 'ISS (ZARYA)', p.x + sz / 2 + 2, p.y + 3);
+          } else if (scale > 1.4 && sat.label) {
+            ctx.fillStyle = 'rgba(0, 255, 100, 0.8)';
+            ctx.font = '7px monospace';
+            ctx.fillText(sat.label, p.x + sz / 2 + 2, p.y + 3);
+          }
+
+          window.__globePins.push({
+            x: p.x, y: p.y, r: 8,
+            entity: sat,
+            title: sat.label || 'SATELLITE',
+            category: 'SATELLITE'
+          });
+        }
+      }
     }
   },
   cables: {

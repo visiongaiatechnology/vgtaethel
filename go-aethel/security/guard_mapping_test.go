@@ -1,6 +1,10 @@
+// STATUS: DIAMANT VGT SUPREME
 package security
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func TestSecurityGuardMapsReplaceAndWeatherCapabilities(t *testing.T) {
 	guard := NewSecurityGuard()
@@ -59,3 +63,76 @@ func TestSecurityGuardMapsIntelligenceCapabilities(t *testing.T) {
 		t.Fatalf("schedule report = %+v", report)
 	}
 }
+
+func TestPolicyEnginePermissionModes(t *testing.T) {
+	guard := NewSecurityGuard()
+	tmpDir := t.TempDir()
+	leases := NewLeaseManager(tmpDir + "/leases.json")
+	audit := NewAuditLogger(tmpDir + "/audit.json")
+	engine := NewPolicyEngine(guard, leases, audit)
+
+	// Default mode is interactive
+	if mode := engine.GetMode(); mode != PermissionModeInteractive {
+		t.Fatalf("expected default mode interactive, got %v", mode)
+	}
+
+	// In interactive mode, moderate/high risk actions require approval
+	allowed, decision, report := engine.Evaluate("fs_write_file", `{"path":"test.txt","content":"hello"}`, false)
+	if allowed || decision != "needs_approval" {
+		t.Fatalf("expected needs_approval in interactive mode, got allowed=%v, decision=%q, report=%+v", allowed, decision, report)
+	}
+
+	// Switch to full_access mode ("Vollzugriff")
+	engine.SetMode(PermissionModeFullAccess)
+	if mode := engine.GetMode(); mode != PermissionModeFullAccess {
+		t.Fatalf("expected mode full_access, got %v", mode)
+	}
+
+	// In full_access mode, moderate/high risk actions are auto-allowed
+	allowed, decision, report = engine.Evaluate("fs_write_file", `{"path":"test.txt","content":"hello"}`, false)
+	if !allowed || decision != "" {
+		t.Fatalf("expected allowed in full_access mode, got allowed=%v, decision=%q, report=%+v", allowed, decision, report)
+	}
+
+	// Critical/Forbidden action (e.g. rm -rf) must STILL be blocked even in full_access mode!
+	allowed, decision, report = engine.Evaluate("sys_exec_cmd", `{"command":"rm","args":["-rf","/"]}`, false)
+	if allowed || decision != "blocked" {
+		t.Fatalf("expected forbidden action to be blocked in full_access mode, got allowed=%v, decision=%q, report=%+v", allowed, decision, report)
+	}
+}
+
+func TestValidatePathForAccessActiveWorkspace(t *testing.T) {
+	tmpDir := t.TempDir()
+	canonicalTmp, err := CanonicalDir(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	subFile := canonicalTmp + "/example.txt"
+	if err := os.WriteFile(subFile, []byte("data"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Configure active workspace
+	InitState(nil, func() string { return canonicalTmp })
+	defer InitState(nil)
+
+	// Test resolving relative path inside active workspace
+	resolved, err := ValidatePathForAccess("example.txt", MountRead)
+	if err != nil {
+		t.Fatalf("expected relative path to resolve inside active workspace, got error: %v", err)
+	}
+	if !IsPathInside(canonicalTmp, resolved) {
+		t.Fatalf("expected resolved path %q to be inside active workspace %q", resolved, canonicalTmp)
+	}
+
+	// Test write access to a new relative file inside active workspace
+	writeResolved, err := ValidatePathForAccess("new_output.txt", MountWrite)
+	if err != nil {
+		t.Fatalf("expected write path inside active workspace to be allowed, got: %v", err)
+	}
+	if !IsPathInside(canonicalTmp, writeResolved) {
+		t.Fatalf("expected write path %q to be inside active workspace %q", writeResolved, canonicalTmp)
+	}
+}
+
+

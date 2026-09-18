@@ -1,3 +1,4 @@
+// STATUS: DIAMANT VGT SUPREME
 package security
 
 import (
@@ -791,11 +792,20 @@ func (sg *SecurityGuard) Scan(toolName string, args string) ThreatReport {
 	}
 }
 
+type PermissionMode string
+
+const (
+	PermissionModeInteractive PermissionMode = "interactive"
+	PermissionModeFullAccess  PermissionMode = "full_access"
+)
+
 // PolicyEngine orchestrates rules, leases and scans
 type PolicyEngine struct {
 	guard  *SecurityGuard
 	leases *LeaseManager
 	audit  *AuditLogger
+	mode   PermissionMode
+	modeMu sync.RWMutex
 }
 
 func NewPolicyEngine(guard *SecurityGuard, leases *LeaseManager, audit *AuditLogger) *PolicyEngine {
@@ -803,7 +813,29 @@ func NewPolicyEngine(guard *SecurityGuard, leases *LeaseManager, audit *AuditLog
 		guard:  guard,
 		leases: leases,
 		audit:  audit,
+		mode:   PermissionModeInteractive,
 	}
+}
+
+func (pe *PolicyEngine) SetMode(mode PermissionMode) {
+	if pe == nil {
+		return
+	}
+	pe.modeMu.Lock()
+	defer pe.modeMu.Unlock()
+	pe.mode = mode
+}
+
+func (pe *PolicyEngine) GetMode() PermissionMode {
+	if pe == nil {
+		return PermissionModeInteractive
+	}
+	pe.modeMu.RLock()
+	defer pe.modeMu.RUnlock()
+	if pe.mode == "" {
+		return PermissionModeInteractive
+	}
+	return pe.mode
 }
 
 func (pe *PolicyEngine) AddLease(lease PermissionLease) error {
@@ -871,7 +903,19 @@ func (pe *PolicyEngine) Evaluate(toolName string, args string, hasOverride bool)
 		return true, "", report
 	}
 
-	// 5. REQUIRE APPROVAL
+	// 5. FULL ACCESS MODE (AUTO-APPROVE SAFE/MODERATE/HIGH RISK ACTIONS)
+	if pe.GetMode() == PermissionModeFullAccess {
+		if report.RiskLevel == RiskCritical && len(report.Threats) > 0 {
+			recordDecision("blocked", "Kritischer Sicherheitsbefund im Vollzugriff blockiert.", "")
+			return false, "blocked", report
+		}
+		if !recordDecision("allowed", "Vollzugriff aktiv: Automatische Freigabe durch Operator-Konfiguration.", "") {
+			return false, "blocked", report
+		}
+		return true, "", report
+	}
+
+	// 6. REQUIRE APPROVAL (INTERACTIVE MODE)
 	if !recordDecision("requested_approval", "Zustimmung vom Operator ausstehend.", "") {
 		return false, "blocked", report
 	}
@@ -938,7 +982,23 @@ func ValidatePathForAccess(pathStr string, access MountAccess) (string, error) {
 	if filepath.IsAbs(pathStr) || strings.HasPrefix(pathStr, "/") || strings.HasPrefix(pathStr, "\\") {
 		absTarget, err = filepath.Abs(pathStr)
 	} else {
-		absTarget, err = filepath.Abs(filepath.Join(WorkspaceDir, pathStr))
+		activeRoot := ""
+		if state != nil && state.ActiveWorkspace != nil {
+			activeRoot = state.ActiveWorkspace()
+		}
+		if activeRoot != "" {
+			candidate := filepath.Join(activeRoot, pathStr)
+			wsCandidate := filepath.Join(WorkspaceDir, pathStr)
+			if _, errStat := os.Stat(candidate); errStat == nil {
+				absTarget, err = filepath.Abs(candidate)
+			} else if _, errStat := os.Stat(wsCandidate); errStat == nil {
+				absTarget, err = filepath.Abs(wsCandidate)
+			} else {
+				absTarget, err = filepath.Abs(candidate)
+			}
+		} else {
+			absTarget, err = filepath.Abs(filepath.Join(WorkspaceDir, pathStr))
+		}
 	}
 	if err != nil {
 		return "", err
@@ -953,6 +1013,14 @@ func ValidatePathForAccess(pathStr string, access MountAccess) (string, error) {
 
 	if IsPathInside(absWorkspace, resolvedTarget) {
 		return resolvedTarget, nil
+	}
+
+	if state != nil && state.ActiveWorkspace != nil {
+		if activeRoot := state.ActiveWorkspace(); activeRoot != "" {
+			if base, err := CanonicalDir(activeRoot); err == nil && IsPathInside(base, resolvedTarget) {
+				return resolvedTarget, nil
+			}
+		}
 	}
 
 	if state != nil && state.MountAllows != nil && state.MountAllows(resolvedTarget, access) {

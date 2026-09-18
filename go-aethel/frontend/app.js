@@ -22,6 +22,7 @@ import { startPersonalOperationsMonitor } from './modules/personal_operations.js
 import { initMailWorkspace } from './modules/mail_workspace.js';
 import { initOperatorWorkbench } from './modules/operator_workbench.js';
 import { initShadowOSINT } from './modules/shadow_osint.js';
+import { initVGTCode } from './modules/vgt_code.js';
 
 // Initialize Application
 
@@ -29,6 +30,7 @@ async function init() {
     state.views = {
         core: document.getElementById("view-core"),
         chat: document.getElementById("view-chat"),
+		code: document.getElementById("view-code"),
         personas: document.getElementById("view-personas"),
         agent: document.getElementById("view-agent"),
         control: document.getElementById("view-control"),
@@ -50,6 +52,7 @@ async function init() {
     state.navButtons = {
         core: document.getElementById("nav-btn-core"),
         chat: document.getElementById("nav-btn-chat"),
+		code: document.getElementById("nav-btn-code"),
         personas: document.getElementById("nav-btn-personas"),
         agent: document.getElementById("nav-btn-agent"),
         control: document.getElementById("nav-btn-control"),
@@ -160,6 +163,7 @@ async function init() {
         initMailWorkspace();
         initOperatorWorkbench();
         initShadowOSINT();
+		initVGTCode();
 
         await checkSystemStatus();
         await import('./modules/personal_mode.js').then(m => m.hydratePersonalModeAtBoot()).catch(e => console.error('Personal Core boot hydrate failed', e));

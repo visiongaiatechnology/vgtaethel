@@ -362,18 +362,18 @@ func TestOSINTModuleImportGraph(t *testing.T) {
 		t.Error("briefing_and_reader must import epistemicLayer")
 	}
 
-	// Hazard animation + personal impact wiring (split regressions)
+	// Cesium owns animation/render scheduling; the retired canvas hazard loop must stay absent.
 	uiCtrl, err := os.ReadFile(filepath.Join(root, "ui_controls.js"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	uiSrc := string(uiCtrl)
-	// Must not reference unbound globeLayers in hazard scheduler
-	if strings.Contains(uiSrc, "globeLayers.earthquakes") || strings.Contains(uiSrc, "globeLayers.volcanoes") {
-		t.Error("scheduleGlobalWatchHazardAnimation must not use unbound globeLayers; use visibleLayers proxy")
+	hazardBody, ok := extractJSFunctionBody(uiSrc, "scheduleGlobalWatchHazardAnimation")
+	if !ok {
+		t.Fatal("scheduleGlobalWatchHazardAnimation compatibility hook missing")
 	}
-	if !strings.Contains(uiSrc, "visibleLayers.earthquakes") || !strings.Contains(uiSrc, "visibleLayers.volcanoes") {
-		t.Error("hazard animation must gate on visibleLayers.earthquakes/volcanoes")
+	if strings.Contains(hazardBody, "setInterval") || strings.Contains(hazardBody, "requestAnimationFrame") {
+		t.Error("retired canvas hazard renderer must not create a permanent animation loop")
 	}
 	body, ok := extractJSFunctionBody(uiSrc, "initGlobalWatch")
 	if !ok {
@@ -407,7 +407,7 @@ func TestOSINTModuleImportGraph(t *testing.T) {
 	}
 }
 
-func TestOSINTFrontendGlobeNoCDNAndInlinedMath(t *testing.T) { // BETA V3 - structural proof of shipped Global Watch (split under osint/*)
+func TestOSINTFrontendGlobeNoCDNAndInlinedMath(t *testing.T) { // BETA V4 - structural proof of shipped Global Watch (split under osint/*)
 
 	entry, watch := loadShippedOSINTGraph(t)
 	mathBytes, err := osintFrontend.ReadFile("frontend/modules/globe_math.js")
@@ -450,15 +450,12 @@ func TestOSINTFrontendGlobeNoCDNAndInlinedMath(t *testing.T) { // BETA V3 - stru
 		t.Error("OSINT graph missing applyDomainFilter")
 	}
 
-	// Draw uses the functions directly (no GlobeMath. prefix)
-	if !strings.Contains(watch, "projectLatLon(c.lat, c.lon") {
-		t.Error("globe draw does not call projectLatLon for continents (part of drawPureLocalGlobe)")
+	// The public OSINT command surface must target the sole Cesium manager.
+	if !strings.Contains(watch, "sharedGeoManager.flyTo") || !strings.Contains(watch, "renderer.setData") {
+		t.Error("OSINT globe commands must be routed exclusively through the Cesium manager")
 	}
-	if !strings.Contains(watch, "buildGlobePins(activeFeedEvents") {
-		t.Error("OSINT graph does not use buildGlobePins (for drawPureLocalGlobe)")
-	}
-	if !strings.Contains(watch, "applyDragDelta(") || !strings.Contains(watch, "applyWheelZoom(") {
-		t.Error("OSINT graph does not use drag/zoom FSM")
+	if strings.Contains(watch, "drawPureLocalGlobe") || strings.Contains(watch, "SovereignGlobeRenderer") {
+		t.Error("retired canvas/sovereign globe remains in the shipped OSINT graph")
 	}
 
 	// globe_math.js is no longer required for the draw (kept for reference only)
@@ -607,7 +604,7 @@ func TestOSINTFrontendGlobeNoCDNAndInlinedMath(t *testing.T) { // BETA V3 - stru
 	}
 	if !strings.Contains(watch, "GLOBE_IDLE_ROTATION_FRAME_MS = 40") ||
 		!strings.Contains(watch, "GLOBE_IDLE_ROTATION_RADIANS_PER_SECOND = 0.022") {
-		t.Error("idle globe rotation must retain the smooth Beta V3 cadence and speed")
+		t.Error("idle globe rotation must retain the smooth Beta V4 cadence and speed")
 	}
 	if strings.Contains(watch, "GEO:${geoCount}") {
 		t.Error("duplicate canvas diagnostics overlap the single globe hint")
@@ -639,7 +636,7 @@ func TestOSINTFrontendGlobeNoCDNAndInlinedMath(t *testing.T) { // BETA V3 - stru
 	}
 }
 
-func TestShadowBetaV3CommandGlobeIsLocalAndDirectional(t *testing.T) {
+func TestShadowBetaV3CommandGlobeUsesCesiumAndEvidenceBoundVectors(t *testing.T) {
 	uiBytes, err := os.ReadFile(filepath.Join("frontend", "modules", "shadow_osint.js"))
 	if err != nil {
 		t.Fatal(err)
@@ -653,20 +650,20 @@ func TestShadowBetaV3CommandGlobeIsLocalAndDirectional(t *testing.T) {
 		t.Fatal(err)
 	}
 	ui, globe, css := string(uiBytes), string(globeBytes), string(cssBytes)
-	for _, marker := range []string{"ShadowCommandGlobe", "conflict_links", "shadow-conflict-overlay", "renderConflictLinks", "toggleShadowAutonomy", "'/autonomy'", "shadow-analysis-state", "LATEST INTERCEPTS", "renderLatestDossiers", "renderForecastMatrix", "market_snapshot", "intake_window_hours", "CONTEXT DOSSIERS", "context_dossiers", "ALLES LÖSCHEN", "clearShadowData", "'/data'"} {
+	for _, marker := range []string{"ShadowCommandGlobe", "conflict_links", "shadow-conflict-globe", "CESIUM // 3D GEOINT", "renderConflictLinks", "toggleShadowAutonomy", "'/autonomy'", "shadow-analysis-state", "LATEST INTERCEPTS", "renderLatestDossiers", "renderForecastMatrix", "market_snapshot", "intake_window_hours", "CONTEXT DOSSIERS", "context_dossiers", "ALLES LÖSCHEN", "clearShadowData", "'/data'"} {
 		if !strings.Contains(ui, marker) {
 			t.Errorf("SHADOW UI missing %q", marker)
 		}
 	}
-	for _, marker := range []string{"getContext('webgl2'", "drawConflictLink", "drawArrowhead", "attacker_latitude", "target_latitude", "assets/earth_day.jpg"} {
+	for _, marker := range []string{"new C.Viewer", "requestRenderMode: true", "baseLayer: false", "generateArcPositions", "PolylineArrowMaterialProperty", "link.evidence_ids", "attacker_latitude", "target_latitude", "#b84dff"} {
 		if !strings.Contains(globe, marker) {
 			t.Errorf("SHADOW command globe missing %q", marker)
 		}
 	}
-	if strings.Contains(globe, "https://") || strings.Contains(ui, "innerHTML") {
-		t.Error("SHADOW UI must remain local-only and must not render data through innerHTML")
+	if strings.Contains(ui, "innerHTML") || strings.Contains(globe, "cdn.") {
+		t.Error("SHADOW UI must render data through safe DOM APIs and use the locally bundled Cesium runtime")
 	}
-	for _, marker := range []string{"body.shadow-osint-active .sidebar", "body.shadow-osint-active .header-bar", ".shadow-map-overlay"} {
+	for _, marker := range []string{"body.shadow-osint-active .sidebar", "body.shadow-osint-active .header-bar", ".shadow-map .cesium-viewer"} {
 		if !strings.Contains(css, marker) {
 			t.Errorf("SHADOW shell skin missing %q", marker)
 		}
@@ -1060,7 +1057,7 @@ func TestFullAppProductionUILayer(t *testing.T) {
 		}
 	}
 	for _, nav := range []string{
-		"nav-btn-core", "nav-btn-chat", "nav-btn-agent", "nav-btn-control",
+		"nav-btn-core", "nav-btn-chat", "nav-btn-control",
 		"nav-btn-sphere", "nav-btn-memory", "nav-btn-personal", "nav-btn-global-watch",
 		"nav-btn-tasks", "nav-btn-case", "nav-btn-security", "nav-btn-archive",
 		"nav-btn-settings", "nav-btn-personas",
@@ -1078,6 +1075,9 @@ func TestFullAppProductionUILayer(t *testing.T) {
 	}
 	if !strings.Contains(html, `id="agent-workspace-grid"`) || !strings.Contains(html, `id="agent-btn-launch-team"`) {
 		t.Error("agent workspace structure missing")
+	}
+	if strings.Contains(html, `id="nav-btn-agent"`) || !strings.Contains(html, `data-code-tab="team"`) {
+		t.Error("agent team must be integrated into VGT Code without a separate navigation entry")
 	}
 	if !strings.Contains(html, `id="settings-btn-save"`) || !strings.Contains(html, `id="settings-groq-input"`) {
 		t.Error("settings key management structure missing")
@@ -1210,7 +1210,7 @@ func TestSidebarExpandAndSettingsModernUI(t *testing.T) {
 
 	// All primary nav IDs intact
 	for _, id := range []string{
-		"nav-btn-core", "nav-btn-chat", "nav-btn-personas", "nav-btn-agent", "nav-btn-control",
+		"nav-btn-core", "nav-btn-chat", "nav-btn-personas", "nav-btn-control",
 		"nav-btn-sphere", "nav-btn-memory", "nav-btn-personal",
 		"nav-btn-global-watch", "nav-btn-tasks",
 		"nav-btn-case", "nav-btn-security", "nav-btn-archive", "nav-btn-settings",
@@ -1222,7 +1222,6 @@ func TestSidebarExpandAndSettingsModernUI(t *testing.T) {
 	// Section content hosts multiple buttons (assistant has chat+agent etc.)
 	for _, pair := range []struct{ section, btn string }{
 		{"nav-section-assistant", "nav-btn-chat"},
-		{"nav-section-assistant", "nav-btn-agent"},
 		{"nav-section-workspace", "nav-btn-memory"},
 		{"nav-section-global-watch", "nav-btn-tasks"},
 		{"nav-section-case-workspace", "nav-btn-security"},
@@ -1271,6 +1270,38 @@ func TestSidebarExpandAndSettingsModernUI(t *testing.T) {
 	// Splash frozen
 	if !strings.Contains(html, `id="startup-splash-screen"`) || !strings.Contains(css, ".startup-splash {") {
 		t.Error("splash must remain present")
+	}
+}
+
+func TestBetaV4OperationalLayoutRegressions(t *testing.T) {
+	htmlBytes, err := os.ReadFile(filepath.Join("frontend", "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	globalCSSBytes, err := os.ReadFile(filepath.Join("frontend", "styles", "global-watch.css"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	operationsBytes, err := os.ReadFile(filepath.Join("frontend", "styles", "operations.css"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	html := string(htmlBytes)
+	globalCSS := string(globalCSSBytes)
+	operationsCSS := string(operationsBytes)
+	for _, marker := range []string{`id="gw-hazard-panel"`, `id="gw-hazard-list"`, `class="splash-stars far"`, `class="splash-stars near"`, "BETA V4"} {
+		if !strings.Contains(html, marker) {
+			t.Errorf("V4 operational surface is missing %q", marker)
+		}
+	}
+	if strings.Contains(html, `class="splash-grid"`) || strings.Contains(html, `class="splash-scanline"`) {
+		t.Error("V4 boot screen must not restore the legacy box-grid or scanline layers")
+	}
+	if !strings.Contains(globalCSS, "grid-template-rows:auto auto minmax(0,1fr) auto minmax(0,1fr)") || !strings.Contains(globalCSS, ".gw-feed-dock > .gw-splitter-v { display:none !important; }") {
+		t.Error("Global Watch must allocate equal visible rows to news and natural hazards without a phantom splitter row")
+	}
+	if !strings.Contains(operationsCSS, "position:absolute !important") || !strings.Contains(operationsCSS, ".vgt-code-conversations,.vgt-code-tree") {
+		t.Error("Sphere absolute composition or VGT Code sidebar clipping guard is missing")
 	}
 }
 

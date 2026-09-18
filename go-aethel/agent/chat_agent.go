@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"go-aethel/provider"
@@ -14,6 +15,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -107,6 +109,10 @@ func DriveChatAgentRun(id string, liveOperator bool) {
 		}
 
 		run, _ = state.runs.Get(id)
+		if _, beginErr := state.runs.BeginAgentInference(id); beginErr != nil {
+			state.runs.FailAgent(id, beginErr.Error())
+			return
+		}
 		result := invokeAgentModel(run, run.LiveOperator || liveOperator)
 		if result.Err != nil {
 			state.runs.FailAgent(id, result.Err.Error())
@@ -265,6 +271,9 @@ func marshalAssistantAgentMessage(result agentInferenceResult) (json.RawMessage,
 }
 
 func ResolveChatAgentProfile(request ChatAgentStartRequest) string {
+	if request.Mode == "vgt_code" {
+		return "developer"
+	}
 	if request.SphereActive {
 		return "sphere_workspace"
 	}
@@ -281,6 +290,9 @@ func ResolveChatAgentProfile(request ChatAgentStartRequest) string {
 }
 
 func RequiresChatOrchestrator(request ChatAgentStartRequest) bool {
+	if request.Mode == "vgt_code" {
+		return true
+	}
 	continuity := newContinuityState(request.Objective, request.SphereActive)
 	probe := AgentRun{Objective: request.Objective, ProfileID: ResolveChatAgentProfile(request), SphereActive: request.SphereActive}
 	return shouldUseOrchestrator(continuity.Tier, request.Objective, requiredExecutionEffects(probe))
@@ -294,8 +306,8 @@ func invokeAgentModel(run AgentRun, liveOperator bool) agentInferenceResult {
 	baseMessages := compactAgentContext(run, run.AgentMessages)
 	if run.AgentTurn == 0 && shouldUseOrchestrator(run.Continuity.Tier, run.Objective, run.Continuity.ExpectedEffects) {
 		if !needsDomainDraft(run) {
-			result := invokeAgentModelStage(run, orchestratorModel, baseMessages, run.SystemPrompt+orchestratorSystemContract+runtimeCapabilityContract(run.Objective, run.SphereActive, run.ProfileID), true, liveOperator)
-			applyAgentFallbacks(&result, run.Objective)
+			result := invokeAgentModelStage(run, orchestratorModel, baseMessages, agentSystemContract(run), true, liveOperator)
+			applyAgentFallbacks(&result, run)
 			return result
 		}
 		draft := invokeAgentModelStage(run, run.ModelID, baseMessages, run.SystemPrompt+domainModelContract, false, liveOperator)
@@ -317,28 +329,28 @@ func invokeAgentModel(run AgentRun, liveOperator bool) agentInferenceResult {
 			return agentInferenceResult{Err: err}
 		}
 		messages = append(messages, orchestrationMessage)
-		result := invokeAgentModelStage(run, orchestratorModel, messages, run.SystemPrompt+orchestratorSystemContract+runtimeCapabilityContract(run.Objective, run.SphereActive, run.ProfileID), shouldEnableAgentTools(run.Objective) || len(requiredExecutionEffects(run)) > 0, liveOperator)
+		result := invokeAgentModelStage(run, orchestratorModel, messages, agentSystemContract(run), run.Mode == "vgt_code" || shouldEnableAgentTools(run.Objective) || len(requiredExecutionEffects(run)) > 0, liveOperator)
 		result.PreludeMessages = []json.RawMessage{orchestrationMessage}
 		mergeInferenceAccounting(&result, draft)
 		if len(result.ToolCalls) == 0 && strings.TrimSpace(result.Text) == "" && strings.TrimSpace(draft.Text) != "" && len(requiredExecutionEffects(run)) == 0 {
 			result.Text = draft.Text
 		}
-		applyAgentFallbacks(&result, run.Objective)
+		applyAgentFallbacks(&result, run)
 		return result
 	}
 	if run.AgentTurn == 0 {
 		result := invokeAgentModelStage(run, run.ModelID, baseMessages, run.SystemPrompt+domainModelContract, false, liveOperator)
-		applyAgentFallbacks(&result, run.Objective)
+		applyAgentFallbacks(&result, run)
 		return result
 	}
-	result := invokeAgentModelStage(run, orchestratorModel, baseMessages, run.SystemPrompt+orchestratorSystemContract+runtimeCapabilityContract(run.Objective, run.SphereActive, run.ProfileID), shouldEnableAgentTools(run.Objective) || len(requiredExecutionEffects(run)) > 0, liveOperator)
-	applyAgentFallbacks(&result, run.Objective)
+	result := invokeAgentModelStage(run, orchestratorModel, baseMessages, agentSystemContract(run), run.Mode == "vgt_code" || shouldEnableAgentTools(run.Objective) || len(requiredExecutionEffects(run)) > 0, liveOperator)
+	applyAgentFallbacks(&result, run)
 	return result
 }
 
 func needsDomainDraft(run AgentRun) bool {
 	objective := normalizeAgentObjective(run.Objective)
-	if objectiveNeedsDeveloperProfile(objective) || run.Mode == "agent_team" {
+	if objectiveNeedsDeveloperProfile(objective) || run.Mode == "agent_team" || run.Mode == "vgt_code" {
 		return true
 	}
 	if run.SphereActive && containsAny(objective, "writer", "gedicht", "geschichte", "dokument", "artikel", "schreib", "autor") {
@@ -380,6 +392,28 @@ You are the execution controller, not the domain author. You receive an AETHEL_E
 8. Merely mentioning Global Watch is never a navigation request. Use navigate_ui only for an explicit view transition. Never mix the isolated natural-hazards context into an ordinary news answer.
 9. Mail reading uses mail_list_messages. Mail sending uses mail_send_message only with complete recipients, subject and body; never claim delivery before the verified SMTP tool result.`
 
+const vgtCodeSystemContract = `
+
+VGT CODE EXECUTION CONTRACT:
+- Operate as a repository coding agent inside the authorized Aethel workspace.
+- The VGT Code objective supplies an AUTHORIZED PROJECT ROOT. Treat that exact directory as the repository root; never substitute Aethel's internal vgt_workspace.
+- Pass the authorized project root as working_dir for repository commands.
+- Inspect relevant files before editing. Never infer repository state that a read or search tool can establish.
+- Maintain one durable execution chain: objective -> inspected evidence -> native tool call -> tool result -> verification -> final report.
+- Use native tool calls only; tool-call JSON printed as prose is invalid.
+- Apply the minimum coherent patch. Preserve unrelated operator changes and never clean or delete build output unless explicitly authorized.
+- Every write must be followed by proportionate verification. A completion claim requires matching tool evidence in this run.
+- If a tool fails, report the actual failure, adapt the next step, and never fabricate success.
+- Final output names changed files, verification results, and remaining risks without exposing private reasoning.`
+
+func agentSystemContract(run AgentRun) string {
+	contract := run.SystemPrompt + orchestratorSystemContract + runtimeCapabilityContract(run.Objective, run.SphereActive, run.ProfileID)
+	if run.Mode == "vgt_code" {
+		contract += vgtCodeSystemContract
+	}
+	return contract
+}
+
 func invokeAgentModelStage(run AgentRun, modelID string, messages []json.RawMessage, systemPrompt string, useTools bool, liveOperator bool) agentInferenceResult {
 	reasoningEffort, reasoningVisibility := reasoningPolicy(run.Continuity.Tier, modelID, run.ReasoningEffort)
 	payload, err := json.Marshal(struct {
@@ -417,10 +451,11 @@ func invokeAgentModelStage(run AgentRun, modelID string, messages []json.RawMess
 	return result
 }
 
-func applyAgentFallbacks(result *agentInferenceResult, objective string) {
-	promoteCodeCartographyFallback(result, objective)
-	promoteWebBrowserFallback(result, objective)
+func applyAgentFallbacks(result *agentInferenceResult, run AgentRun) {
+	promoteCodeCartographyFallback(result, run.Objective)
+	promoteWebBrowserFallback(result, run.Objective)
 	promoteJSONTextToolCallsFallback(result)
+	promoteLegacyXMLToolCallFallback(result, run)
 }
 
 func requiredExecutionEffects(run AgentRun) []string {
@@ -472,6 +507,9 @@ func missingExecutionEffects(run AgentRun) []string {
 func invalidCompletionText(text string) bool {
 	clean := strings.ToLower(strings.TrimSpace(text))
 	if clean == "" {
+		return true
+	}
+	if strings.Contains(clean, "<tool_console") || strings.Contains(clean, "<tool_call") || strings.Contains(clean, "<invoke ") {
 		return true
 	}
 	generic := []string{
@@ -928,4 +966,91 @@ func promoteJSONTextToolCallsFallback(result *agentInferenceResult) {
 			}
 		}
 	}
+}
+
+type legacyToolEnvelope struct {
+	Invoke legacyToolInvoke `xml:"tool_call>invoke"`
+}
+
+type legacyToolInvoke struct {
+	Name       string                `xml:"name,attr"`
+	Parameters []legacyToolParameter `xml:"parameter"`
+}
+
+type legacyToolParameter struct {
+	Name  string `xml:"name,attr"`
+	Value string `xml:",chardata"`
+}
+
+// promoteLegacyXMLToolCallFallback recovers the bounded XML tool dialect used
+// by some DeepSeek-compatible endpoints. Only tools already narrowed for this
+// run can be promoted; the normal policy and workspace jail still execute next.
+func promoteLegacyXMLToolCallFallback(result *agentInferenceResult, run AgentRun) {
+	if result == nil || len(result.ToolCalls) != 0 {
+		return
+	}
+	raw := strings.TrimSpace(result.Text)
+	lower := strings.ToLower(raw)
+	if len(raw) == 0 || len(raw) > 16<<10 || !strings.Contains(lower, "<tool_console") {
+		return
+	}
+	start := strings.Index(lower, "<tool_console")
+	endMarker := "</tool_console>"
+	end := strings.Index(lower[start:], endMarker)
+	if start < 0 || end < 0 {
+		return
+	}
+	raw = raw[start : start+end+len(endMarker)]
+	var envelope legacyToolEnvelope
+	if err := xml.Unmarshal([]byte(raw), &envelope); err != nil {
+		return
+	}
+	name := strings.TrimSpace(envelope.Invoke.Name)
+	allowed := false
+	for _, candidate := range toolAllowlistForRun(run) {
+		if candidate == name {
+			allowed = true
+			break
+		}
+	}
+	if !allowed || len(envelope.Invoke.Parameters) == 0 || len(envelope.Invoke.Parameters) > 12 {
+		return
+	}
+	arguments := make(map[string]interface{}, len(envelope.Invoke.Parameters))
+	for _, parameter := range envelope.Invoke.Parameters {
+		key := strings.TrimSpace(parameter.Name)
+		value := strings.TrimSpace(parameter.Value)
+		if key == "" || len(key) > 64 || strings.ContainsAny(key, "\x00\r\n") || len(value) > 8000 {
+			return
+		}
+		switch key {
+		case "max_files", "max_depth", "limit", "offset":
+			number, err := strconv.Atoi(value)
+			if err != nil {
+				return
+			}
+			arguments[key] = number
+		case "recursive", "include_hidden":
+			boolean, err := strconv.ParseBool(value)
+			if err != nil {
+				return
+			}
+			arguments[key] = boolean
+		case "args":
+			var values []string
+			if json.Unmarshal([]byte(value), &values) != nil {
+				return
+			}
+			arguments[key] = values
+		default:
+			arguments[key] = value
+		}
+	}
+	encoded, err := json.Marshal(arguments)
+	if err != nil {
+		return
+	}
+	result.ToolCalls = []AgentToolCall{{ID: fmt.Sprintf("fallback_xml_%d", time.Now().UnixNano()), Name: name, Arguments: encoded}}
+	result.Text = ""
+	result.Err = nil
 }

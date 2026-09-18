@@ -31,13 +31,12 @@ import {
   visibleLayers
 } from './layers.js';
 import {
-  initPureLocalGlobe,
-  drawPureLocalGlobe,
   requestGlobeRender,
   focusGlobeOnLonLat,
   highlightEventInList,
   forceGlobeResize,
 } from './globe_render.js';
+import { sharedGeoManager } from '../geo_renderer/geo_manager.js';
 import {
   refreshOSINTFeed,
   loadAndRenderRegionalRisks,
@@ -239,7 +238,20 @@ export function updateLayerCounts() {
     setTxt('gw-cnt-sats', satData.length);
     setTxt('gw-cnt-news', (activeFeedEvents || []).length);
     setTxt('gw-cnt-risks', (typeof cachedRiskMarkers !== 'undefined' && cachedRiskMarkers) ? cachedRiskMarkers.length : '—');
-    setTxt('gw-cnt-borders', visibleLayers.borders ? 'ON' : 'OFF');
+    setTxt('gw-cnt-borders', visibleLayers.borders !== false ? 'AN' : 'AUS');
+    setTxt('gw-cnt-volcanoes', (activeFeedEvents || []).filter(e => isVolcanoEvent(e)).length || 'LIVE');
+    setTxt('gw-cnt-quakes', (activeFeedEvents || []).filter(e => isEarthquakeEvent(e)).length || 'LIVE');
+    if (sharedGeoManager && Array.isArray(sharedGeoManager.entities)) {
+        const air = sharedGeoManager.entities.filter(e => e.type === 'AIRCRAFT').length;
+        const mil = sharedGeoManager.entities.filter(e => e.type === 'MIL_AIRCRAFT').length;
+        const ves = sharedGeoManager.entities.filter(e => e.type === 'VESSEL').length;
+        const fir = sharedGeoManager.entities.filter(e => e.type === 'FIRE').length;
+        setTxt('gw-cnt-aircraft', air || 'LIVE');
+        setTxt('gw-cnt-military', mil || 'LIVE');
+        setTxt('gw-cnt-vessels', ves || 'LIVE');
+        setTxt('gw-cnt-fires', fir || 'LIVE');
+        setTxt('gw-cnt-geoint-total', sharedGeoManager.entities.length);
+    }
 }
 
 export function wireRegionChips() {
@@ -252,6 +264,9 @@ export function wireRegionChips() {
             chip.classList.add('active');
             const key = chip.getAttribute('data-focus') || 'global';
             const f = focusRegionByKey(key);
+            if (sharedGeoManager) {
+                sharedGeoManager.focusRegion(key);
+            }
             const status = document.getElementById('gw-refresh-info');
             if (status) status.textContent = `FOCUS: ${f.label || key.toUpperCase()}`;
         });
@@ -356,17 +371,6 @@ export function scheduleGlobalWatchHazardAnimation() {
     if (globalWatchHazardTimer) window.clearInterval(globalWatchHazardTimer);
     setGlobalWatchHazardTimer(null);
     window.__gwHazardAnimInterval = null;
-    if (!globalWatchPreferences.hazardAnimation) return;
-    const interval = Math.max(125, Math.round(1000 / globalWatchPreferences.hazardFPS));
-    const timer = window.setInterval(() => {
-        const view = document.getElementById('view-global-watch');
-        if (!view || view.classList.contains('hidden') || document.hidden) return;
-        // visibleLayers proxy mirrors globeLayers[prop].visible (earthquakes/volcanoes)
-        const needAnimation = Boolean(visibleLayers.earthquakes || visibleLayers.volcanoes);
-        if (needAnimation) requestGlobeRender();
-    }, interval);
-    setGlobalWatchHazardTimer(timer);
-    window.__gwHazardAnimInterval = timer;
 }
 
 /** Bind #gw-personal-sync / #gw-personal-refresh (settings personal-impact strip). */
@@ -399,33 +403,178 @@ export function wireGlobalWatchRuntimeSettings() {
         idleRotation: document.getElementById('gw-idle-rotation'),
         hazardFPS: document.getElementById('gw-hazard-fps'),
         hazardAnimation: document.getElementById('gw-hazard-animation'),
+        max3DEntities: document.getElementById('gw-max-3d-entities'),
+        targetFPS: document.getElementById('gw-target-fps'),
+        enableAtmosphere: document.getElementById('gw-enable-atmosphere'),
+        enableTrails: document.getElementById('gw-enable-trails'),
+        enableConflictTensions: document.getElementById('gw-enable-tensions'),
+        dynamicQuality: document.getElementById('gw-dynamic-quality'),
+        postProcessing: document.getElementById('gw-post-processing'),
+        diagnosticsHUD: document.getElementById('gw-diagnostics-hud'),
+        rendererMode: document.getElementById('gw-renderer-mode'),
+        terrainQuality: document.getElementById('gw-terrain-quality'),
+        tilesQuality: document.getElementById('gw-tiles-quality'),
+        maximumScreenSpaceError: document.getElementById('gw-screen-space-error'),
+        maximumNetworkRequests: document.getElementById('gw-network-requests'),
+        entityDrawDistance: document.getElementById('gw-entity-distance'),
+        labelDrawDistance: document.getElementById('gw-label-distance'),
+        modelDrawDistance: document.getElementById('gw-model-distance'),
+        trailLength: document.getElementById('gw-trail-length'),
+        trailDensity: document.getElementById('gw-trail-density'),
+        aircraftUpdateSeconds: document.getElementById('gw-aircraft-update'),
+        osintUpdateSeconds: document.getElementById('gw-osint-update'),
+        geoClustering: document.getElementById('gw-geo-clustering'),
+        postProcessingLevel: document.getElementById('gw-post-processing-level'),
+        hudDensity: document.getElementById('gw-hud-density'),
+        dynamicScreenSpaceError: document.getElementById('gw-dynamic-sse'),
+        antiAliasing: document.getElementById('gw-anti-aliasing'),
+        fog: document.getElementById('gw-fog'),
+        shadows: document.getElementById('gw-shadows'),
+        lighting: document.getElementById('gw-lighting'),
+        highResolutionTextures: document.getElementById('gw-high-res-textures'),
+        sensorEffects: document.getElementById('gw-sensor-effects'),
+        automaticLOD: document.getElementById('gw-auto-lod'),
+        riskOverlayMinAltitude: document.getElementById('gw-risk-min-altitude'),
+        satelliteMinAltitude: document.getElementById('gw-satellite-min-altitude'),
+        aircraftMaxAltitude: document.getElementById('gw-aircraft-max-altitude'),
+        vesselMaxAltitude: document.getElementById('gw-vessel-max-altitude'),
+        cameraMaxAltitude: document.getElementById('gw-camera-max-altitude'),
+        hazardMaxAltitude: document.getElementById('gw-hazard-max-altitude'),
+        cityMaxAltitude: document.getElementById('gw-city-max-altitude'),
+        relationMinAltitude: document.getElementById('gw-relation-min-altitude'),
+        relationMaxAltitude: document.getElementById('gw-relation-max-altitude'),
     };
     if (!controls.renderQuality || controls.renderQuality.dataset.bound === 'true') return;
 
+    const customProfileControls = [
+        controls.max3DEntities, controls.targetFPS, controls.enableAtmosphere,
+        controls.postProcessing, controls.terrainQuality, controls.tilesQuality,
+        controls.maximumScreenSpaceError, controls.entityDrawDistance,
+        controls.labelDrawDistance, controls.modelDrawDistance, controls.trailLength,
+        controls.trailDensity, controls.geoClustering, controls.postProcessingLevel,
+        controls.hudDensity, controls.dynamicScreenSpaceError, controls.antiAliasing,
+        controls.fog, controls.shadows, controls.lighting,
+        controls.highResolutionTextures, controls.sensorEffects,
+    ].filter(Boolean);
+
     const renderValues = () => {
-        controls.renderQuality.value = globalWatchPreferences.renderQuality;
-        controls.autoRefreshSeconds.value = String(globalWatchPreferences.autoRefreshSeconds);
-        controls.feedLimit.value = String(globalWatchPreferences.feedLimit);
-        controls.clusterMode.value = globalWatchPreferences.clusterMode;
-        controls.idleRotation.checked = globalWatchPreferences.idleRotation;
-        controls.hazardFPS.value = String(globalWatchPreferences.hazardFPS);
-        controls.hazardAnimation.checked = globalWatchPreferences.hazardAnimation;
-        controls.hazardFPS.disabled = !globalWatchPreferences.hazardAnimation;
+        if (controls.renderQuality) controls.renderQuality.value = globalWatchPreferences.renderQuality;
+        if (controls.autoRefreshSeconds) controls.autoRefreshSeconds.value = String(globalWatchPreferences.autoRefreshSeconds);
+        if (controls.feedLimit) controls.feedLimit.value = String(globalWatchPreferences.feedLimit);
+        if (controls.clusterMode) controls.clusterMode.value = globalWatchPreferences.clusterMode;
+        if (controls.idleRotation) controls.idleRotation.checked = globalWatchPreferences.idleRotation;
+        if (controls.hazardFPS) controls.hazardFPS.value = String(globalWatchPreferences.hazardFPS);
+        if (controls.hazardAnimation) controls.hazardAnimation.checked = globalWatchPreferences.hazardAnimation;
+        if (controls.hazardFPS && controls.hazardAnimation) controls.hazardFPS.disabled = !globalWatchPreferences.hazardAnimation;
+        if (controls.max3DEntities) controls.max3DEntities.value = String(globalWatchPreferences.max3DEntities || 2500);
+        if (controls.targetFPS) controls.targetFPS.value = String(globalWatchPreferences.targetFPS || 60);
+        if (controls.enableAtmosphere) controls.enableAtmosphere.checked = globalWatchPreferences.enableAtmosphere !== false;
+        if (controls.enableTrails) controls.enableTrails.checked = globalWatchPreferences.enableTrails !== false;
+        if (controls.enableConflictTensions) controls.enableConflictTensions.checked = globalWatchPreferences.enableConflictTensions !== false;
+        if (controls.dynamicQuality) controls.dynamicQuality.checked = globalWatchPreferences.dynamicQuality !== false;
+        if (controls.postProcessing) controls.postProcessing.checked = globalWatchPreferences.postProcessing !== false;
+        if (controls.diagnosticsHUD) controls.diagnosticsHUD.checked = globalWatchPreferences.diagnosticsHUD === true;
+        if (controls.rendererMode) controls.rendererMode.value = globalWatchPreferences.rendererMode;
+        if (controls.terrainQuality) controls.terrainQuality.value = globalWatchPreferences.terrainQuality;
+        if (controls.tilesQuality) controls.tilesQuality.value = globalWatchPreferences.tilesQuality;
+        if (controls.maximumScreenSpaceError) controls.maximumScreenSpaceError.value = String(globalWatchPreferences.maximumScreenSpaceError);
+        if (controls.maximumNetworkRequests) controls.maximumNetworkRequests.value = String(globalWatchPreferences.maximumNetworkRequests);
+        if (controls.entityDrawDistance) controls.entityDrawDistance.value = String(globalWatchPreferences.entityDrawDistance);
+        if (controls.labelDrawDistance) controls.labelDrawDistance.value = String(globalWatchPreferences.labelDrawDistance);
+        if (controls.modelDrawDistance) controls.modelDrawDistance.value = String(globalWatchPreferences.modelDrawDistance);
+        if (controls.trailLength) controls.trailLength.value = String(globalWatchPreferences.trailLength);
+        if (controls.trailDensity) controls.trailDensity.value = String(globalWatchPreferences.trailDensity);
+        if (controls.aircraftUpdateSeconds) controls.aircraftUpdateSeconds.value = String(globalWatchPreferences.aircraftUpdateSeconds);
+        if (controls.osintUpdateSeconds) controls.osintUpdateSeconds.value = String(globalWatchPreferences.osintUpdateSeconds);
+        if (controls.geoClustering) controls.geoClustering.value = globalWatchPreferences.geoClustering;
+        if (controls.postProcessingLevel) controls.postProcessingLevel.value = globalWatchPreferences.postProcessingLevel;
+        if (controls.hudDensity) controls.hudDensity.value = globalWatchPreferences.hudDensity;
+        if (controls.dynamicScreenSpaceError) controls.dynamicScreenSpaceError.checked = globalWatchPreferences.dynamicScreenSpaceError !== false;
+        if (controls.antiAliasing) controls.antiAliasing.checked = globalWatchPreferences.antiAliasing !== false;
+        if (controls.fog) controls.fog.checked = globalWatchPreferences.fog !== false;
+        if (controls.shadows) controls.shadows.checked = globalWatchPreferences.shadows === true;
+        if (controls.lighting) controls.lighting.checked = globalWatchPreferences.lighting !== false;
+        if (controls.highResolutionTextures) controls.highResolutionTextures.checked = globalWatchPreferences.highResolutionTextures === true;
+        if (controls.sensorEffects) controls.sensorEffects.checked = globalWatchPreferences.sensorEffects !== false;
+        if (controls.automaticLOD) controls.automaticLOD.checked = globalWatchPreferences.automaticLOD !== false;
+        for (const key of ['riskOverlayMinAltitude', 'satelliteMinAltitude', 'aircraftMaxAltitude', 'vesselMaxAltitude', 'cameraMaxAltitude', 'hazardMaxAltitude', 'cityMaxAltitude', 'relationMinAltitude', 'relationMaxAltitude']) {
+            if (controls[key]) controls[key].value = String(globalWatchPreferences[key]);
+        }
+        const customProfile = globalWatchPreferences.renderQuality === 'custom';
+        for (const control of customProfileControls) {
+            control.disabled = !customProfile;
+            control.title = customProfile ? '' : 'Wird durch das aktive Qualitätsprofil gesteuert.';
+        }
     };
     const collectValues = () => ({
-        renderQuality: controls.renderQuality.value,
-        autoRefreshSeconds: Number(controls.autoRefreshSeconds.value),
-        feedLimit: Number(controls.feedLimit.value),
-        clusterMode: controls.clusterMode.value,
-        idleRotation: controls.idleRotation.checked,
-        hazardFPS: Number(controls.hazardFPS.value),
-        hazardAnimation: controls.hazardAnimation.checked,
+        renderQuality: controls.renderQuality ? controls.renderQuality.value : 'balanced',
+        autoRefreshSeconds: controls.autoRefreshSeconds ? Number(controls.autoRefreshSeconds.value) : 60,
+        feedLimit: controls.feedLimit ? Number(controls.feedLimit.value) : 200,
+        clusterMode: controls.clusterMode ? controls.clusterMode.value : 'balanced',
+        idleRotation: controls.idleRotation ? controls.idleRotation.checked : true,
+        hazardFPS: controls.hazardFPS ? Number(controls.hazardFPS.value) : 6,
+        hazardAnimation: controls.hazardAnimation ? controls.hazardAnimation.checked : true,
+        max3DEntities: controls.max3DEntities ? Number(controls.max3DEntities.value) : 2500,
+        targetFPS: controls.targetFPS ? Number(controls.targetFPS.value) : 60,
+        enableAtmosphere: controls.enableAtmosphere ? controls.enableAtmosphere.checked : true,
+        enableTrails: controls.enableTrails ? controls.enableTrails.checked : true,
+        enableConflictTensions: controls.enableConflictTensions ? controls.enableConflictTensions.checked : true,
+        dynamicQuality: controls.dynamicQuality ? controls.dynamicQuality.checked : true,
+        postProcessing: controls.postProcessing ? controls.postProcessing.checked : true,
+        diagnosticsHUD: controls.diagnosticsHUD ? controls.diagnosticsHUD.checked : false,
+        rendererMode: controls.rendererMode ? controls.rendererMode.value : 'enhanced',
+        terrainQuality: controls.terrainQuality ? controls.terrainQuality.value : 'medium',
+        tilesQuality: controls.tilesQuality ? controls.tilesQuality.value : 'medium',
+        maximumScreenSpaceError: controls.maximumScreenSpaceError ? Number(controls.maximumScreenSpaceError.value) : 3,
+        maximumNetworkRequests: controls.maximumNetworkRequests ? Number(controls.maximumNetworkRequests.value) : 18,
+        entityDrawDistance: controls.entityDrawDistance ? Number(controls.entityDrawDistance.value) : 20000000,
+        labelDrawDistance: controls.labelDrawDistance ? Number(controls.labelDrawDistance.value) : 500000,
+        modelDrawDistance: controls.modelDrawDistance ? Number(controls.modelDrawDistance.value) : 50000,
+        trailLength: controls.trailLength ? Number(controls.trailLength.value) : 16,
+        trailDensity: controls.trailDensity ? Number(controls.trailDensity.value) : 2,
+        aircraftUpdateSeconds: controls.aircraftUpdateSeconds ? Number(controls.aircraftUpdateSeconds.value) : 12,
+        osintUpdateSeconds: controls.osintUpdateSeconds ? Number(controls.osintUpdateSeconds.value) : 30,
+        geoClustering: controls.geoClustering ? controls.geoClustering.value : 'adaptive',
+        postProcessingLevel: controls.postProcessingLevel ? controls.postProcessingLevel.value : 'low',
+        hudDensity: controls.hudDensity ? controls.hudDensity.value : 'standard',
+        dynamicScreenSpaceError: controls.dynamicScreenSpaceError ? controls.dynamicScreenSpaceError.checked : true,
+        antiAliasing: controls.antiAliasing ? controls.antiAliasing.checked : true,
+        fog: controls.fog ? controls.fog.checked : true,
+        shadows: controls.shadows ? controls.shadows.checked : false,
+        lighting: controls.lighting ? controls.lighting.checked : true,
+        highResolutionTextures: controls.highResolutionTextures ? controls.highResolutionTextures.checked : false,
+        sensorEffects: controls.sensorEffects ? controls.sensorEffects.checked : true,
+        automaticLOD: controls.automaticLOD ? controls.automaticLOD.checked : true,
+        riskOverlayMinAltitude: controls.riskOverlayMinAltitude ? Number(controls.riskOverlayMinAltitude.value) : 3000000,
+        satelliteMinAltitude: controls.satelliteMinAltitude ? Number(controls.satelliteMinAltitude.value) : 2200000,
+        aircraftMaxAltitude: controls.aircraftMaxAltitude ? Number(controls.aircraftMaxAltitude.value) : 1800000,
+        vesselMaxAltitude: controls.vesselMaxAltitude ? Number(controls.vesselMaxAltitude.value) : 2200000,
+        cameraMaxAltitude: controls.cameraMaxAltitude ? Number(controls.cameraMaxAltitude.value) : 450000,
+        hazardMaxAltitude: controls.hazardMaxAltitude ? Number(controls.hazardMaxAltitude.value) : 5500000,
+        cityMaxAltitude: controls.cityMaxAltitude ? Number(controls.cityMaxAltitude.value) : 2500000,
+        relationMinAltitude: controls.relationMinAltitude ? Number(controls.relationMinAltitude.value) : 120000,
+        relationMaxAltitude: controls.relationMaxAltitude ? Number(controls.relationMaxAltitude.value) : 16000000,
     });
     Object.values(controls).forEach(control => {
+        if (!control) return;
         control.dataset.bound = 'true';
         control.addEventListener('change', () => {
             applyGlobalWatchPreferences(collectValues());
+            window.dispatchEvent(new CustomEvent('aethel:global-watch-preferences', { detail: globalWatchPreferences }));
+            if (sharedGeoManager.mode !== 'CESIUM_3D') void sharedGeoManager.setMode('CESIUM_3D');
+            if (control === controls.aircraftUpdateSeconds || control === controls.osintUpdateSeconds) sharedGeoManager.requestDataRefresh();
             renderValues();
+            if (sharedGeoManager && sharedGeoManager.currentRenderer) {
+                if (sharedGeoManager.currentRenderer.viewer) {
+                    const scene = sharedGeoManager.currentRenderer.viewer.scene;
+                    if (scene && scene.globe) {
+                        scene.globe.showGroundAtmosphere = globalWatchPreferences.enableAtmosphere;
+                    }
+                }
+                if (sharedGeoManager.currentRenderer.entityRenderer) {
+                    sharedGeoManager.currentRenderer.entityRenderer.sync(sharedGeoManager.entities, sharedGeoManager.sceneState.layers, sharedGeoManager.links);
+                }
+            }
             if (control === controls.feedLimit) void refreshOSINTFeed(activeGlobalWatchDomain(), false, showSelectionDetails, openGwReportReader);
         });
     });
@@ -699,6 +848,7 @@ export function makeGwPanelDraggable(panelEl, handleEl, storageKey) {
     }
 
     handleEl.addEventListener('pointerdown', (e) => {
+        if (panelEl.closest('.gw-left-rail')) return;
         if (e.target.closest('button, input, select, a, textarea')) return;
         dragging = true;
         ox = e.clientX;
@@ -795,8 +945,11 @@ export function wireGwTimeWindow() {
     if (!el || el._gwBound) return;
     el._gwBound = true;
     window.__gwTimeWindowHours = getGwTimeWindowHours();
+    sharedGeoManager.sceneState.setTimeWindow(window.__gwTimeWindowHours === 0 ? 168 : window.__gwTimeWindowHours);
     el.addEventListener('change', () => {
         setGwTimeWindowHours(el.value);
+        sharedGeoManager.sceneState.setTimeWindow(Number(el.value) === 0 ? 168 : Number(el.value));
+        sharedGeoManager.requestDataRefresh();
         const active = document.querySelector('.gw-domain-filter.active');
         const domain = active ? active.getAttribute('data-domain') : 'all';
         void refreshOSINTFeed(domain || 'all', false, showSelectionDetails, openGwReportReader);
@@ -1024,13 +1177,23 @@ window.AETHEL_GW_COMMAND = function(cmd) {
         return true;
     }
     if (cmd.action === 'focus' && (cmd.lat != null || cmd.latitude != null)) {
-        focusGlobeOnLonLat(cmd.lon ?? cmd.longitude, cmd.lat ?? cmd.latitude, { scale: cmd.zoom, snap: true });
+        const lat = Number(cmd.lat ?? cmd.latitude);
+        const lon = Number(cmd.lon ?? cmd.longitude);
+        const zoom = Number(cmd.zoom || 1);
+        focusGlobeOnLonLat(lon, lat, { scale: zoom, snap: true });
+        sharedGeoManager.flyTo(lat, lon, Math.max(800, 4000000 / Math.max(0.5, zoom)), -45, 0);
         return true;
     }
     if (cmd.action === 'time_window') {
         setGwTimeWindowHours(cmd.hours);
+        sharedGeoManager.sceneState.setTimeWindow(Number(cmd.hours) === 0 ? 168 : Number(cmd.hours));
+        sharedGeoManager.requestDataRefresh();
         const active = document.querySelector('.gw-domain-filter.active');
         void refreshOSINTFeed(active ? active.getAttribute('data-domain') : 'all', false);
+        return true;
+    }
+    if (cmd.action === 'layer' && cmd.layer) {
+        sharedGeoManager.setLayer(String(cmd.layer), cmd.enable !== false);
         return true;
     }
     if (cmd.action === 'open_report') {
@@ -1054,7 +1217,8 @@ export async function initGlobalWatch() {
     if (!container) return;
     setGlobeContainer(container);
 
-    initPureLocalGlobe(showSelectionDetails, showCameraDetails);
+    const geoReady = await sharedGeoManager.init(container, showSelectionDetails);
+    if (!geoReady) console.error('[GLOBAL_WATCH] Cesium GEOINT engine unavailable');
     subscribeGlobalWatchCommands();
     wireSelectedEventAIActions();
 
@@ -1064,6 +1228,19 @@ export async function initGlobalWatch() {
             filters.forEach(f => f.classList.remove("active"));
             btn.classList.add("active");
             const domain = btn.getAttribute("data-domain");
+            const domainFilters = {
+                conflict: { entityTypes: ['CONFLICT'], relationCategories: ['KINETIC', 'MARITIME'] },
+                military: { entityTypes: ['MIL_AIRCRAFT', 'MILITARY_INSTALLATION'], relationCategories: ['KINETIC', 'SUPPORT', 'AIR', 'MARITIME'] },
+                cyber: { entityTypes: ['CYBER'], relationCategories: ['CYBER'] },
+                political: { entityTypes: ['POLITICAL'], relationCategories: [] },
+                economic: { entityTypes: ['ECONOMIC'], relationCategories: ['ECONOMIC'] },
+                energy: { entityTypes: ['ENERGY'], relationCategories: [] },
+                infrastructure: { entityTypes: ['INFRASTRUCTURE'], relationCategories: [] },
+                natural: { entityTypes: ['EARTHQUAKE', 'VOLCANO', 'FIRE'], relationCategories: [] },
+                space: { entityTypes: ['SATELLITE', 'SPACE_EVENT'], relationCategories: ['SPACE'] },
+            };
+            sharedGeoManager.sceneState.setFilters(domainFilters[domain] || { entityTypes: [], relationCategories: [] });
+            if (sharedGeoManager.currentRenderer?.entityRenderer) sharedGeoManager.currentRenderer.entityRenderer.sync(sharedGeoManager.entities, sharedGeoManager.sceneState.layers, sharedGeoManager.links);
             refreshOSINTFeed(domain, false, showSelectionDetails, openGwReportReader);
         });
     });
@@ -1089,16 +1266,28 @@ export async function initGlobalWatch() {
     const layerToggles = document.querySelectorAll(".gw-layer-row[data-layer], .gw-layer-toggle[data-layer]");
     layerToggles.forEach(btn => {
         const layer = btn.getAttribute("data-layer");
-        if (!layer || !(layer in visibleLayers)) return;
-        btn.classList.toggle("active", !!visibleLayers[layer]);
-        btn.addEventListener("click", () => {
-            visibleLayers[layer] = !visibleLayers[layer];
+        if (!layer) return;
+        if (layer in visibleLayers) {
             btn.classList.toggle("active", !!visibleLayers[layer]);
+        }
+        if (btn._gwBound) return;
+        btn._gwBound = true;
+        btn.addEventListener("click", () => {
+            if (layer in visibleLayers) {
+                visibleLayers[layer] = !visibleLayers[layer];
+                btn.classList.toggle("active", !!visibleLayers[layer]);
+            } else {
+                btn.classList.toggle("active");
+                visibleLayers[layer] = btn.classList.contains("active");
+            }
+            const isActive = btn.classList.contains("active");
+            sharedGeoManager.setLayer(layer, isActive);
             updateLayerCounts();
-            drawPureLocalGlobe();
+            requestGlobeRender();
         });
     });
 
+    wireHazardPanelSplitter();
     updateLayerCounts();
     wireRegionChips();
     wireGwCollapsibles();
@@ -1168,7 +1357,7 @@ export async function initGlobalWatch() {
                 cameraData.push(camEntry);
                 closeModal();
                 showAethelToast("Kamera erfolgreich hinzugefügt! Aktivieren Sie den Layer 'CAMERAS' zum Anzeigen.", "success");
-                drawPureLocalGlobe();
+                requestGlobeRender();
             }
         });
     };
@@ -1209,4 +1398,56 @@ export async function initGlobalWatch() {
         const saved = localStorage.getItem('aethel_osint_briefing_prompt');
         if (saved) window.__osintCustomPrompt = saved;
     } catch (_) {}
+}
+
+export function wireHazardPanelSplitter() {
+    const splitter = document.getElementById('gw-hazard-splitter');
+    const panel = document.getElementById('gw-hazard-panel');
+    const sidebar = document.querySelector('.gw-feed-sidebar') || document.querySelector('.gw-feed-dock');
+    if (!splitter || !panel || splitter._gwBound) return;
+    splitter._gwBound = true;
+
+    try {
+        const savedHeight = localStorage.getItem('aethel.gw.hazardHeight');
+        if (savedHeight && Number(savedHeight) >= 100) {
+            panel.style.setProperty('--gw-hazard-height', `${savedHeight}px`);
+        }
+    } catch (_) {}
+
+    let isDragging = false;
+    let startY = 0;
+    let startHeight = 0;
+
+    const onPointerDown = (e) => {
+        isDragging = true;
+        startY = e.clientY;
+        startHeight = panel.getBoundingClientRect().height;
+        splitter.classList.add('dragging');
+        document.body.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none';
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+    };
+
+    const onPointerMove = (e) => {
+        if (!isDragging) return;
+        const delta = startY - e.clientY;
+        const maxH = sidebar ? Math.round(sidebar.getBoundingClientRect().height * 0.85) : 650;
+        const newH = Math.max(100, Math.min(maxH, startHeight + delta));
+        panel.style.setProperty('--gw-hazard-height', `${newH}px`);
+    };
+
+    const onPointerUp = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        splitter.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+        const finalH = Math.round(panel.getBoundingClientRect().height);
+        try { localStorage.setItem('aethel.gw.hazardHeight', String(finalH)); } catch (_) {}
+    };
+
+    splitter.addEventListener('pointerdown', onPointerDown);
 }

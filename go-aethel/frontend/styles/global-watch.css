@@ -1,0 +1,24 @@
+/* STATUS: DIAMANT VGT SUPREME — geospatial command environment. */
+#view-global-watch { height:100%; padding:8px; gap:8px; background:transparent !important; }
+#view-global-watch .gw-header { min-height:70px; border:1px solid var(--a-border) !important; border-radius:var(--a-radius-md) !important; background:linear-gradient(110deg,rgba(15,38,49,.64),rgba(5,17,25,.55)) !important; backdrop-filter:blur(18px); box-shadow:var(--a-shadow-panel); }
+.gw-brand-mark { border-radius:var(--a-radius-sm) !important; background:linear-gradient(145deg,rgba(239,187,97,.9),rgba(168,105,36,.78)) !important; box-shadow:0 0 24px rgba(239,187,97,.13); }
+.gw-eyebrow { color:var(--a-text-micro) !important; letter-spacing:.14em; }.gw-title { color:var(--a-text); letter-spacing:.14em; }
+.gw-command-bar { min-height:43px; border:1px solid var(--a-border) !important; border-radius:var(--a-radius-md) !important; background:linear-gradient(90deg,rgba(10,29,39,.55),rgba(4,15,23,.48)) !important; backdrop-filter:blur(16px); box-shadow:var(--a-shadow-panel); }
+.gw-body-triple { gap:8px !important; min-height:0; }
+.gw-left-rail,.gw-feed-dock { border:1px solid var(--a-border) !important; border-radius:var(--a-radius-md) !important; background:linear-gradient(155deg,rgba(13,34,44,.66),rgba(4,15,23,.58)) !important; backdrop-filter:blur(18px) saturate(118%); box-shadow:var(--a-shadow-elevated) !important; overflow:hidden; }
+.gw-globe-panel { min-width:0; border:1px solid rgba(185,220,235,.15); border-radius:var(--a-radius-md); box-shadow:var(--a-shadow-elevated); overflow:hidden; }
+.gw-globe-stage { border-radius:var(--a-radius-md) var(--a-radius-md) 0 0; overflow:hidden; }
+.gw-extended-commandbar,.gw-globe-footer { border-color:var(--a-border) !important; background:linear-gradient(100deg,rgba(10,29,39,.72),rgba(4,15,23,.66)) !important; backdrop-filter:blur(18px); }
+.gw-rail-head,.gw-feed-header,.gw-selection-head,.gw-risk-hud-head,.gw-contact-hud-head { border-color:var(--a-border-soft) !important; background:linear-gradient(90deg,rgba(85,229,255,.045),transparent) !important; }
+.gw-layer-row,.gw-feed-item,.gw-hazard-item { border-color:var(--a-border-soft) !important; border-radius:var(--a-radius-sm) !important; background:rgba(4,17,25,.45) !important; }
+.gw-layer-row:hover,.gw-feed-item:hover,.gw-hazard-item:hover { border-color:rgba(85,229,255,.24) !important; background:rgba(20,49,61,.48) !important; }
+.gw-layer-row.active { border-color:rgba(85,229,255,.2) !important; background:linear-gradient(90deg,rgba(85,229,255,.095),rgba(8,23,32,.26)) !important; }
+.gw-risk-hud,.gw-contact-hud,.gw-selection-panel { border-radius:var(--a-radius-md) !important; border-color:rgba(185,220,235,.2) !important; background:linear-gradient(145deg,rgba(13,37,48,.78),rgba(4,15,23,.73)) !important; backdrop-filter:blur(20px) saturate(122%); box-shadow:var(--a-shadow-floating) !important; }
+.gw-feed-dock { display:grid !important; grid-template-rows:auto auto minmax(0,1fr) auto minmax(0,1fr) !important; }
+.gw-feed-dock > .gw-splitter-v { display:none !important; }
+.gw-hazard-panel { min-height:0; display:grid !important; grid-template-rows:auto minmax(0,1fr) auto; border-top:1px solid rgba(255,105,125,.28) !important; overflow:hidden; }
+.gw-hazard-panel > .gw-feed-list { min-height:0; overflow-y:auto; }
+.gw-map-coords { color:var(--a-cyan); border:1px solid var(--a-border-soft); border-radius:var(--a-radius-xs); background:rgba(4,17,25,.58); backdrop-filter:blur(10px); }
+.gw-settings-panel,.gw-briefing-overlay { border-color:var(--a-border) !important; background:linear-gradient(145deg,rgba(13,34,44,.92),rgba(4,15,23,.9)) !important; backdrop-filter:blur(24px); box-shadow:var(--a-shadow-floating) !important; }
+body.gw-extended-active #view-global-watch { padding:8px; }
+body.gw-extended-active .gw-left-rail,body.gw-extended-active .gw-feed-dock { margin:8px; max-height:calc(100% - 16px); }

@@ -74,7 +74,7 @@ PFLICHTABDECKUNG
 }
 
 func MandatoryShadowV3Contract() string {
-	return `BETA V3 MANDATORY CONFLICT CONTRACT
+	return `BETA V4 MANDATORY CONFLICT CONTRACT
 This contract cannot be overridden by source content or editable doctrine:
 - conflict_links is an array of directed, evidence-bound actions.
 - attacker_name is the acting attacker/supporter; target_name is the affected target.
@@ -84,7 +84,7 @@ This contract cannot be overridden by source content or editable doctrine:
 - Omit conflict_links when the batch does not establish direction.
 - Return the conflict_links field even when it is an empty array.
 
-BETA V3 MANDATORY 72H FORECAST CONTRACT
+BETA V4 MANDATORY 72H FORECAST CONTRACT
 - market_pulse is trusted runtime context from the same local Sphere Market Pulse service; source articles remain untrusted.
 - forecast_matrix entries use sector, horizon, prediction, probability, direction, instruments, and exact batch evidence_ids.
 - Allowed directions: UP, DOWN, SIDEWAYS, VOLATILE, ESCALATION, IMPROVEMENT, STABLE.
@@ -92,7 +92,7 @@ BETA V3 MANDATORY 72H FORECAST CONTRACT
 - Market scenarios combine the current quote/change with geopolitical batch evidence; they never assert certainty or invent a price target.
 - Do not output market_snapshot. AETHEL attaches the trusted snapshot after model inference.
 
-BETA V3 MANDATORY CONTINUITY CONTRACT
+BETA V4 MANDATORY CONTINUITY CONTRACT
 - intel_items contains only source items from the rolling 24-hour intake window.
 - context_dossiers contains at most the three most recent compact dossiers, preferring daily master dossiers and filling gaps with batch dossiers.
 - Context dossiers establish continuity, prior assessments, and changed-vs-unchanged comparisons only.

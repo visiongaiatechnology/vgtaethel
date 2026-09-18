@@ -1,0 +1,58 @@
+# STATUS: DIAMANT VGT SUPREME
+name: Continuous Verification
+
+on:
+  pull_request:
+    paths:
+      - "go-aethel/**"
+      - ".github/workflows/ci.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "go-aethel/**"
+      - ".github/workflows/ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: go-aethel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-aethel/go.mod
+          cache-dependency-path: go-aethel/go.sum
+          check-latest: true
+      - name: Unit and integration tests
+        run: go test ./... -count=1
+      - name: Race detector
+        run: go test -race ./... -count=1
+      - name: Static analysis
+        run: go vet -buildvcs=false ./...
+      - name: Frontend syntax
+        shell: pwsh
+        run: |
+          Get-ChildItem frontend -Recurse -Filter *.js | ForEach-Object {
+            node --check $_.FullName
+            if ($LASTEXITCODE -ne 0) { throw "JavaScript syntax failure: $($_.FullName)" }
+          }
+      - name: Production Wails build
+        shell: pwsh
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
+          wails build -platform windows/amd64
+      - name: Vulnerability gate
+        shell: pwsh
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          govulncheck ./...

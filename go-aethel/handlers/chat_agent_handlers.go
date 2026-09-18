@@ -32,6 +32,15 @@ SPHERE WORKSPACE DIRECTIVES:
   4. For current weather, invoke weather_lookup with the requested city. For BTC, ETH, SOL or gold-price requests, invoke market_lookup; GOLD is transparently a PAXG token proxy, never claim it is official XAU fixing. WEATHER PULSE and MARKET PULSE present the same results. For code and agent work, LIVE FLOW shows the execution plan, tool events and verified evidence; keep the operator updated with concise observable progress, not private chain-of-thought.
 - You can write whole books and documents inside the constrained workspace. Your voice mode is continuously active, and you should react and communicate interactively.`
 	}
+	if request.Mode == "vgt_code" {
+		request.SystemPrompt += `
+
+VGT CODE WORKSPACE DIRECTIVES:
+- The operator is working in the dedicated VGT Code cockpit.
+- All repository inspection, edits and command execution must use the registered Aethel tools and remain inside the authorized workspace boundary.
+- Treat the active file path supplied by the operator as context, never as permission to skip inspection.
+- Keep progress observable through durable run events. Do not emit private chain-of-thought.`
+	}
 	if selected, changed := state.providers.SelectAvailable(request.ModelID, state, false, request.LiveOperatorActive); changed {
 		request.ModelID = selected.ID
 	}
@@ -61,7 +70,7 @@ SPHERE WORKSPACE DIRECTIVES:
 		request.CostBudgetUSD = spec.DefaultRunBudget
 	}
 	runMode := "chat_agent"
-	if request.Mode == "agent_team" {
+	if request.Mode == "agent_team" || request.Mode == "vgt_code" {
 		runMode = request.Mode
 	}
 	run, err := state.runs.Create(agent.CreateRunRequest{

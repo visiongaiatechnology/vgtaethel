@@ -1,3 +1,4 @@
+// STATUS: DIAMANT VGT SUPREME
 package handlers
 
 import (
@@ -121,3 +122,46 @@ func handleSecurityStatus(w http.ResponseWriter, r *http.Request) {
 		"last_activity_hash":  lastAuditHash,
 	})
 }
+
+func handleSecurityMode(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if state == nil || state.policy == nil {
+		http.Error(w, `{"error":"security_unavailable"}`, http.StatusServiceUnavailable)
+		return
+	}
+	if r.Method == http.MethodGet {
+		mode := state.policy.GetMode()
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"mode":        string(mode),
+			"full_access": mode == security.PermissionModeFullAccess,
+		})
+		return
+	}
+	if r.Method == http.MethodPost {
+		var req struct {
+			Mode string `json:"mode"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
+			return
+		}
+		mode := security.PermissionMode(req.Mode)
+		if mode != security.PermissionModeInteractive && mode != security.PermissionModeFullAccess {
+			http.Error(w, `{"error":"invalid_mode","message":"Mode must be 'interactive' or 'full_access'"}`, http.StatusBadRequest)
+			return
+		}
+		state.policy.SetMode(mode)
+		if state.saveConfig != nil && state.getAPIKey != nil {
+			_ = state.saveConfig(state.getAPIKey(), state.getOpenAIKey(), state.getDeepSeekKey(), state.getGeminiKey(), state.getClaudeKey())
+		}
+		security.LogKernelActivity("SECURITY_MODE_CHANGE", string(mode), "SUCCESS")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":      "success",
+			"mode":        string(mode),
+			"full_access": mode == security.PermissionModeFullAccess,
+		})
+		return
+	}
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+

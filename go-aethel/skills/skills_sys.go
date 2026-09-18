@@ -18,6 +18,7 @@ type ExecuteCommandSkill struct{}
 type ExecArgs struct {
 	Command    string   `json:"command"`
 	Args       []string `json:"args"`
+	WorkingDir string   `json:"working_dir,omitempty"`
 	Background bool     `json:"background,omitempty"`
 }
 
@@ -31,9 +32,10 @@ func (s *ExecuteCommandSkill) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"command":    map[string]interface{}{"type": "string", "enum": []string{"git", "go", "node", "npm", "python", "rg", "where", "whoami", "tasklist"}, "description": "Fest installiertes Werkzeug."},
-			"args":       map[string]interface{}{"type": "array", "maxItems": 32, "items": map[string]interface{}{"type": "string", "maxLength": 2048}, "description": "Getrennte Argumente ohne Shell-Syntax."},
-			"background": map[string]interface{}{"type": "boolean", "description": "Nur für explizit freigegebene Node- oder npm-Prozesse."},
+			"command":     map[string]interface{}{"type": "string", "enum": []string{"git", "go", "node", "npm", "python", "rg", "where", "whoami", "tasklist"}, "description": "Fest installiertes Werkzeug."},
+			"args":        map[string]interface{}{"type": "array", "maxItems": 32, "items": map[string]interface{}{"type": "string", "maxLength": 2048}, "description": "Getrennte Argumente ohne Shell-Syntax."},
+			"working_dir": map[string]interface{}{"type": "string", "maxLength": 1024, "description": "Authorized project working directory."},
+			"background":  map[string]interface{}{"type": "boolean", "description": "Nur für explizit freigegebene Node- oder npm-Prozesse."},
 		},
 		"required":             []string{"command", "args"},
 		"additionalProperties": false,
@@ -66,6 +68,18 @@ func (s *ExecuteCommandSkill) Execute(args json.RawMessage) (string, error) {
 		return "", errors.New("approved command is unavailable on this system")
 	}
 	auditTarget := commandArgumentDigest(command, input.Args)
+	workingDir := security.WorkspaceDir
+	if strings.TrimSpace(input.WorkingDir) != "" {
+		resolvedWorkingDir, workErr := security.ValidatePathForAccess(input.WorkingDir, security.MountRead)
+		if workErr != nil {
+			return "", errors.New("VGT SECURITY INTERVENTION: working directory is outside the authorized workspace")
+		}
+		workingDir = resolvedWorkingDir
+		info, statErr := os.Stat(workingDir)
+		if statErr != nil || !info.IsDir() {
+			return "", errors.New("working directory is unavailable")
+		}
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -73,6 +87,7 @@ func (s *ExecuteCommandSkill) Execute(args json.RawMessage) (string, error) {
 		Executable:  cmdPath,
 		Arguments:   append([]string(nil), input.Args...),
 		Environment: restrictedCommandEnvironment(),
+		WorkingDir:  workingDir,
 		Limits:      security.ProcessLimits{Timeout: 60 * time.Second, MemoryBytes: 512 << 20, MaximumProcesses: 8, MaximumOutput: 1 << 20},
 	})
 	if ctx.Err() == context.DeadlineExceeded {

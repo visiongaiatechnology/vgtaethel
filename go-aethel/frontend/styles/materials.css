@@ -1,0 +1,19 @@
+/* STATUS: DIAMANT VGT SUPREME — shared material and depth system. */
+.a-panel, .glass-card, .ds-card, .settings-card, .task-card, .agent-card, .memory-card, .persona-card, .case-card, .audit-card,
+.security-panel, .personal-panel, .mail-panel, .operator-panel, .neural-module {
+  border:1px solid var(--a-border) !important;
+  border-radius:var(--a-radius-md) !important;
+  background:linear-gradient(145deg,rgba(17,38,50,.55),rgba(6,17,25,.49)) !important;
+  box-shadow:var(--a-shadow-panel) !important;
+}
+.panel-elevated, .modal-overlay > .glass-card, [role="dialog"]:not(.modal-overlay) { background:linear-gradient(145deg,rgba(19,42,55,.82),rgba(5,16,24,.78)); border-color:rgba(185,220,235,.22); box-shadow:var(--a-shadow-elevated); }
+.panel-floating, .gw-float-panel, .gw-selection-panel { background:linear-gradient(145deg,rgba(15,36,47,.8),rgba(5,15,23,.75)); border:1px solid rgba(185,220,235,.2); box-shadow:var(--a-shadow-floating); backdrop-filter:blur(var(--a-blur-md)) saturate(125%); }
+.panel-critical { border-color:rgba(255,105,125,.3); background:linear-gradient(145deg,rgba(61,22,32,.55),rgba(19,12,19,.56)); }
+.panel-success { border-color:rgba(90,225,180,.26); }
+.panel-interactive { transition:transform var(--a-normal) var(--a-ease),border-color var(--a-normal),background var(--a-normal); }
+.panel-interactive:hover { transform:translateY(-1px); border-color:var(--a-border-active); background:linear-gradient(145deg,rgba(20,46,59,.62),rgba(7,20,29,.56)); }
+.modal-overlay { background:rgba(1,7,12,.68) !important; backdrop-filter:blur(18px) saturate(90%); }
+.modal-overlay > .glass-card { backdrop-filter:blur(var(--a-blur-lg)) saturate(128%); }
+.vgt-view-header, .ds-page-header { border:1px solid var(--a-border); border-radius:var(--a-radius-md); background:linear-gradient(110deg,rgba(19,42,54,.6),rgba(6,17,25,.5)); box-shadow:var(--a-shadow-panel); }
+.vgt-view-title, .ds-title { color:var(--a-text); letter-spacing:.01em; }
+.vgt-view-description, .ds-subtitle { color:var(--a-text-dim); }

@@ -9,6 +9,19 @@ import (
 	"go-aethel/intelligence"
 )
 
+func TestValidateHazardJSONPayloadUsesVerifiedBodyWhenProviderMislabeledHeader(t *testing.T) {
+	validEONET := []byte(`{"title":"EONET Events","events":[]}`)
+	if err := validateHazardJSONPayload("application/rss+xml; charset=utf-8", validEONET); err != nil {
+		t.Fatalf("valid JSON with provider-mislabeled content type must be accepted: %v", err)
+	}
+	if err := validateHazardJSONPayload("application/rss+xml", []byte(`<rss><channel/></rss>`)); err == nil {
+		t.Fatal("non-JSON payload must be rejected regardless of declared content type")
+	}
+	if err := validateHazardJSONPayload("application/json", []byte(`{"events":`)); err == nil {
+		t.Fatal("malformed JSON must be rejected despite JSON content type")
+	}
+}
+
 func TestHazardJSONCollectorParsesEarthquakesWithoutInventingGeo(t *testing.T) {
 	collector := NewHazardJSONCollector(OSINTCollectorConfig{Name: "Operator Quakes", Type: CollectorTypeEarthquakeGeoJSON, Domain: intelligence.DomainGeo})
 	events, err := collector.parseEarthquakeGeoJSON([]byte(`{
@@ -119,5 +132,3 @@ func TestOSINTEngineAcceptsOnlyExplicitCollectorTypes(t *testing.T) {
 		t.Fatal("unsupported collector type must be rejected")
 	}
 }
-
-

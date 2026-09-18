@@ -350,4 +350,16 @@ export async function fetchKernelTasks() {
 
 export function setupTasksUIEvents() {
     document.getElementById('task-btn-add')?.addEventListener('click', addTaskItem);
+    const view = document.getElementById('view-tasks');
+    const expand = document.getElementById('run-list-expand');
+    const toggle = force => {
+        const enabled = typeof force === 'boolean' ? force : !view?.classList.contains('run-list-expanded');
+        view?.classList.toggle('run-list-expanded', enabled);
+        expand?.setAttribute('aria-pressed', String(enabled));
+        if (expand) expand.textContent = enabled ? 'Zurück zur Übersicht' : 'Großansicht';
+    };
+    expand?.addEventListener('click', () => toggle());
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && view?.classList.contains('run-list-expanded')) toggle(false);
+    });
 }

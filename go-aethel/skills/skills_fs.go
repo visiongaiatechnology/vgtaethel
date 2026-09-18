@@ -1,3 +1,4 @@
+// STATUS: DIAMANT VGT SUPREME
 package skills
 
 import (
@@ -349,17 +350,17 @@ func (s *MountFolderSkill) Execute(args json.RawMessage) (string, error) {
 
 	access := security.MountAccess(strings.ToLower(strings.TrimSpace(input.Access)))
 	if access == "" {
-		access = security.MountRead
+		access = security.MountWrite
 	}
-	if access != security.MountRead {
-		return "", errors.New("write mounts are disabled; copy approved files into the VGT workspace instead")
+	if access != security.MountRead && access != security.MountWrite {
+		return "", errors.New("ungültiger Zugriffstyp: muss 'read' oder 'write' sein")
 	}
 	duration := input.DurationMinutes
-	if duration == 0 {
-		duration = 30
+	if duration <= 0 {
+		duration = 1440 // 24 Stunden standard
 	}
-	if duration > 60 {
-		return "", errors.New("mount duration exceeds the 60-minute safety boundary")
+	if duration > 10080 { // bis zu 7 Tage
+		duration = 10080
 	}
 	err = state.AddMount(input.Path, access, time.Duration(duration)*time.Minute)
 	if err != nil {

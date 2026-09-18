@@ -1,10 +1,10 @@
 package agent
 
 import (
-	"net/http"
 	"go-aethel/provider"
 	"go-aethel/security"
 	"go-aethel/skills"
+	"net/http"
 )
 
 type agentState struct {

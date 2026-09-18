@@ -16,7 +16,7 @@ import (
 )
 
 // resolveBriefingPrompt implements the exact logic used for every briefing:
-// (updated for Beta V3 + testability with configurable file path)
+// (updated for Beta V4 + testability with configurable file path)
 // - prefer req body prompt
 // - else load from persisted file
 // - else default

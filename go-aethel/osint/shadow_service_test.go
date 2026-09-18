@@ -67,7 +67,7 @@ func TestShadowV3ConflictContractCannotBeRemovedByEditableDoctrine(t *testing.T)
 		t.Fatal(err)
 	}
 	prompt := service.AnalysisPrompt()
-	for _, required := range []string{"BETA V3 MANDATORY CONFLICT CONTRACT", "attacker_name", "target_name", "evidence_id", "market_pulse", "BTC", "BRENT", "72h", "rolling 24-hour", "context_dossiers"} {
+	for _, required := range []string{"BETA V4 MANDATORY CONFLICT CONTRACT", "attacker_name", "target_name", "evidence_id", "market_pulse", "BTC", "BRENT", "72h", "rolling 24-hour", "context_dossiers"} {
 		if !strings.Contains(prompt, required) {
 			t.Fatalf("mandatory runtime contract missing %q", required)
 		}

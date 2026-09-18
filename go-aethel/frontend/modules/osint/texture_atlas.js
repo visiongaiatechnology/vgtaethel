@@ -39,9 +39,9 @@ export function computeEarthRasterStep(radiusPx, dragging) {
   const r = Math.max(1, Number(radiusPx) || 1);
   const quality = globalWatchPreferences.renderQuality;
   if (dragging) {
-    return quality === 'performance' ? 3 : 2;
+    return quality === 'performance' || quality === 'power_saver' ? 3 : 2;
   }
-  if (quality === 'performance') return 2;
+  if (quality === 'performance' || quality === 'power_saver') return 2;
   return 1;
 }
 
@@ -88,13 +88,18 @@ export function startGlobeIdleRotation(requestRenderFn) {
     if (globeIdleRotationFrame) return;
 	setGlobeIdleRotationBlockedUntil(performance.now());
     setGlobeIdleRotationLastFrame(performance.now());
-    const timer = window.setInterval(() => runGlobeIdleRotation(performance.now(), requestRenderFn), GLOBE_IDLE_ROTATION_FRAME_MS);
-    setGlobeIdleRotationFrame(timer);
+    const tick = () => {
+        const now = performance.now();
+        runGlobeIdleRotation(now, requestRenderFn);
+        const delay = shouldRotateGlobe(now) && !document.hidden ? GLOBE_IDLE_ROTATION_FRAME_MS : 500;
+        setGlobeIdleRotationFrame(window.setTimeout(tick, delay));
+    };
+    setGlobeIdleRotationFrame(window.setTimeout(tick, GLOBE_IDLE_ROTATION_FRAME_MS));
 }
 
 export function earthRasterDPRCap() {
   if (globalWatchPreferences.renderQuality === 'ultra') return 1.75;
-  if (globalWatchPreferences.renderQuality === 'performance') return 1;
+  if (globalWatchPreferences.renderQuality === 'performance' || globalWatchPreferences.renderQuality === 'power_saver') return 1;
   return 1.25;
 }
 

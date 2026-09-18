@@ -28,6 +28,7 @@ import {
   eventTimestampMs as eventTimestampMsPure,
   REGION_FOCUS_TABLE,
 } from './projection.js';
+import { sharedGeoManager } from '../geo_renderer/geo_manager.js';
 import { requestGlobeRender, focusGlobeOnLonLat, clearPins } from './globe_render.js';
 import { showSelectionDetails } from './selection_and_chat.js';
 import { openGwReportReader } from './briefing_and_reader.js';
@@ -55,6 +56,8 @@ export function focusRegionByKey(key) {
   const f = REGION_FOCUS_TABLE[regionKey] || REGION_FOCUS_TABLE.global;
   window.__gwRegionFilter = REGION_FOCUS_TABLE[regionKey] ? regionKey : 'global';
   focusGlobeOnLonLat(f.lon, f.lat, { scale: f.scale, snap: true });
+  const altitude = regionKey === 'global' ? 14000000 : regionKey === 'germany' ? 850000 : 2800000;
+  sharedGeoManager.flyTo(f.lat, f.lon, altitude, altitude > 5000000 ? -90 : -65, 0);
   const active = document.querySelector('.gw-domain-filter.active');
   void refreshOSINTFeed(active ? active.getAttribute('data-domain') : 'all', false, showSelectionDetails, openGwReportReader);
   return f;
@@ -746,6 +749,8 @@ export async function loadAndRenderRegionalRisks() {
                 listEl.appendChild(item);
             });
         requestGlobeRender();
+        wireTensionTabs();
+        renderBilateralTensionsHUD();
         void loadAndRenderAlerts();
     } catch (err) {
         console.error('Failed to render risk list', err);
@@ -753,6 +758,96 @@ export async function loadAndRenderRegionalRisks() {
         const errEl = appendTextElement(listEl, 'div', 'HUD LOAD ERROR', 'gw-risk-empty');
         errEl.style.color = 'var(--vgt-red)';
     }
+}
+
+export function renderBilateralTensionsHUD() {
+    const listEl = document.getElementById("gw-tension-hud-list");
+    if (!listEl) return;
+    listEl.replaceChildren();
+
+    const relations = Array.isArray(sharedGeoManager?.links) ? sharedGeoManager.links : [];
+    if (relations.length === 0) {
+        appendTextElement(listEl, 'div', 'Keine evidenzgestützten gerichteten Beziehungen im gewählten Zeitfenster.', 'gw-risk-empty');
+        return;
+    }
+    relations.forEach(t => {
+        const item = document.createElement('div');
+        item.className = 'gw-risk-item';
+        item.style.cursor = 'pointer';
+
+        let color = 'var(--vgt-green)';
+        if (Number(t.confidence) > 80) color = 'var(--vgt-red)';
+        else if (Number(t.confidence) > 60) color = 'var(--vgt-orange)';
+
+        const top = document.createElement('div');
+        top.className = 'gw-risk-item-top';
+        const name = document.createElement('span');
+        name.className = 'gw-risk-item-name';
+        name.textContent = `${t.origin_name} → ${t.target_name}`;
+        const score = document.createElement('span');
+        score.style.color = color;
+        score.textContent = `${Number(t.confidence) || 0}% · ${t.category}`;
+        top.append(name, score);
+
+        const bar = document.createElement('div');
+        bar.className = 'gw-risk-bar';
+        const fill = document.createElement('div');
+        fill.className = 'gw-risk-bar-fill';
+        fill.style.width = `${Math.max(0, Math.min(100, Number(t.confidence) || 0))}%`;
+        fill.style.background = color;
+        fill.style.boxShadow = `0 0 5px ${color}`;
+        bar.appendChild(fill);
+
+        const driver = document.createElement('div');
+        driver.className = 'gw-risk-driver';
+        driver.textContent = `STATUS: ${t.assessment_status} · ${t.attribution_status || 'ASSESSED_DIRECTION'}`;
+
+        const details = document.createElement('div');
+        details.className = 'gw-risk-driver';
+        details.style.opacity = '0.85';
+        details.textContent = `${t.action} · ${t.assessment || 'Keine zusätzliche Bewertung.'} · ${Array.isArray(t.evidence_ids) ? t.evidence_ids.length : 0} Evidenzen`;
+
+        item.append(top, bar, driver, details);
+
+        item.addEventListener('click', () => {
+            const midLat = (Number(t.origin?.lat) + Number(t.target?.lat)) / 2;
+            const midLon = (Number(t.origin?.lon) + Number(t.target?.lon)) / 2;
+            if (sharedGeoManager) {
+                sharedGeoManager.flyTo(midLat, midLon, 750000, -45, 0);
+            }
+        });
+
+        listEl.appendChild(item);
+    });
+}
+
+export function wireTensionTabs() {
+    const tabCountries = document.getElementById('gw-tab-risk-countries');
+    const tabTensions = document.getElementById('gw-tab-risk-tensions');
+    const listCountries = document.getElementById('gw-risk-hud-list');
+    const listTensions = document.getElementById('gw-tension-hud-list');
+
+    if (!tabCountries || !tabTensions || tabCountries._gwBound) return;
+    tabCountries._gwBound = true;
+
+    tabCountries.addEventListener('click', () => {
+        tabCountries.classList.add('active');
+        tabCountries.style.color = 'var(--vgt-cyan)';
+        tabTensions.classList.remove('active');
+        tabTensions.style.color = 'var(--vgt-text-dim)';
+        if (listCountries) listCountries.classList.remove('hidden');
+        if (listTensions) listTensions.classList.add('hidden');
+    });
+
+    tabTensions.addEventListener('click', () => {
+        tabTensions.classList.add('active');
+        tabTensions.style.color = 'var(--vgt-cyan)';
+        tabCountries.classList.remove('active');
+        tabCountries.style.color = 'var(--vgt-text-dim)';
+        if (listTensions) listTensions.classList.remove('hidden');
+        if (listCountries) listCountries.classList.add('hidden');
+        renderBilateralTensionsHUD();
+    });
 }
 
 export async function openExplainDrawer(regionId) {

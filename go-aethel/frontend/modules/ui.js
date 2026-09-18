@@ -9,6 +9,8 @@ import { loadChatHistory } from './chat.js';
 import { currentLanguage } from './i18n.js';
 
 export function switchMode(mode) {
+    const openAgentTeam = mode === "agent";
+    if (openAgentTeam) mode = "code";
     if (!state.views[mode]) return;
     
     Object.keys(state.views).forEach(key => {
@@ -18,6 +20,7 @@ export function switchMode(mode) {
     
     state.views[mode].classList.remove("hidden");
 	document.body.classList.toggle('shadow-osint-active', mode === 'shadow');
+	document.body.classList.toggle('vgt-code-focus-mode', mode === 'code');
     if (state.navButtons[mode]) state.navButtons[mode].classList.add("active");
     
     const label = document.getElementById("current-mode-label");
@@ -43,19 +46,17 @@ export function switchMode(mode) {
     } else if (mode === "personal") {
         import('./personal_mode.js').then(m => m.loadPersonalMode());
     } else if (mode === "sphere") {
-        // Auto-activate voice call if not muted and not already active
-        if (!state.isVoiceMuted && !state.isVoiceCallActive) {
-            const btnVoiceLink = document.getElementById("btn-voice-link");
-            if (btnVoiceLink) btnVoiceLink.click();
-        }
-        // Force active wake session inside the sphere!
-        import('./voice.js').then(m => {
-            if (state.isVoiceCallActive && !state.isWakeSessionActive) {
-                try { m.activateWakeSession(); } catch(e) {}
-            }
-        });
+        // Sphere workspace mode active - initialize workspace if needed
+        import('./sphere/index.js').then(m => {
+            if (m.setupSphereWorkspace) m.setupSphereWorkspace();
+        }).catch(() => {});
     } else if (mode === "tasks") {
         fetchTasksQueue();
+	} else if (mode === "code") {
+		import('./vgt_code.js').then(module => {
+			module.refreshVGTCode();
+			if (openAgentTeam) module.openVGTCodeTeam();
+		}).catch(error => console.error('VGT Code refresh failed', error));
     } else if (mode === "core") {
         fetchKernelLogs();
         refreshVoiceHealthHUD();

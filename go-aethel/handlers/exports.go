@@ -1,3 +1,4 @@
+// STATUS: DIAMANT VGT SUPREME
 package handlers
 
 // Exported aliases for router wiring (handlers remain implementable as unexported funcs).
@@ -30,6 +31,7 @@ var (
 	HandleSecurityLeases     = handleSecurityLeases
 	HandleSecurityAudit      = handleSecurityAudit
 	HandleSecurityStatus     = handleSecurityStatus
+	HandleSecurityMode       = handleSecurityMode
 	HandleMemory             = handleMemory
 	HandleMemoryExplain      = handleMemoryExplain
 	HandleMemoryExport       = handleMemoryExport

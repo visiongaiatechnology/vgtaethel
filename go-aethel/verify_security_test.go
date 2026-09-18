@@ -14,17 +14,17 @@ import (
 	"go-aethel/system"
 )
 
-func TestBetaV3ReleaseIdentityIsConsistent(t *testing.T) {
-	if system.ProductVersion != "1.0.0-beta.3" {
+func TestBetaV4ReleaseIdentityIsConsistent(t *testing.T) {
+	if system.ProductVersion != "1.0.0-beta.4" {
 		t.Fatalf("unexpected product version %q", system.ProductVersion)
 	}
 
 	files := map[string][]string{
-		"wails.json":                            {`"productVersion": "1.0.0-beta.3"`, "Beta V3"},
-		filepath.Join("frontend", "index.html"): {"BETA V3", "STRATEGIC COMMAND BUILD"},
-		filepath.Join("build", "windows", "installer", "aethel.iss"):       {`#define AppVersion "1.0.0-beta.3"`},
-		filepath.Join("docs", "project", "RELEASE_NOTES.md"):               {"1.0.0-beta.3", "BETA V3"},
-		filepath.Join("..", ".github", "workflows", "windows-release.yml"): {"1.0.0-beta.3-dev"},
+		"wails.json":                            {`"productVersion": "1.0.0-beta.4"`, "Beta V4"},
+		filepath.Join("frontend", "index.html"): {"BETA V4", "SOVEREIGN INTELLIGENCE BUILD"},
+		filepath.Join("build", "windows", "installer", "aethel.iss"):       {`#define AppVersion "1.0.0-beta.4"`},
+		filepath.Join("docs", "project", "RELEASE_NOTES.md"):               {"1.0.0-beta.4", "BETA V4"},
+		filepath.Join("..", ".github", "workflows", "windows-release.yml"): {"1.0.0-beta.4-dev"},
 	}
 	for path, required := range files {
 		content, err := os.ReadFile(path)
@@ -77,11 +77,24 @@ func TestBuildScriptCannotCleanRuntimeWorkspace(t *testing.T) {
 	if strings.Contains(script, "wails build -clean") || strings.Contains(script, "wails build --clean") {
 		t.Fatal("build script enables Wails bin cleanup and can delete the runtime workspace")
 	}
-	if !strings.Contains(script, "wails build -platform windows/amd64") {
-		t.Fatal("non-destructive Wails build invocation missing")
+	if !strings.Contains(script, "build_preserve.ps1") {
+		t.Fatal("archiving Wails build wrapper is not invoked")
 	}
 	if !strings.Contains(script, "build\\bin\\vgt_workspace") {
 		t.Fatal("runtime workspace preservation contract missing from build script")
+	}
+	preserveContent, err := os.ReadFile(filepath.Join("scripts", "build_preserve.ps1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	preserveScript := strings.ToLower(string(preserveContent))
+	for _, required := range []string{"wails build -clean=false", "join-path $buildroot 'archive'", "copy-item", "path escaped the repository build jail"} {
+		if !strings.Contains(preserveScript, required) {
+			t.Fatalf("preserving build wrapper is missing %q", required)
+		}
+	}
+	if strings.Contains(preserveScript, "remove-item") || strings.Contains(preserveScript, "remove-all") {
+		t.Fatal("preserving build wrapper must not contain destructive filesystem operations")
 	}
 }
 

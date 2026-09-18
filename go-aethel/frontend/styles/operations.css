@@ -1,0 +1,54 @@
+/* STATUS: DIAMANT VGT SUPREME — operational focus surfaces. */
+body,button,input,textarea,select { font-weight:500; }
+h1,h2,h3,h4,h5,h6,strong,.white-text { color:var(--a-text); font-weight:700; }
+#view-sphere .sphere-background-container { position:absolute !important; inset:58px 0 70px !important; z-index:1 !important; pointer-events:none !important; background:radial-gradient(circle at 50% 45%,rgba(58,143,207,.12),transparent 28%),radial-gradient(ellipse at 50% 100%,rgba(88,48,145,.12),transparent 58%); }
+#view-sphere #workspace-sphere { position:absolute; width:min(72vw,900px) !important; height:min(72vw,900px) !important; border:0 !important; border-radius:50% !important; opacity:calc(var(--sphere-ambient-opacity) * .65); filter:blur(72px) !important; box-shadow:none !important; }
+.sphere-aethel-core { position:absolute; left:50%; top:47%; z-index:2 !important; width:220px; height:220px; transform:translate(-50%,-50%); border:0; border-radius:50%; color:#fff; background:transparent; cursor:pointer; pointer-events:auto; filter:drop-shadow(0 28px 55px rgba(0,0,0,.5)); opacity:0.65; transition:all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.sphere-aethel-core:hover { opacity:1; transform:translate(-50%,-50%) scale(1.05); }
+.sphere-aethel-core::before { content:""; position:absolute; inset:28px; border-radius:50%; background:radial-gradient(circle at 36% 31%,rgba(245,255,255,.92) 0 2%,#65ebff 8%,#4b8cf0 28%,#7955d8 58%,rgba(38,16,82,.9) 72%,rgba(4,14,25,.2) 74%); box-shadow:inset -25px -30px 45px rgba(4,3,20,.65),inset 18px 16px 24px rgba(255,255,255,.16),0 0 55px rgba(85,229,255,.35),0 0 100px rgba(165,140,255,.18); animation:aethel-core-breathe 4s ease-in-out infinite; }
+.sphere-aethel-core strong,.sphere-aethel-core small { position:absolute; left:50%; z-index:3; transform:translateX(-50%); text-shadow:0 2px 14px #001; pointer-events:none; }
+.sphere-aethel-core strong { bottom:-5px; font:700 13px/1 var(--a-font-tech); letter-spacing:.24em; }
+.sphere-aethel-core small { bottom:-25px; color:var(--a-text-soft); font:700 9px/1 var(--a-font-tech); letter-spacing:.15em; }
+.sphere-aethel-orbit { position:absolute; inset:8px; width:auto !important; height:auto !important; border:1px solid rgba(125,231,235,.23); border-radius:50%; animation:aethel-orbit 9s linear infinite; }
+.sphere-aethel-orbit::after { content:""; position:absolute; top:16%; right:12%; width:7px; height:7px; border-radius:50%; background:var(--a-cyan); box-shadow:0 0 15px var(--a-cyan); }
+.sphere-aethel-orbit.orbit-two { inset:0 22px; transform:rotate(65deg); animation-duration:12s; }
+.sphere-aethel-orbit.orbit-three { inset:22px 0; transform:rotate(125deg); animation-duration:15s; }
+.sphere-aethel-core[data-state="listening"]::before { box-shadow:0 0 55px rgba(90,225,180,.75),0 0 130px rgba(90,225,180,.3); animation-duration:1.3s; }
+.sphere-aethel-core[data-state="working"]::before { background:radial-gradient(circle at 36% 31%,#fff,#ffd88c 9%,#d89842 35%,#653c7e 66%,rgba(4,14,25,.2) 74%); animation-duration:.8s; }
+.sphere-aethel-core[data-state="answering"]::before { box-shadow:0 0 70px rgba(165,140,255,.8),0 0 150px rgba(85,229,255,.28); animation-duration:.55s; }
+.sphere-aethel-core[data-state="muted"]::before { background:radial-gradient(circle at 36% 31%,rgba(200,220,230,.3) 0 2%,#1c2833 18%,#0e161d 60%,rgba(4,14,25,.2) 74%); box-shadow:0 0 20px rgba(0,0,0,.6); filter:grayscale(0.8) opacity(0.4); animation:none; }
+.sphere-aethel-core[data-state="muted"] strong { color:rgba(255,255,255,0.4); }
+.sphere-aethel-core[data-state="muted"] small { color:var(--vgt-red, #ff5f56); }
+.neural-core-bubble .voice-sphere { isolation:isolate; }
+.neural-core-bubble .voice-sphere::before,.neural-core-bubble .voice-sphere::after { content:""; position:absolute; inset:-18px; z-index:-1; border:1px solid rgba(85,229,255,.22); border-radius:50%; animation:aethel-orbit 12s linear infinite; }
+.neural-core-bubble .voice-sphere::after { inset:-34px; border-color:rgba(165,140,255,.14); border-style:dashed; animation-duration:19s; animation-direction:reverse; }
+.neural-core-bubble .voice-sphere.listening { animation:sphereListening 1.5s ease-in-out infinite alternate !important; background:radial-gradient(circle at 35% 32%,#eaffff 0 2%,#55e5ff 10%,#5ae1b4 42%,#071625 78%) !important; box-shadow:0 0 65px rgba(90,225,180,.52),0 0 120px rgba(85,229,255,.2) !important; }
+.neural-core-bubble .voice-sphere.processing { animation:aethel-processing .85s ease-in-out infinite alternate !important; background:radial-gradient(circle at 35% 32%,#fff 0 2%,#ffd88c 11%,#d89842 40%,#41275f 76%) !important; box-shadow:0 0 70px rgba(239,187,97,.42),0 0 130px rgba(165,140,255,.18) !important; }
+.neural-core-bubble .voice-sphere.speaking,.neural-core-bubble .voice-sphere.listening.active-speech { animation:sphereSpeaking .48s ease-in-out infinite alternate !important; background:radial-gradient(circle at 35% 32%,#fff 0 2%,#bff8ff 11%,#a58cff 43%,#291548 78%) !important; box-shadow:0 0 75px rgba(165,140,255,.58),0 0 140px rgba(85,229,255,.22) !important; }
+@keyframes aethel-processing { from { transform:scale(.97) rotate(-3deg); border-radius:44% 56% 62% 38%/46% 42% 58% 54%; } to { transform:scale(1.07) rotate(4deg); border-radius:61% 39% 43% 57%/38% 61% 39% 62%; } }
+@keyframes aethel-core-breathe { 50% { transform:scale(1.045); filter:saturate(1.18) brightness(1.12); } }
+@keyframes aethel-orbit { to { rotate:360deg; } }
+.run-list-titlebar { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.run-list-titlebar .ds-section-title { margin:0; }
+.run-workspace.run-list-expanded { position:relative; overflow:hidden; }
+.run-workspace.run-list-expanded .run-list-panel { position:absolute; inset:14px; z-index:30; min-height:0; display:flex; flex-direction:column; background:rgba(5,16,24,.94) !important; backdrop-filter:blur(28px); box-shadow:var(--a-shadow-floating); }
+.run-workspace.run-list-expanded .run-list-container { flex:1; min-height:0; overflow:auto; }
+.vgt-code-sidebar,.vgt-code-sidebar section,.vgt-code-conversations,.vgt-code-files-section,.vgt-code-tree { min-width:0; max-width:100%; box-sizing:border-box; }
+.vgt-code-conversations,.vgt-code-tree { width:100%; overflow-x:hidden; padding-right:3px; }
+.vgt-code-conversation,.vgt-code-tree-item { width:calc(100% - 2px); max-width:calc(100% - 2px); box-sizing:border-box; }
+.vgt-code-tree-item > *,.vgt-code-conversation > * { min-width:0; }
+.vgt-code-tree-item span:last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* V4 boot field: layered stars, no dashboard grid. */
+.startup-splash { background:radial-gradient(circle at 50% 42%,#102238 0,#050915 34%,#010308 76%,#000 100%) !important; }
+.splash-stars { position:absolute; inset:-12%; pointer-events:none; background-image:radial-gradient(circle,rgba(255,255,255,.9) 0 1px,transparent 1.5px),radial-gradient(circle,rgba(85,229,255,.72) 0 1px,transparent 1.6px),radial-gradient(circle,rgba(165,140,255,.58) 0 1.2px,transparent 1.8px); background-size:113px 127px,179px 193px,251px 223px; background-position:17px 31px,71px 43px,131px 89px; opacity:.7; animation:starfield-drift 32s linear infinite; }
+.splash-stars.near { inset:-20%; background-size:223px 197px,307px 281px,401px 367px; filter:drop-shadow(0 0 5px rgba(85,229,255,.5)); opacity:.9; animation-duration:52s; animation-direction:reverse; }
+.startup-splash::before,.startup-splash::after { content:""; position:absolute; border-radius:50%; pointer-events:none; filter:blur(2px); }
+.startup-splash::before { width:70vw; height:70vw; left:-28vw; top:-32vw; background:radial-gradient(circle,rgba(85,229,255,.12),transparent 64%); }
+.startup-splash::after { width:66vw; height:66vw; right:-28vw; bottom:-36vw; background:radial-gradient(circle,rgba(165,140,255,.13),transparent 62%); }
+.splash-console { width:min(92vw,620px) !important; padding:34px 38px; border:0; border-radius:32px; background:radial-gradient(circle at 50% 8%,rgba(85,229,255,.075),transparent 42%); }
+.splash-emblem { width:148px !important; height:148px !important; border:0 !important; box-shadow:0 0 80px rgba(85,229,255,.34),0 0 150px rgba(165,140,255,.15) !important; }
+.splash-progress { height:3px !important; padding:0 !important; border:0 !important; background:rgba(255,255,255,.08) !important; }
+.splash-start-button { border-radius:999px !important; padding:13px 28px !important; }
+@keyframes starfield-drift { to { transform:translate3d(70px,45px,0) scale(1.025); } }
+@media (prefers-reduced-motion:reduce) { .sphere-aethel-core::before,.sphere-aethel-orbit { animation:none; } }

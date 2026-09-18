@@ -52,16 +52,15 @@ func (c *HazardJSONCollector) Collect(ctx context.Context) ([]intelligence.OSINT
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, fmt.Errorf("hazard source returned HTTP %d", resp.StatusCode)
 	}
-	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(resp.Header.Get("Content-Type"), ";")[0]))
-	if mediaType != "application/json" && mediaType != "application/geo+json" && !strings.HasSuffix(mediaType, "+json") {
-		return nil, errors.New("hazard source did not return JSON")
-	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxHazardPayloadBytes+1))
 	if err != nil {
 		return nil, err
 	}
 	if len(body) > maxHazardPayloadBytes {
 		return nil, errors.New("hazard source payload exceeds 4 MiB")
+	}
+	if err := validateHazardJSONPayload(resp.Header.Get("Content-Type"), body); err != nil {
+		return nil, err
 	}
 	switch c.cfg.Type {
 	case CollectorTypeEarthquakeGeoJSON:
@@ -71,6 +70,20 @@ func (c *HazardJSONCollector) Collect(ctx context.Context) ([]intelligence.OSINT
 	default:
 		return nil, errors.New("unsupported hazard collector type")
 	}
+}
+
+func validateHazardJSONPayload(contentType string, body []byte) error {
+	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	declaredJSON := mediaType == "application/json" || mediaType == "application/geo+json" || strings.HasSuffix(mediaType, "+json")
+	if !json.Valid(body) {
+		return errors.New("hazard source did not return valid JSON")
+	}
+	// Some trusted public hazard providers currently mislabel JSON as RSS/XML.
+	// Accept that exact compatibility case only after validating the actual bytes.
+	if !declaredJSON && mediaType != "application/rss+xml" {
+		return errors.New("hazard source returned an unsupported content type")
+	}
+	return nil
 }
 
 func validHazardCoordinates(lat, lon float64) bool {
@@ -199,7 +212,7 @@ func (c *HazardJSONCollector) parseVolcanoEONET(body []byte) ([]intelligence.OSI
 		events = append(events, intelligence.OSINTEvent{
 			ID: id, Title: "[volcano erupting] " + title,
 			Summary: "[volcano erupting] Aktives Vulkanereignis aus EONET-kompatibler Quelle: " + title,
-			Source: c.cfg.Name, SourceURL: c.cfg.URL, URL: boundedHazardText(sourceEvent.Link, 1024),
+			Source:  c.cfg.Name, SourceURL: c.cfg.URL, URL: boundedHazardText(sourceEvent.Link, 1024),
 			Domain: intelligence.DomainGeo, Timestamp: timestamp, Confidence: 0.85, Status: "raw", Lat: lat, Lon: lon, HasGeo: true,
 		})
 	}

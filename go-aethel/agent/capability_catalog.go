@@ -26,6 +26,11 @@ var runtimeCapabilities = []RuntimeCapability{
 	{ID: "ui_navigation", Tool: "navigate_ui", Description: "Switch Aethel's own view without desktop GUI automation.", Intents: []string{"tab", "ansicht", "bereich", "global watch", "live-globus", "live globus", "sphere", "sphäre", "personal core", "e-mail command", "mail tab", "run center", "agent tracker", "settings", "einstellungen"}},
 	{ID: "web_research", Tool: "web_browser", Description: "Search and read public web sources in Aethel's internal browser.", Intents: []string{"recherch", "websuche", "web search", "internet", "website", "webseite", "quelle finden"}},
 	{ID: "writer", Tool: "sphere_write_document", Description: "Create or replace visible content in the Sphere Writer.", Intents: []string{"writer", "gedicht", "geschichte", "dokument", "artikel schreiben"}},
+	{ID: "sphere_travel", Tool: "sphere_manage_trip", Description: "Create, plan, and update persistent trips with budget and itinerary in Sphere.", Intents: []string{"reise", "trip", "urlaub", "hotel", "flug", "reisen", "japan", "tokio", "städte", "staedte"}},
+	{ID: "sphere_planner", Tool: "sphere_manage_plan", Description: "Create structured plans, goals, and milestones in Sphere Master Planner.", Intents: []string{"plan erstellen", "meilenstein", "milestone", "projektplan", "roadmap", "quartalsziel"}},
+	{ID: "sphere_research", Tool: "sphere_research_capture", Description: "Clip research findings, citations, and evidence into the Sphere Research Desk.", Intents: []string{"recherche", "quelle speichern", "zitat", "beleg", "research desk", "clipping"}},
+	{ID: "sphere_doc_change", Tool: "sphere_propose_document_change", Description: "Propose a structured Track Changes diff in the Sphere Writer.", Intents: []string{"änderung vorschlagen", "aenderung vorschlagen", "track changes", "korrigiere", "umschreiben", "satz anpassen"}},
+	{ID: "sphere_send_to", Tool: "sphere_send_to", Description: "Transfer an object or clipping across Sphere apps.", Intents: []string{"send to", "sende an", "übertrage an", "uebertrage an", "in writer öffnen", "in reise einfügen"}},
 	{ID: "global_watch", Tool: "global_watch_nexus_context", Description: "Read Aethel's unified current intelligence and Global Watch state.", Intents: []string{"weltlage", "nachrichtenlage", "global watch", "osint", "lagebriefing", "geopolit", "aktuelle news"}},
 	{ID: "natural_hazards", Tool: "global_watch_natural_hazards_context", Description: "Read the isolated earthquake and volcano context after an explicit operator request.", Intents: []string{"erdbeben", "earthquake", "quake", "seismisch", "seismic", "vulkan", "volcano", "eruption", "naturgefahr", "natural hazard"}},
 	{ID: "agent_plan", Tool: "task_set_checklist", Description: "Create a visible execution checklist for a multi-step objective.", Intents: []string{"agentenplan", "agent plan", "agenten-team", "agent team", "aktionsplan", "checkliste"}},
@@ -71,7 +76,7 @@ func capabilityEffects(objective string, sphereActive bool) []string {
 	effects := make([]string, 0, len(capabilities))
 	for _, capability := range capabilities {
 		switch capability.ID {
-		case "weather", "personal_operations", "market", "mail_read", "mail_detail", "mail_manage", "mail_send", "ui_navigation", "web_research", "agent_plan", "writer", "global_watch", "natural_hazards":
+		case "weather", "personal_operations", "market", "mail_read", "mail_detail", "mail_manage", "mail_send", "ui_navigation", "web_research", "agent_plan", "writer", "sphere_travel", "sphere_planner", "sphere_research", "sphere_doc_change", "sphere_send_to", "global_watch", "natural_hazards":
 			effects = append(effects, capability.Tool)
 		}
 	}

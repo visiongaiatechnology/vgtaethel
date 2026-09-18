@@ -1,12 +1,16 @@
+// STATUS: DIAMANT VGT SUPREME
 package skills
 
 import (
-	"go-aethel/security"
 	"encoding/json"
 	"os"
 	"strings"
 	"testing"
+	"time"
+
+	"go-aethel/security"
 )
+
 
 func TestSecurityPoCPathTraversal(t *testing.T) {
 	// Setup workspace environment for test
@@ -96,3 +100,48 @@ func TestSecurityPoCResourceIDValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestMountFolderSkillWriteAndDuration(t *testing.T) {
+	tmpDir := t.TempDir()
+	var mountedDir string
+	var mountedAccess security.MountAccess
+	var mountedDuration time.Duration
+
+	InitState(nil, nil, nil, nil, nil,
+		func() []security.MountGrant {
+			return []security.MountGrant{{Path: mountedDir, Access: mountedAccess}}
+		},
+		func(dir string, access security.MountAccess, duration time.Duration) error {
+			mountedDir = dir
+			mountedAccess = access
+			mountedDuration = duration
+			return nil
+		},
+		nil, nil,
+	)
+
+	mountSkill := &MountFolderSkill{}
+	argsJSON, err := json.Marshal(map[string]interface{}{
+		"path":             tmpDir,
+		"access":           "write",
+		"duration_minutes": 1440,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := mountSkill.Execute(argsJSON)
+	if err != nil {
+		t.Fatalf("expected write mount to succeed, got error: %v", err)
+	}
+	if mountedAccess != security.MountWrite {
+		t.Fatalf("expected mounted access write, got %v", mountedAccess)
+	}
+	if mountedDuration != 1440*time.Minute {
+		t.Fatalf("expected 1440m duration, got %v", mountedDuration)
+	}
+	if !strings.Contains(result, "erfolgreich eingehängt") {
+		t.Fatalf("unexpected result: %s", result)
+	}
+}
+

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VGT AETHEL // BETA V3 · STRATEGIC COMMAND BUILD</title>
+    <title>VGT AETHEL // BETA V4 · SOVEREIGN INTELLIGENCE BUILD</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="aethel-ui-production.css">
     <link rel="stylesheet" href="inline-extracted.css">
@@ -11,13 +11,34 @@
     <link rel="stylesheet" href="vgt-components.css">
     <link rel="stylesheet" href="operator-workbench.css">
     <link rel="stylesheet" href="shadow-osint.css">
+	<link rel="stylesheet" href="vgt-code.css">
+    <link rel="stylesheet" href="vendor/cesium/Widgets/widgets.css">
+	<link rel="stylesheet" href="styles/tokens.css?v=400">
+	<link rel="stylesheet" href="styles/base.css?v=400">
+	<link rel="stylesheet" href="styles/shell.css?v=400">
+	<link rel="stylesheet" href="styles/materials.css?v=400">
+	<link rel="stylesheet" href="styles/components.css?v=400">
+	<link rel="stylesheet" href="styles/modules.css?v=400">
+	<link rel="stylesheet" href="styles/neural-core.css?v=400">
+	<link rel="stylesheet" href="styles/vgt-code.css?v=400">
+	<link rel="stylesheet" href="styles/global-watch.css?v=400">
+	<link rel="stylesheet" href="styles/operations.css?v=400">
+	<link rel="stylesheet" href="styles/responsive.css?v=400">
     <!-- sidebar expand + settings layout live in aethel-ui-production.css -->
 
     <script defer src="marked.min.js"></script>
+    <script>window.CESIUM_BASE_URL = 'vendor/cesium/';</script>
+    <script src="vendor/cesium/Cesium.js"></script>
 
     <script type='module' src='app.js'></script>
 </head>
 <body>
+    <div class="aethel-environment" aria-hidden="true">
+        <div class="aethel-environment-image"></div>
+        <div class="aethel-environment-aurora"></div>
+        <div class="aethel-environment-grid"></div>
+        <div class="aethel-environment-noise"></div>
+    </div>
     <!-- Background grid -->
     <div class="grid-pattern"></div>
     <div class="glow-orb orange"></div>
@@ -166,14 +187,14 @@
     </div>
 
     <!-- Main Application -->
-    <div id="app-container" class="app-layout">
+    <div id="app-container" class="app-layout aethel-shell">
         <!-- Header -->
-        <header class="glass-card header-bar">
+        <header class="glass-card header-bar top-system-bar">
             <div class="branding">
                 <img class="brand-mark" src="aethel.webp" alt="Aethel Emblem">
                 <div>
                     <h1>VGT <span class="white-text">AETHEL</span></h1>
-                    <p class="status-sub">BETA V3 :: <span id="current-mode-label" class="cyan-text">NEURAL CORE</span></p>
+                    <p class="status-sub">BETA V4 :: <span id="current-mode-label" class="cyan-text">NEURAL CORE</span></p>
                 </div>
             </div>
             
@@ -215,7 +236,7 @@
         </header>
 
         <!-- Main HUD Grid -->
-        <div class="hud-grid">
+        <div class="hud-grid aethel-workspace-grid">
             <!-- Sidebar: Navigation, Models and Config -->
             <aside class="glass-card sidebar">
                 <!-- Scrollable navigation content -->
@@ -239,10 +260,6 @@
                             <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             <span data-i18n="nav.personas">Personas</span>
                         </button>
-                        <button id="nav-btn-agent" class="nav-menu-btn">
-                            <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 17h6M9 12h6M9 7h6"/></svg>
-                            <span data-i18n="nav.agents">Agenten-Team</span>
-                        </button>
                         <button id="nav-btn-control" class="nav-menu-btn">
                             <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                             <span data-i18n="nav.operator">Live-Operator</span>
@@ -259,6 +276,10 @@
                         <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                     </div>
                     <div class="nav-section-content" data-section="workspace" id="nav-section-workspace">
+						<button id="nav-btn-code" class="nav-menu-btn vgt-code-nav">
+							<svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="8 9 4 12 8 15"/><polyline points="16 9 20 12 16 15"/><line x1="14" y1="5" x2="10" y2="19"/></svg>
+							<span>VGT Code</span><span class="vgt-code-nav-badge">AGENT</span>
+						</button>
                         <button id="nav-btn-sphere" class="nav-menu-btn">
                             <svg class="nav-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 2.3 3.8 5 3.8 8S14.5 17.7 12 20c-2.5-2.3-3.8-5-3.8-8S9.5 6.3 12 4z"/></svg>
                             <span data-i18n="nav.sphere">Sphere</span>
@@ -357,7 +378,7 @@
                         <div class="vgt-inline-0d8b38c2">
                             <div class="vgt-inline-564a99b3">
                                 <span>SYSTEM VERSION:</span>
-                                <span class="release-badge">BETA V3</span> <!-- synchronized with ProductVersion=1.0.0-beta.3 -->
+                                <span class="release-badge">BETA V4</span> <!-- synchronized with ProductVersion=1.0.0-beta.4 -->
                             </div>
                             <button id="btn-donation" class="cyber-button font-mono vgt-inline-24a44af3">❤️ UNTERSTÜTZEN</button>
                         </div>
@@ -374,7 +395,7 @@
             </aside>
 
             <!-- Dynamic Viewport Area (Takes 1fr) -->
-            <div class="console-container main-viewport vgt-inline-1d688432">
+            <div class="console-container main-viewport workspace-surface vgt-inline-1d688432">
 
                 <!-- 1. VIEW PANEL: NEURAL CORE command center -->
                 <div id="view-core" class="viewport-panel neural-core-view">
@@ -446,7 +467,7 @@
                 <div id="view-shadow" class="viewport-panel hidden shadow-osint-view" aria-label="SHADOW OSINT Operations Mode"></div>
 
                 <!-- OSINT GLOBAL WATCH — VGT command center (UX inspired by modern geospatial HUDs; original code) -->
-                <div id="view-global-watch" class="viewport-panel hidden">
+                <div id="view-global-watch" class="viewport-panel hidden gw-extended-mode">
                     <div class="gw-header">
                         <div class="gw-header-left">
                             <div class="gw-brand-row">
@@ -523,11 +544,15 @@
                                     <div class="gw-layer-list font-mono" role="group" aria-label="Kartenebenen">
                                         <button type="button" class="gw-layer-row active" data-layer="borders"><span>Grenzen &amp; Land</span><span class="gw-layer-count" id="gw-cnt-borders">AN</span></button>
                                         <button type="button" class="gw-layer-row active" data-layer="daynight"><span>Tag / Nacht</span><span class="gw-layer-count">UTC</span></button>
-                                        <button type="button" class="gw-layer-row active" data-layer="cameras"><span>Kameras</span><span class="gw-layer-count" id="gw-cnt-cameras">—</span></button>
+                                        <button type="button" class="gw-layer-row active" data-layer="aircraft"><span>Flugzeuge (ADS-B)</span><span class="gw-layer-count" id="gw-cnt-aircraft">—</span></button>
+                                        <button type="button" class="gw-layer-row active" data-layer="military"><span>Militärflüge</span><span class="gw-layer-count" id="gw-cnt-military">—</span></button>
+                                        <button type="button" class="gw-layer-row active" data-layer="vessels"><span>Schiffsverkehr (AIS)</span><span class="gw-layer-count" id="gw-cnt-vessels">—</span></button>
                                         <button type="button" class="gw-layer-row active" data-layer="satellites"><span>Satelliten</span><span class="gw-layer-count" id="gw-cnt-sats">—</span></button>
+                                        <button type="button" class="gw-layer-row active" data-layer="cameras"><span>Kameras</span><span class="gw-layer-count" id="gw-cnt-cameras">—</span></button>
                                         <button type="button" class="gw-layer-row active" data-layer="cables"><span>Seekabel</span><span class="gw-layer-count">KARTE</span></button>
                                         <button type="button" class="gw-layer-row active" data-layer="news"><span>News / Events</span><span class="gw-layer-count" id="gw-cnt-news">—</span></button>
                                         <button type="button" class="gw-layer-row active" data-layer="earthquakes"><span>Erdbeben</span><span class="gw-layer-count" id="gw-cnt-quakes">—</span></button>
+                                        <button type="button" class="gw-layer-row active" data-layer="fires"><span>Wärme / Brände (FIRMS)</span><span class="gw-layer-count" id="gw-cnt-fires">—</span></button>
                                         <button type="button" class="gw-layer-row active" data-layer="volcanoes"><span>Vulkane</span><span class="gw-layer-count" id="gw-cnt-volcanoes">—</span></button>
                                         <button type="button" class="gw-layer-row active" data-layer="cities"><span>Städte</span><span class="gw-layer-count">REF</span></button>
                                         <button type="button" class="gw-layer-row active" data-layer="risks"><span>Risiko-Marker</span><span class="gw-layer-count" id="gw-cnt-risks">—</span></button>
@@ -544,13 +569,20 @@
                                     <div class="gw-domain-filters font-mono" role="group" aria-label="Themenfilter">
                                         <button type="button" class="gw-domain-filter active" data-domain="all">ALLE</button>
                                         <button type="button" class="gw-domain-filter" data-domain="geo">GEO</button>
+                                        <button type="button" class="gw-domain-filter" data-domain="conflict">KONFLIKT</button>
+                                        <button type="button" class="gw-domain-filter" data-domain="military">MILITÄR</button>
                                         <button type="button" class="gw-domain-filter" data-domain="cyber">CYBER</button>
+                                        <button type="button" class="gw-domain-filter" data-domain="political">POLITIK</button>
                                         <button type="button" class="gw-domain-filter" data-domain="economic">WIRTSCHAFT</button>
+                                        <button type="button" class="gw-domain-filter" data-domain="energy">ENERGIE</button>
+                                        <button type="button" class="gw-domain-filter" data-domain="infrastructure">INFRASTRUKTUR</button>
+                                        <button type="button" class="gw-domain-filter" data-domain="natural">NATUR</button>
+                                        <button type="button" class="gw-domain-filter" data-domain="space">SPACE</button>
                                         <button type="button" class="gw-domain-filter" data-domain="humanitarian">HUMANITÄR</button>
                                     </div>
                                 </div>
                             </div>
-                            <div class="gw-rail-section gw-layer-legend-rail" aria-label="Legende Naturgefahren">
+                            <div id="gw-legend-section" class="gw-rail-section gw-layer-legend-rail" aria-label="Legende Naturgefahren">
                                 <div class="gw-rail-head">LEGENDE</div>
                                 <div class="gw-hazard-legend font-mono">
                                     <span class="gw-hz-chip gw-hz-green">Erdbeben ≤ M2.5</span>
@@ -567,20 +599,31 @@
                         <!-- CENTER: Globe canvas -->
                         <div class="gw-globe-panel">
                             <div id="osint-globe" class="gw-globe-stage">
+                                <div class="gw-extended-commandbar" role="toolbar" aria-label="Global Watch Ansichtsmodus">
+                                    <span><strong>GLOBAL WATCH</strong> // CESIUM OPERATIONS VIEW</span>
+                                    <button type="button" id="gw-research-mode-btn" class="gw-tool-btn">RESEARCH / KI MODUS</button>
+                                </div>
                                 <div id="gw-map-coords" class="gw-map-coords font-mono" aria-live="polite">LAT — · LON — · SCALE —</div>
                                 <div id="gw-risk-hud" class="gw-risk-hud gw-float-panel" role="region" aria-label="Regionales Risiko">
                                     <div id="gw-risk-hud-head" class="gw-risk-hud-head gw-float-drag-handle" title="Ziehen zum Verschieben">
-                                        <span>REGIONALES RISIKO</span>
+                                        <span>REGIONALES RISIKO &amp; SPANNUNGEN</span>
                                         <span class="gw-risk-hud-head-actions">
                                             <span class="gw-risk-hud-live">LIVE</span>
                                             <button type="button" id="gw-risk-hud-collapse" class="gw-tool-btn" aria-expanded="true" title="Ein-/ausklappen">▾</button>
                                         </span>
                                     </div>
+                                    <div class="gw-hud-tab-row font-mono" style="display:flex; gap:6px; padding:4px 8px; border-bottom:1px solid rgba(0,240,255,0.2);">
+                                        <button type="button" id="gw-tab-risk-countries" class="gw-hud-tab active" style="background:none; border:none; color:var(--vgt-cyan); font-size:9px; cursor:pointer; font-weight:700;">LÄNDER-RISIKO</button>
+                                        <button type="button" id="gw-tab-risk-tensions" class="gw-hud-tab" style="background:none; border:none; color:var(--vgt-text-dim); font-size:9px; cursor:pointer; font-weight:700;">SPANNUNGEN &amp; KONFLIKTE</button>
+                                    </div>
                                     <div id="gw-risk-hud-body" class="gw-risk-hud-body">
                                         <div id="gw-risk-hud-list" class="gw-risk-hud-list">
                                             <div class="gw-risk-empty">Wird geladen…</div>
                                         </div>
-                                        <button type="button" id="gw-risk-explain-hint" class="gw-risk-hint">Klick: KI-Text + Referenzen · Dblclick: Explain-Score</button>
+                                        <div id="gw-tension-hud-list" class="gw-risk-hud-list hidden">
+                                            <div class="gw-risk-empty">Spannungs-Matrix wird initialisiert…</div>
+                                        </div>
+                                        <button type="button" id="gw-risk-explain-hint" class="gw-risk-hint">Klick: KI-Text + Fokus · Dblclick: Explain-Score</button>
                                     </div>
                                 </div>
                                 <div id="gw-selection-panel" class="gw-selection-panel hidden" role="dialog" aria-label="Ausgewählte Meldung">
@@ -598,7 +641,23 @@
                                         <button type="button" id="gw-selection-compose" class="gw-tool-btn" data-i18n="gw.compose">BEITRAG ERSTELLEN</button>
                                         <button type="button" id="gw-selection-ask-chat" class="gw-tool-btn" data-i18n="gw.discuss">MIT AETHEL BESPRECHEN</button>
                                         <button type="button" id="gw-selection-promote" class="gw-tool-btn">→ CASE</button>
+                                        <button type="button" id="gw-selection-open-shadow" class="gw-tool-btn">IN SHADOW ÖFFNEN</button>
                                         <button type="button" id="gw-selection-focus" class="gw-tool-btn">FOKUSSIEREN</button>
+                                        <button type="button" id="gw-selection-track" class="gw-tool-btn">TRACK</button>
+                                    </div>
+                                </div>
+                                <div id="gw-contact-hud" class="gw-contact-hud gw-float-panel" role="region" aria-label="Local Contacts 250km">
+                                    <div id="gw-contact-hud-head" class="gw-contact-hud-head gw-float-drag-handle" title="Ziehen zum Verschieben">
+                                        <span class="font-mono">LOCAL CONTACTS (250 KM)</span>
+                                        <span class="gw-contact-hud-head-actions">
+                                            <span class="gw-risk-hud-live font-mono">RADAR</span>
+                                            <button type="button" id="gw-contact-hud-collapse" class="gw-tool-btn" aria-expanded="true" title="Ein-/ausklappen">▾</button>
+                                        </span>
+                                    </div>
+                                    <div id="gw-contact-hud-body" class="gw-contact-hud-body">
+                                        <div id="gw-contact-roster-list" class="gw-contact-roster-list">
+                                            <div class="gw-contact-empty">Wird synchronisiert…</div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div id="gw-explain-drawer" class="gw-explain-drawer hidden" role="dialog" aria-label="Risiko-Erklärung">
@@ -611,7 +670,23 @@
                             </div>
                             <div class="gw-globe-footer">
                                 <div class="gw-globe-footer-row">
-                                    <div class="gw-globe-label">LIVE-ERDKUGEL · LOKAL · OHNE CDN</div>
+                                    <button type="button" id="globe-mode-toggle-btn" class="gw-tool-btn gw-mode-btn active-3d" title="Exklusiver fotorealistischer 3D Cesium Globus">ENGINE: CESIUM 3D (ACTIVE)</button>
+                                    <button type="button" id="gw-extended-mode-btn" class="gw-tool-btn" aria-pressed="true" title="Große Cesium-Lageansicht mit schwebenden Widgets">EXTENDED VIEW</button>
+                                    <select id="gw-map-provider-select" class="gw-sensor-select font-mono" title="Kartenebenen Provider">
+                                        <option value="ARCGIS_SATELLITE">MAP: ARCGIS SATELLITE (HIGH-RES)</option>
+                                        <option value="GOOGLE_3D">MAP: GOOGLE 3D TILES</option>
+                                        <option value="CARTO_DARK">MAP: CARTO DARK</option>
+                                        <option value="CARTO_VOYAGER">MAP: CARTO VOYAGER</option>
+                                        <option value="CESIUM_ION">MAP: CESIUM ION BING</option>
+                                    </select>
+                                    <select id="gw-sensor-shader-select" class="gw-sensor-select font-mono" title="Sensor Shader Filter">
+                                        <option value="NORMAL">SENSOR: NORMAL</option>
+                                        <option value="FLIR_WHITE_HOT">FLIR WHITE-HOT</option>
+                                        <option value="FLIR_IRONBOW">FLIR IRONBOW</option>
+                                        <option value="NVG_GREEN">NVG NIGHT VISION</option>
+                                        <option value="CRT_HUD">CRT HUD SCANLINE</option>
+                                    </select>
+                                    <div class="gw-globe-label font-mono">GEOINT: <span id="gw-cnt-geoint-total">0</span> ENTITIES</div>
                                     <button type="button" id="globe-reset-btn" class="gw-tool-btn">ANSICHT ZURÜCKSETZEN</button>
                                 </div>
                                 <div class="gw-timeline" id="gw-timeline" role="region" aria-label="Zeitachse">
@@ -652,7 +727,10 @@
                                 <span class="gw-feed-refresh-info" id="gw-feed-poll-label">AUTO-SYNC</span>
                                 <span class="gw-feed-src-label">HTTPS · LOKAL</span>
                             </div>
-                            <section class="gw-hazard-panel" aria-labelledby="gw-hazard-title">
+                            <div id="gw-hazard-splitter" class="gw-splitter-v" title="Ziehen zum Vergrößern/Verkleinern des Naturereignisse-Panels">
+                                <div class="gw-splitter-handle"></div>
+                            </div>
+                            <section class="gw-hazard-panel" id="gw-hazard-panel" aria-labelledby="gw-hazard-title">
                                 <div class="gw-feed-header gw-hazard-header">
                                     <div class="gw-feed-header-left">
                                         <span id="gw-hazard-title" class="gw-feed-title">Naturereignisse</span>
@@ -715,14 +793,58 @@
                                     </div>
                                     <p class="gw-settings-hint">Steuert Kartenqualität, Live-Bewegung, Feed-Menge und lokale Aktualisierung unmittelbar.</p>
                                     <div class="gw-settings-form-grid">
-                                        <label class="gw-settings-field"><span>Renderqualität</span><select id="gw-render-quality"><option value="performance">Performance</option><option value="balanced">Ausgewogen</option><option value="ultra">Ultra</option></select></label>
+                                        <label class="gw-settings-field"><span>Renderqualität</span><select id="gw-render-quality"><option value="power_saver">Power Saver</option><option value="balanced">Ausgewogen</option><option value="high">Hoch</option><option value="ultra">Ultra</option><option value="custom">Benutzerdefiniert</option></select></label>
                                         <label class="gw-settings-field"><span>Auto-Sync</span><select id="gw-auto-refresh"><option value="0">Aus</option><option value="30">30 Sekunden</option><option value="60">60 Sekunden</option><option value="120">2 Minuten</option><option value="300">5 Minuten</option></select></label>
                                         <label class="gw-settings-field"><span>Feed-Limit</span><select id="gw-feed-limit"><option value="100">100</option><option value="200">200</option><option value="500">500</option><option value="1000">1.000</option></select></label>
                                         <label class="gw-settings-field"><span>Pin-Clustering</span><select id="gw-cluster-mode"><option value="compact">Kompakt</option><option value="balanced">Ausgewogen</option><option value="precise">Präzise</option></select></label>
-                                        <label class="gw-settings-field"><span>Hazard-FPS</span><select id="gw-hazard-fps"><option value="2">2 FPS</option><option value="4">4 FPS</option><option value="6">6 FPS</option><option value="8">8 FPS</option></select></label>
-                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-idle-rotation"><span>Globus im Leerlauf drehen</span></label>
-                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-hazard-animation"><span>Naturgefahren animieren</span></label>
                                     </div>
+                                    <div class="gw-settings-divider"></div>
+                                    <div class="gw-settings-section-head"><h3>3D GEOINT &amp; Grafik-Leistung</h3><span class="gw-settings-state">CESIUM ENGINE</span></div>
+                                    <div class="gw-settings-form-grid">
+                                        <label class="gw-settings-field"><span>Max. 3D-Objekte</span><select id="gw-max-3d-entities"><option value="250">250 (Sparsam)</option><option value="500">500</option><option value="1000">1.000 (Mittel)</option><option value="2500" selected>2.500 (Standard)</option><option value="5000">5.000 (Hoch)</option><option value="10000">10.000 (Maximal)</option></select></label>
+                                        <label class="gw-settings-field"><span>Ziel-Framerate</span><select id="gw-target-fps"><option value="24">24 FPS (Sparsam)</option><option value="30">30 FPS</option><option value="45">45 FPS (Ausgewogen)</option><option value="60" selected>60 FPS (Flüssig)</option></select></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-enable-atmosphere" checked><span>3D-Atmosphäre &amp; Sonnenlicht</span></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-enable-trails" checked><span>Flugpfade (Breadcrumb Trails)</span></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-enable-tensions" checked><span>Geopolitische Spannungsbögen</span></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-dynamic-quality" checked><span>Dynamische Qualität (Hysterese)</span></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-post-processing" checked><span>Sensor-Postprocessing</span></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-diagnostics-hud"><span>Performance-Diagnostik</span></label>
+                                        <label class="gw-settings-field"><span>Engine</span><select id="gw-renderer-mode" disabled><option value="enhanced">Cesium 3D</option></select></label>
+                                        <label class="gw-settings-field"><span>Terrain</span><select id="gw-terrain-quality"><option value="off">Aus</option><option value="low">Niedrig</option><option value="medium">Mittel</option><option value="high">Hoch</option><option value="ultra">Ultra</option></select></label>
+                                        <label class="gw-settings-field"><span>3D-Tiles</span><select id="gw-tiles-quality"><option value="low">Niedrig</option><option value="medium">Mittel</option><option value="high">Hoch</option><option value="ultra">Ultra</option></select></label>
+                                        <label class="gw-settings-field"><span>Screen-Space Error</span><input id="gw-screen-space-error" type="number" min="1" max="16" step="0.25"></label>
+                                        <label class="gw-settings-field"><span>Netzwerk-Requests</span><input id="gw-network-requests" type="number" min="4" max="64" step="1"></label>
+                                        <label class="gw-settings-field"><span>Objekt-Sichtweite</span><select id="gw-entity-distance"><option value="5000000">5.000 km</option><option value="12000000">12.000 km</option><option value="20000000">20.000 km</option><option value="50000000">Global</option></select></label>
+                                        <label class="gw-settings-field"><span>Label-Sichtweite</span><select id="gw-label-distance"><option value="180000">180 km</option><option value="500000">500 km</option><option value="900000">900 km</option><option value="1500000">1.500 km</option></select></label>
+                                        <label class="gw-settings-field"><span>Modell-Sichtweite</span><select id="gw-model-distance"><option value="10000">10 km</option><option value="50000">50 km</option><option value="150000">150 km</option><option value="500000">500 km</option></select></label>
+                                        <label class="gw-settings-field"><span>Trail-Länge</span><input id="gw-trail-length" type="number" min="0" max="30" step="1"></label>
+                                        <label class="gw-settings-field"><span>Trail-Decimation</span><input id="gw-trail-density" type="number" min="1" max="8" step="1"></label>
+                                        <label class="gw-settings-field"><span>Aircraft Sync</span><select id="gw-aircraft-update"><option value="5">5 s</option><option value="12">12 s</option><option value="30">30 s</option><option value="60">60 s</option></select></label>
+                                        <label class="gw-settings-field"><span>OSINT Sync</span><select id="gw-osint-update"><option value="15">15 s</option><option value="30">30 s</option><option value="60">60 s</option><option value="120">120 s</option></select></label>
+                                        <label class="gw-settings-field"><span>GEO-Clustering</span><select id="gw-geo-clustering"><option value="off">Aus</option><option value="light">Leicht</option><option value="adaptive">Adaptiv</option><option value="aggressive">Aggressiv</option></select></label>
+                                        <label class="gw-settings-field"><span>Postprocessing</span><select id="gw-post-processing-level"><option value="off">Aus</option><option value="low">Niedrig</option><option value="full">Voll</option></select></label>
+                                        <label class="gw-settings-field"><span>HUD-Dichte</span><select id="gw-hud-density"><option value="minimal">Minimal</option><option value="standard">Standard</option><option value="dense">Dicht</option></select></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-dynamic-sse" checked><span>Dynamischer Screen-Space Error</span></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-anti-aliasing" checked><span>Anti-Aliasing</span></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-fog" checked><span>Nebel</span></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-shadows"><span>Schatten</span></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-lighting" checked><span>Beleuchtung</span></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-high-res-textures"><span>Hochauflösende Texturen</span></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-sensor-effects" checked><span>Sensor-Effekte</span></label>
+                                        <label class="gw-settings-switch"><input type="checkbox" id="gw-auto-lod" checked><span>Automatisches LOD</span></label>
+                                        <label class="gw-settings-field"><span>Risiko-Flächen ab Höhe</span><select id="gw-risk-min-altitude"><option value="500000">500 km</option><option value="1500000">1.500 km</option><option value="2500000">2.500 km</option><option value="3000000">3.000 km</option><option value="5000000">5.000 km</option></select></label>
+                                        <label class="gw-settings-field"><span>Satelliten ab Höhe</span><select id="gw-satellite-min-altitude"><option value="500000">500 km</option><option value="1200000">1.200 km</option><option value="2000000">2.000 km</option><option value="2200000">2.200 km</option><option value="4000000">4.000 km</option></select></label>
+                                        <label class="gw-settings-field"><span>Flugzeuge bis Höhe</span><select id="gw-aircraft-max-altitude"><option value="500000">500 km</option><option value="1000000">1.000 km</option><option value="1800000">1.800 km</option><option value="3000000">3.000 km</option><option value="6000000">6.000 km</option><option value="7000000">7.000 km</option></select></label>
+                                        <label class="gw-settings-field"><span>Schiffe bis Höhe</span><select id="gw-vessel-max-altitude"><option value="300000">300 km</option><option value="800000">800 km</option><option value="1500000">1.500 km</option><option value="2200000">2.200 km</option><option value="5000000">5.000 km</option></select></label>
+                                        <label class="gw-settings-field"><span>Kameras bis Höhe</span><select id="gw-camera-max-altitude"><option value="50000">50 km</option><option value="150000">150 km</option><option value="450000">450 km</option><option value="1000000">1.000 km</option><option value="2500000">2.500 km</option><option value="4500000">4.500 km</option></select></label>
+                                        <label class="gw-settings-field"><span>Naturereignisse bis Höhe</span><select id="gw-hazard-max-altitude"><option value="1000000">1.000 km</option><option value="2500000">2.500 km</option><option value="5500000">5.500 km</option><option value="10000000">10.000 km</option><option value="12000000">12.000 km</option><option value="20000000">Global</option></select></label>
+                                        <label class="gw-settings-field"><span>Städte bis Höhe</span><select id="gw-city-max-altitude"><option value="250000">250 km</option><option value="750000">750 km</option><option value="1500000">1.500 km</option><option value="2500000">2.500 km</option><option value="5000000">5.000 km</option></select></label>
+                                        <label class="gw-settings-field"><span>SHADOW-Vektoren ab Höhe</span><select id="gw-relation-min-altitude"><option value="0">Immer</option><option value="50000">50 km</option><option value="120000">120 km</option><option value="300000">300 km</option><option value="750000">750 km</option></select></label>
+                                        <label class="gw-settings-field"><span>SHADOW-Vektoren bis Höhe</span><select id="gw-relation-max-altitude"><option value="5000000">5.000 km</option><option value="10000000">10.000 km</option><option value="16000000">16.000 km</option><option value="20000000">20.000 km</option><option value="25000000">Global</option></select></label>
+                                    </div>
+                                    <div class="gw-settings-divider"></div>
+                                    <div class="gw-settings-section-head"><h3>Layer-Status</h3><span class="gw-settings-state">LIVE / DEGRADED / STALE / OFFLINE</span></div>
+                                    <div id="gw-geoint-layer-status" class="gw-connectors-list font-mono">Status wird beim nächsten GEOINT-Sync geladen.</div>
                                     <div class="gw-settings-divider"></div>
                                     <div class="gw-settings-section-head"><h3>Lokale Lageberichte</h3><span id="gw-schedule-status" class="gw-settings-state">—</span></div>
                                     <div class="gw-settings-form-grid">
@@ -936,6 +1058,64 @@
                         <div class="speech-status font-mono" id="speech-indicator">Mikrofon bereit <button id="btn-code-cartography" class="chat-cartography-button" type="button">◈ Code-Kartografie</button></div>
                     </div>
                 </div>
+
+				<!-- VGT CODE // SOVEREIGN CODING AGENT -->
+				<div id="view-code" class="viewport-panel vgt-code-view hidden" aria-label="VGT Code Agent Workspace">
+					<header class="vgt-code-commandbar">
+						<div class="vgt-code-brand"><span class="vgt-code-mark">V</span><div><strong>VGT CODE</strong><small>AGENTIC DEVELOPMENT ENVIRONMENT</small></div></div>
+						<div class="vgt-code-breadcrumb"><span id="vgt-code-project-name">No project open</span><span id="vgt-code-active-file">Conversation</span></div>
+						<div class="vgt-code-actions"><button id="vgt-code-exit-focus" class="vgt-code-exit-focus" type="button">← Zurück zu Aethel</button><span id="vgt-code-run-health" class="vgt-code-health" data-health="IDLE">SYSTEM BEREIT</span><span id="vgt-code-run-state" class="vgt-code-status">IDLE</span><button id="vgt-code-stop" class="vgt-code-stop hidden" type="button">■ Run stoppen</button><button id="vgt-code-save" type="button" disabled>Save <kbd>Ctrl S</kbd></button><button id="vgt-code-open-project" class="primary" type="button">Open project</button></div>
+					</header>
+					<div class="vgt-code-shell">
+						<aside class="vgt-code-sidebar">
+							<button id="vgt-code-new-conversation" class="vgt-code-new-task" type="button"><span>＋</span> New coding task</button>
+							<section><div class="vgt-code-section-title"><span>Conversations</span></div><div id="vgt-code-conversations" class="vgt-code-conversations"><p>No conversations yet</p></div></section>
+							<section class="vgt-code-files-section"><div class="vgt-code-section-title"><span>Project files</span><span id="vgt-code-tree-count">0</span></div><div id="vgt-code-tree" class="vgt-code-tree" role="tree" aria-label="Project files"><p>Select a project to browse files.</p></div></section>
+							<div class="vgt-code-sidebar-foot"><button id="vgt-code-close-project" type="button" disabled>Close project</button><button id="vgt-code-refresh" type="button" disabled>Refresh</button></div>
+						</aside>
+						<main class="vgt-code-main">
+							<nav id="vgt-code-tabs" class="vgt-code-tabs"><button class="active" data-code-tab="chat" type="button">Conversation</button><button data-code-tab="editor" type="button">Editor</button><button data-code-tab="plan" type="button">Implementation plan</button><button data-code-tab="team" type="button">Agenten-Team</button></nav>
+							<section id="vgt-code-empty" class="vgt-code-empty"><div class="vgt-code-empty-orbit"><span>V</span></div><p class="eyebrow">VGT CODE · LOCAL-FIRST</p><h2>What are we building?</h2><p>Open a project folder to give Aethel an explicit working environment. Nothing is selected automatically.</p><button id="vgt-code-empty-open" type="button">Open a project folder</button><small>Read/write access is limited to the folder you select.</small></section>
+							<section id="vgt-code-chat-pane" class="vgt-code-chat-pane hidden"><div id="vgt-code-chat-messages" class="vgt-code-chat-messages"><div class="vgt-code-welcome"><strong>VGT Code is ready.</strong><span>Describe a change, bug or feature. The agent will inspect the project, edit files and verify the result.</span></div></div><div class="vgt-code-composer"><textarea id="vgt-code-objective" placeholder="Ask VGT Code to build, debug or explain…"></textarea><div class="vgt-code-composer-bar"><div><select id="vgt-code-reasoning"><option value="auto">Auto reasoning</option><option value="low">Low reasoning</option><option value="medium">Medium reasoning</option><option value="high">High reasoning</option></select><select id="vgt-code-turns"><option value="8">8 turns</option><option value="16" selected>16 turns</option><option value="24">24 turns</option><option value="32">32 turns</option></select></div><button id="vgt-code-run" type="button" title="Start agent run">↑</button></div></div></section>
+							<section id="vgt-code-editor-pane" class="vgt-code-editor hidden"><div class="vgt-code-editor-head"><span id="vgt-code-editor-title">Select a file</span><span id="vgt-code-file-state">READ ONLY</span></div><div class="vgt-code-editor-body"><div id="vgt-code-lines" class="vgt-code-lines" aria-hidden="true">1</div><textarea id="vgt-code-content" spellcheck="false" aria-label="Code editor" disabled></textarea></div><div class="vgt-code-editor-foot"><span id="vgt-code-position">LN 1 · COL 1</span><span>UTF-8 · SNAPSHOT GUARDED</span></div></section>
+							<section id="vgt-code-plan-pane" class="vgt-code-plan hidden"><div class="vgt-code-plan-head"><span>Implementation plan</span><span id="vgt-code-run-id">NO ACTIVE SESSION</span></div><div id="vgt-code-run-report" class="vgt-code-run-report">No plan has been generated.</div><div id="vgt-code-event-list" class="vgt-code-event-list" role="log" aria-live="polite"><div class="vgt-code-empty-event">Execution events will appear here.</div></div></section>
+							<section id="vgt-code-diff-pane" class="vgt-code-diff hidden"><div class="vgt-code-diff-toolbar"><div><button id="vgt-code-diff-prev" type="button">‹ Previous</button><button id="vgt-code-diff-next" type="button">Next ›</button></div><strong id="vgt-code-diff-title">Review changes</strong><div><button id="vgt-code-diff-unified" class="active" type="button">Unified</button><button id="vgt-code-diff-split" type="button">Split</button><button id="vgt-code-diff-open" type="button">Open file</button><button id="vgt-code-diff-ask" type="button">Ask Coder</button></div></div><div id="vgt-code-diff-content" class="vgt-code-diff-content"></div></section>
+							<div id="vgt-code-livebar" class="vgt-code-livebar hidden"><strong>VGT CODER // <span id="vgt-code-live-state">ACTIVE</span></strong><span>Files <b id="vgt-code-live-files">0</b></span><span class="added">Added <b id="vgt-code-live-added">+0</b></span><span class="deleted">Deleted <b id="vgt-code-live-deleted">-0</b></span><span>Tests <b id="vgt-code-live-tests">0 / 0</b></span><span>Elapsed <b id="vgt-code-live-elapsed">00:00</b></span></div>
+						</main>
+						<aside class="vgt-code-environment">
+							<div class="vgt-code-env-head"><span>Environment</span><button id="vgt-code-open-runs" type="button">Run Center ↗</button></div>
+							<div class="vgt-code-env-card"><span class="icon">▣</span><div><strong id="vgt-code-env-project">No local project</strong><small>Explicit workspace selection</small></div></div>
+							<div class="vgt-code-model-config"><label>CODING MODEL<select id="vgt-code-worker-model"><option>Loading models…</option></select></label><label>TOOL ORCHESTRATOR<select id="vgt-code-orchestrator-model"><option>Loading models…</option></select></label></div>
+							<div class="vgt-code-env-row"><span>Workspace access</span><strong id="vgt-code-access-state">NONE</strong></div>
+							<div class="vgt-code-env-row"><span>Sicherheitsmodus</span><button id="vgt-code-mode-toggle" class="vgt-code-mode-btn full-access" type="button" title="Klicken für Umschaltung (Vollzugriff / Interaktiv)">VOLLZUGRIFF</button></div>
+							<div class="vgt-code-env-divider"></div><div class="vgt-code-changes-head"><span>Changes</span><strong id="vgt-code-changes-summary">0 files · +0 -0</strong></div><div id="vgt-code-scope" class="vgt-code-scope"><button class="active" data-scope="AGENT" type="button">Agent</button><button data-scope="WORKTREE" type="button">Worktree</button><button data-scope="BRANCH" type="button">Branch</button></div><div id="vgt-code-changes" class="vgt-code-changes"><p>No repository changes.</p></div>
+							<div class="vgt-code-env-divider"></div><div class="vgt-code-env-title">Validation</div><div id="vgt-code-validation" class="vgt-code-validation"><p>No validation results.</p></div>
+							<div class="vgt-code-env-divider"></div><div class="vgt-code-env-title">Run activity</div><div id="vgt-code-mini-activity" class="vgt-code-mini-activity">No active session</div>
+						</aside>
+					</div>
+					<div class="vgt-code-grid vgt-code-legacy-grid">
+						<aside class="vgt-code-explorer">
+							<div class="vgt-code-panel-head"><span>REPOSITORY</span><span id="legacy-vgt-code-tree-count">0 FILES</span></div>
+							<div id="legacy-vgt-code-tree" class="vgt-code-tree" role="tree" aria-label="Workspace files"></div>
+						</aside>
+						<main class="vgt-code-editor">
+							<div class="vgt-code-editor-head"><span>NO FILE SELECTED</span><span>READ ONLY</span></div>
+							<div class="vgt-code-editor-body"></div>
+						</main>
+						<aside class="vgt-code-agent">
+							<div class="vgt-code-panel-head"><span>AGENT TASK</span><span>DEVELOPER PROFILE</span></div>
+							<textarea id="legacy-vgt-code-objective" placeholder="Legacy coding task"></textarea>
+							<div class="vgt-code-task-options"><label><span>TURN LIMIT</span><select id="legacy-vgt-code-turns"><option>16</option></select></label><label><span>REASONING</span><select id="legacy-vgt-code-reasoning"><option value="auto">AUTO</option></select></label></div>
+							<button id="legacy-vgt-code-run" class="vgt-code-run" type="button">START AGENT RUN</button>
+							<div class="vgt-code-agent-meta"><span id="legacy-vgt-code-run-id">NO ACTIVE RUN</span><button id="legacy-vgt-code-open-runs" type="button">RUN CENTER</button></div>
+							<div id="legacy-vgt-code-run-report" class="vgt-code-run-report">Legacy report</div>
+						</aside>
+						<section class="vgt-code-events">
+							<div class="vgt-code-panel-head"><span>EXECUTION JOURNAL</span><span>APPEND-ONLY · REPLAYABLE</span></div>
+							<div id="legacy-vgt-code-event-list" class="vgt-code-event-list"></div>
+						</section>
+					</div>
+				</div>
 
                 <!-- 3. VIEW PANEL: AGENT BUILDER & WORKSPACE -->
                 <div id="view-agent" class="viewport-panel agent-workspace-view hidden">
@@ -1387,6 +1567,7 @@
                     <!-- Background Animated Sphere Container -->
                     <div class="sphere-background-container vgt-inline-a4fbdce0">
                         <div class="sphere-canvas idle vgt-inline-a66e9148" id="workspace-sphere"></div>
+						<button id="sphere-aethel-core" class="sphere-aethel-core" type="button" data-state="idle" aria-label="Aethel Sprachkern aktivieren"><span class="sphere-aethel-orbit orbit-one"></span><span class="sphere-aethel-orbit orbit-two"></span><span class="sphere-aethel-orbit orbit-three"></span><strong>AETHEL</strong><small id="sphere-aethel-core-status">BEREIT</small></button>
                     </div>
 
                     <!-- Virtual Desktop Workspace Area -->
@@ -1401,9 +1582,9 @@
                                     AETHEL WRITER // DOCUMENT CANVAS
                                 </span>
                                 <div class="window-controls vgt-inline-295a61e8">
-                                    <button class="win-btn vgt-inline-edadf6b6" id="win-editor-min" title="Minimieren"></button>
-                                    <button class="win-btn vgt-inline-bf74bb83" id="win-editor-max" title="Maximieren"></button>
-                                    <button class="win-btn vgt-inline-5cb322dd" id="win-editor-close" title="Schließen"></button>
+                                    <button class="win-btn win-btn-min" id="win-editor-min" title="Minimieren (−)">−</button>
+                                    <button class="win-btn win-btn-max" id="win-editor-max" title="Maximieren (⤢)">⤢</button>
+                                    <button class="win-btn win-btn-close" id="win-editor-close" title="Schließen (✕)">✕</button>
                                 </div>
                             </div>
                             <!-- Format Toolbar (WYSIWYG + export) -->
@@ -1456,9 +1637,9 @@
                                     AETHEL BROWSER // LIVE FEED
                                 </span>
                                 <div class="window-controls vgt-inline-295a61e8">
-                                    <button class="win-btn vgt-inline-edadf6b6" id="win-browser-min" title="Minimieren"></button>
-                                    <button class="win-btn vgt-inline-bf74bb83" id="win-browser-max" title="Maximieren"></button>
-                                    <button class="win-btn vgt-inline-5cb322dd" id="win-browser-close" title="Schließen"></button>
+                                    <button class="win-btn win-btn-min" id="win-browser-min" title="Minimieren (−)">−</button>
+                                    <button class="win-btn win-btn-max" id="win-browser-max" title="Maximieren (⤢)">⤢</button>
+                                    <button class="win-btn win-btn-close" id="win-browser-close" title="Schließen (✕)">✕</button>
                                 </div>
                             </div>
                             <!-- Mock Browser URL bar -->
@@ -1485,9 +1666,9 @@
                                     AETHEL RUN ENGINE // TERMINAL
                                 </span>
                                 <div class="window-controls vgt-inline-295a61e8">
-                                    <button class="win-btn vgt-inline-edadf6b6" id="win-terminal-min" title="Minimieren"></button>
-                                    <button class="win-btn vgt-inline-bf74bb83" id="win-terminal-max" title="Maximieren"></button>
-                                    <button class="win-btn vgt-inline-5cb322dd" id="win-terminal-close" title="Schließen"></button>
+                                    <button class="win-btn win-btn-min" id="win-terminal-min" title="Minimieren (−)">−</button>
+                                    <button class="win-btn win-btn-max" id="win-terminal-max" title="Maximieren (⤢)">⤢</button>
+                                    <button class="win-btn win-btn-close" id="win-terminal-close" title="Schließen (✕)">✕</button>
                                 </div>
                             </div>
                             <!-- Terminal Controls -->
@@ -1522,18 +1703,21 @@
 
                     </div>
                     <nav class="sphere-dock" aria-label="Sphere Apps">
-                        <button type="button" data-sphere-app="aethel" class="sphere-dock-app" title="Aethel Console"><span>◈</span>AETHEL</button>
-                        <button type="button" data-sphere-app="editor" class="sphere-dock-app" title="Writer"><span>✦</span>WRITER</button>
-                        <button type="button" data-sphere-app="browser" class="sphere-dock-app" title="Browser"><span>◌</span>BROWSER</button>
-                        <button type="button" data-sphere-app="terminal" class="sphere-dock-app" title="Terminal"><span>$</span>TERMINAL</button>
-                        <button type="button" data-sphere-app="workspace" class="sphere-dock-app" title="Workspace Dateien"><span>▤</span>WORKSPACE</button>
-                        <button type="button" data-sphere-app="runs" class="sphere-dock-app" title="Agent Runs"><span>◈</span>RUN DESK</button>
-                        <button type="button" data-sphere-app="live" class="sphere-dock-app" title="Aethel Live Flow"><span>⌁</span>LIVE FLOW</button>
-                        <button type="button" data-sphere-app="notes" class="sphere-dock-app" title="Scratch Notes"><span>✎</span>NOTES</button>
-                        <button type="button" data-sphere-app="weather" class="sphere-dock-app" title="Wetter"><span>☼</span>WETTER</button>
-                        <button type="button" data-sphere-app="market" class="sphere-dock-app" title="Marktkurse"><span>◇</span>MÄRKTE</button>
-                        <button type="button" data-sphere-app="tasks" class="sphere-dock-app" title="Automationen & Tasks"><span>⏰</span>TASKS</button>
-                        <button type="button" data-sphere-app="media" class="sphere-dock-app" title="Media Steuerung"><span>▶</span>MEDIA</button>
+                        <button type="button" data-app="dashboard" class="sphere-dock-item sphere-dock-app" title="Personal Dashboard"><span>◫</span>DASHBOARD</button>
+                        <button type="button" data-app="writer" class="sphere-dock-item sphere-dock-app" title="Aethel Writer (Canvas)"><span>✦</span>WRITER</button>
+                        <button type="button" data-app="browser" class="sphere-dock-item sphere-dock-app" title="Aethel Browser (Multi-Tab)"><span>◌</span>BROWSER</button>
+                        <button type="button" data-app="travel" class="sphere-dock-item sphere-dock-app" title="Trip Planner & Global Watch"><span>🗺</span>REISEN</button>
+                        <button type="button" data-app="planner" class="sphere-dock-item sphere-dock-app" title="Master Planner"><span>⏰</span>PLANNER</button>
+                        <button type="button" data-app="research" class="sphere-dock-item sphere-dock-app" title="Research Desk"><span>🔬</span>RESEARCH</button>
+                        <button type="button" data-app="files" class="sphere-dock-item sphere-dock-app" title="Vault Explorer"><span>▤</span>VAULT</button>
+                        <button type="button" data-app="mail" class="sphere-dock-item sphere-dock-app" title="Sphere Mail"><span>✉</span>MAIL</button>
+                        <button type="button" data-app="weather" class="sphere-dock-item sphere-dock-app" title="Wetter Pulse"><span>☼</span>WETTER</button>
+                        <button type="button" data-app="market" class="sphere-dock-item sphere-dock-app" title="Live Market Engine"><span>◇</span>MÄRKTE</button>
+                        <button type="button" data-app="terminal" class="sphere-dock-item sphere-dock-app" title="Aethel Terminal"><span>$</span>TERMINAL</button>
+                        <button type="button" data-app="runs" class="sphere-dock-item sphere-dock-app" title="Agent Runs"><span>◈</span>RUNS</button>
+                        <button type="button" data-app="live" class="sphere-dock-item sphere-dock-app" title="Live Flow"><span>⌁</span>FLOW</button>
+                        <button type="button" data-app="notes" class="sphere-dock-item sphere-dock-app" title="Scratch Notes"><span>✎</span>NOTES</button>
+                        <button type="button" data-app="aethel" class="sphere-dock-item sphere-dock-app" title="Aethel Console"><span>◈</span>AETHEL</button>
                     </nav>
 
                     <section id="sphere-help-dialog" class="sphere-help-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="sphere-help-title">
@@ -1626,7 +1810,7 @@
 
                     <!-- Tasks queue monitor -->
                     <section class="run-panel run-list-panel font-mono">
-                        <h4 class="ds-section-title">Aktive &amp; gespeicherte Runs</h4>
+                        <div class="run-list-titlebar"><h4 class="ds-section-title">Aktive &amp; gespeicherte Runs</h4><button id="run-list-expand" class="cyber-button font-mono" type="button" aria-pressed="false">Großansicht</button></div>
                         <div id="tasks-list-container" class="run-list-container">
                             <div class="run-center-empty">Lade Runs...</div>
                         </div>
@@ -1906,11 +2090,11 @@
         <div class="glass-card runtime-disclosure-card">
             <div class="vgt-inline-33901091">
                 <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></svg>
-                <h3 data-i18n="disclosure.title" class="vgt-inline-ac9f7ebc">BETA V3 RUNTIME DISCLOSURE</h3>
+                <h3 data-i18n="disclosure.title" class="vgt-inline-ac9f7ebc">BETA V4 RUNTIME DISCLOSURE</h3>
             </div>
             
             <div id="startup-disclosure-body" data-i18n="disclosure.body" class="vgt-inline-a21e66d6">
-                Dies ist VGT AETHEL Beta V3 — ein souveränes strategisches Intelligence OS, entwickelt von VisionGaiaTechnology.
+                Dies ist VGT AETHEL Beta V4 — ein souveränes Intelligence Operator OS, entwickelt von VisionGaiaTechnology.
 
 Die Nutzung der Software erfolgt vollständig auf eigene Verantwortung. Aethel besitzt weitreichende Berechtigungen (Shell-Befehle, Dateisystem-Zugriff, Tastatur- & Maus-Simulation). Unerwartete Aktionen oder Fehlfunktionen können Datenverlust oder Systeminstabilitäten verursachen.
             </div>
@@ -1968,16 +2152,16 @@ Die Nutzung der Software erfolgt vollständig auf eigene Verantwortung. Aethel b
         </div>
     </div>
 
-    <!-- Beta V3 Strategic Command Boot Sequence -->
+    <!-- Beta V4 Sovereign Intelligence Boot Sequence -->
     <div id="startup-splash-screen" class="startup-splash">
-        <div class="splash-grid"></div>
-        <div class="splash-scanline"></div>
+        <div class="splash-stars far"></div>
+        <div class="splash-stars near"></div>
         <section class="splash-console" aria-label="Aethel boot sequence">
             <div class="splash-orbit orbit-one"></div><div class="splash-orbit orbit-two"></div>
             <img class="splash-emblem" src="aethel.webp" alt="Aethel emblem">
             <p class="splash-kicker">VisionGaia Technology / Sovereign Runtime</p>
             <h1>AETHEL</h1>
-            <p class="splash-release">BETA V3 <span></span> STRATEGIC COMMAND BUILD</p>
+            <p class="splash-release">BETA V4 <span></span> SOVEREIGN INTELLIGENCE BUILD</p>
             <div class="splash-progress"><div class="splash-progress-value"></div></div>
             <div class="splash-readout"><span class="readout-dot"></span><span id="splash-status-text">BOOTING CORE KERNEL...</span></div>
             <p class="splash-note">POLICY GATE · NEXUS MEMORY · OPERATOR CONTROL</p>

@@ -1,36 +1,40 @@
-VGT AETHEL :: DEPLOYMENT PROTOCOL
+# AETHEL Beta V4 — Windows release protocol
 
-STATUS: PHASE V (DEPLOYMENT)
-TARGET: DOCKERIZED ENVIRONMENT
+The Wails application in `go-aethel/` is the authoritative product runtime. The Docker and
+legacy crate trees are development components and do not replace the Windows release gate.
 
-1. VORAUSSETZUNGEN
+## Build prerequisites
 
-Docker & Docker Compose installiert.
+- Windows 10/11 and WebView2
+- Go 1.26.5+
+- Wails CLI 2.15.0
+- Native compiler/toolchain required by the voice bindings
+- Inno Setup for the installer stage
+- Authenticode certificate for public artifacts
 
-Ein gültiger GROQ_API_KEY in der .env Datei im Root-Verzeichnis.
+## Verified source build
 
-2. GENESIS (Start System)
+```powershell
+cd go-aethel
+go test ./... -count=1
+go vet -buildvcs=false ./...
+govulncheck ./...
+.\scripts\build_aethel.bat
+```
 
-Erstelle eine .env Datei im Hauptverzeichnis:
+The build script intentionally preserves an existing `build/bin/vgt_workspace` directory.
+Never publish that directory. Release packages must be assembled from a clean staging root.
 
-GROQ_API_KEY=gsk_...dein_key_hier...
+## Public release gate
 
+1. Run the live provider/orchestrator E2E matrix.
+2. Build from the reviewed release-candidate commit in CI.
+3. Sign and timestamp the executable and installer.
+4. Verify signatures and SHA-256 checksums.
+5. Test install, startup, offline behavior, update and uninstall on a clean Windows VM.
+6. Publish the signed update manifest only after those checks pass.
 
-Starte die Sequenz:
+Required tag: `aethel-v1.0.0-beta.4`.
 
-docker-compose up --build -d
-
-
-3. ZUGRIFFSPUNKTE
-
-INTERFACE (UI): http://localhost:3001
-
-CORTEX (API): http://localhost:3000
-
-4. ARCHITEKTUR-NOTIZEN
-
-Security: Der API-Container nutzt distroless. Es gibt keine Shell im Container. docker exec wird fehlschlagen. Das ist ein Feature, kein Bug.
-
-Persistenz: Das Langzeitgedächtnis (Nexus) wird in ./vgt_workspace auf dem Host gemountet. Daten überleben Container-Neustarts.
-
-Networking: Das UI kommuniziert über das interne Docker-Netzwerk vgt_neural_net.
+No `.env`, key, certificate, workspace, chat, memory, audit, screenshot or diagnostic payload
+may enter the source archive or release artifact.

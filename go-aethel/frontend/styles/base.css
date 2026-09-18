@@ -1,0 +1,19 @@
+/* STATUS: DIAMANT VGT SUPREME — global rendering foundation. */
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--a-bg-0); color: var(--a-text); }
+body { font-family: var(--a-font-ui); font-size: 13px; line-height: 1.45; letter-spacing: -.005em; }
+*, *::before, *::after { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; }
+.font-mono, code, pre, kbd, .label, [class*="meta"], [class*="kicker"] { font-family: var(--a-font-tech); }
+.aethel-environment { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; background: var(--a-bg-0); }
+.aethel-environment-image { position: absolute; inset: -3%; background: linear-gradient(105deg, rgba(2,8,14,.7), rgba(2,8,14,.2) 45%, rgba(4,6,14,.54)), url("../assets/future/aethel-command-space-v1.png") center/cover no-repeat; filter: saturate(.72) contrast(1.04) brightness(.72); opacity: .76; }
+.aethel-environment-aurora { position:absolute; inset:0; background: radial-gradient(ellipse 45% 38% at 15% 23%, rgba(60,217,255,.15), transparent 72%), radial-gradient(ellipse 46% 42% at 84% 74%, rgba(165,140,255,.12), transparent 74%), radial-gradient(ellipse 32% 24% at 66% 8%, rgba(90,225,193,.08), transparent 75%); }
+.aethel-environment-grid { position:absolute; inset:0; opacity:.23; background-image: linear-gradient(rgba(132,215,236,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(132,215,236,.045) 1px, transparent 1px); background-size: 56px 56px; mask-image: linear-gradient(to bottom, transparent 0, #000 18%, #000 84%, transparent); }
+.aethel-environment-noise { position:absolute; inset:0; opacity:.18; background-image: radial-gradient(rgba(255,255,255,.13) .55px, transparent .65px); background-size: 5px 5px; mix-blend-mode:soft-light; }
+.grid-pattern, .glow-orb { display: none; }
+::selection { color:#021017; background:rgba(85,229,255,.7); }
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: rgba(1,8,13,.24); }
+::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 20px; background: rgba(126,181,198,.34) padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(85,229,255,.54) padding-box; }
+:focus-visible { outline: 1px solid var(--a-cyan); outline-offset: 2px; box-shadow: 0 0 0 3px rgba(85,229,255,.11); }
+.hidden { display: none !important; }

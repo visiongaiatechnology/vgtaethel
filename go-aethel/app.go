@@ -1,3 +1,4 @@
+// STATUS: DIAMANT VGT SUPREME
 package main
 
 import (
@@ -8,12 +9,16 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"go-aethel/agent"
+	"go-aethel/coder"
+	"go-aethel/geoint"
 	"go-aethel/handlers"
 	"go-aethel/intelligence"
 	"go-aethel/mailbox"
@@ -31,6 +36,9 @@ import (
 type App struct {
 	ctx        context.Context
 	operations *personal.OperationsService
+	geoint     *geoint.GeoIntService
+	codeMu     sync.Mutex
+	codePath   string
 }
 
 func NewApp() *App {
@@ -94,8 +102,12 @@ func (a *App) startup(ctx context.Context) {
 	registry.Register(&skills.WeatherSkill{})
 	registry.Register(&skills.PersonalOperationsSkill{Store: personalStore, Inbox: operationsStore})
 	registry.Register(&skills.MarketSkill{})
-	registry.Register(&skills.SphereMarketOverviewSkill{})
 	registry.Register(&skills.SphereWriteDocumentSkill{})
+	registry.Register(&skills.SphereProposeDocumentChangeSkill{})
+	registry.Register(&skills.SphereManageTripSkill{})
+	registry.Register(&skills.SphereManagePlanSkill{})
+	registry.Register(&skills.SphereResearchCaptureSkill{})
+	registry.Register(&skills.SphereSendToSkill{})
 	registry.Register(&skills.MediaControlSkill{})
 	registry.Register(&skills.YouTubeControlSkill{})
 	registry.Register(&skills.VisionContextSkill{})
@@ -153,13 +165,22 @@ func (a *App) startup(ctx context.Context) {
 	registry.Register(&skills.MailSendMessageSkill{})
 	registry.Register(&skills.MailReadMessageSkill{})
 	registry.Register(&skills.MailManageSkill{})
+	registry.Register(&skills.GeoContactsNearestSkill{})
+	registry.Register(&skills.GeoFocusSkill{})
+	registry.Register(&skills.GeoTrackSkill{})
+	registry.Register(&skills.GeoLayerEnableSkill{})
+	registry.Register(&skills.GeoCorrelateSkill{})
+	registry.Register(&skills.GeoCCTVLookupSkill{})
 
-	gKey, oKey, dsKey, gemKey, claudeKey, mDirs, mounts := loadConfig()
+	gKey, oKey, dsKey, gemKey, claudeKey, mDirs, mounts, permMode := loadConfig()
 
 	guard := security.NewSecurityGuard()
 	leases := security.NewLeaseManager("./vgt_workspace/active_leases.json")
 	audit := security.NewAuditLogger("./vgt_workspace/security_audit.json")
 	policy := security.NewPolicyEngine(guard, leases, audit)
+	if permMode != "" {
+		policy.SetMode(security.PermissionMode(permMode))
+	}
 	approvals := security.NewApprovalManager("./vgt_workspace/approval_grants.json")
 
 	// ─── Sherpa-ONNX Offline TTS (PRIMÄR) ───
@@ -192,12 +213,18 @@ func (a *App) startup(ctx context.Context) {
 		})
 	})
 	runEngine := agent.NewRunEngine("./vgt_workspace/agent_runs.json")
+	coderManager := coder.NewManager("./vgt_workspace/coder_sessions.sealed")
 
-	// Intelligence + OSINT before InitState (skills/handlers need them)
+	// Intelligence + OSINT + GEOINT before InitState (skills/handlers need them)
 	osintEngine := osint.NewOSINTEngine("./vgt_workspace/osint_feeds.json")
 	shadowService := osint.NewShadowService("./vgt_workspace/shadow_osint.enc")
+	geointService := geoint.NewGeoIntService("./vgt_workspace/geoint", "")
+	geointService.AttachShadow(shadowService)
+	geointService.Start(ctx)
+	a.geoint = geointService
 	sharedIntelBus := intelligence.NewEventBus()
 	intelligence.SharedIntelStore = intelligence.NewStore("./vgt_workspace/intel_shared.json", sharedIntelBus)
+	geointService.AttachIntelligence(intelligence.SharedIntelStore)
 	if err := intelligence.MigrateLegacyIntelligence("./vgt_workspace/intelligence_core.json", intelligence.SharedIntelStore); err != nil {
 		log.Printf("[INTELLIGENCE] Legacy migration failed closed: %v", err)
 	}
@@ -274,7 +301,10 @@ func (a *App) startup(ctx context.Context) {
 	}
 
 	// Dependency injection into packages (after all services exist)
-	security.InitState(state.MountAllows)
+	security.InitState(state.MountAllows, func() string {
+		root, _ := handlers.CurrentCodeWorkspaceRoot()
+		return root
+	})
 	skills.InitState(state.intelSources, state.personal, state.intelMonitor, state.intel, state.osint, state.GetMounts, state.AddMount, state.MountAllows, handlers.RecordFileChange)
 	agent.InitState(state.runs, state.policy, state.skills, state.providers, state.audit, state.GetAPIKey)
 	osint.InitState(state.osint)
@@ -290,7 +320,10 @@ func (a *App) startup(ctx context.Context) {
 		state.saveConfig, state.GetMountedDirs, state.GetMounts,
 	)
 	handlers.InitOperations(operationsStore)
+	handlers.InitCoderManager(coderManager)
 	handlers.InitShadowService(shadowService)
+	handlers.InitGeoInt(geointService)
+	skills.SetGeoIntService(geointService)
 	// Agent chat loop reuses HTTP chat handler without importing handlers (avoids cycle).
 	agent.ChatHandler = handlers.HandleChat
 
@@ -320,6 +353,10 @@ func (a *App) startup(ctx context.Context) {
 	APIRouter.HandleFunc("/v1/release/check", handlers.HandleReleaseCheck)
 	APIRouter.HandleFunc("/v1/chat", handlers.HandleChat)
 	APIRouter.HandleFunc("/v1/chat/runs", handlers.HandleChatAgentRuns)
+	APIRouter.HandleFunc("/v1/code/workspace/tree", handlers.HandleCodeWorkspaceTree)
+	APIRouter.HandleFunc("/v1/code/workspace/file", handlers.HandleCodeWorkspaceFile)
+	APIRouter.HandleFunc("/v1/coder/sessions", handlers.HandleCoderSessions)
+	APIRouter.HandleFunc("/v1/coder/sessions/", handlers.HandleCoderSessionPath)
 	APIRouter.HandleFunc("/v1/chat/checklist", handlers.HandleChecklist)
 	APIRouter.HandleFunc("/v1/tools/execute", handlers.HandleToolExecute)
 	APIRouter.HandleFunc("/browser/screenshot.png", handlers.HandleBrowserScreenshot)
@@ -339,6 +376,7 @@ func (a *App) startup(ctx context.Context) {
 	APIRouter.HandleFunc("/v1/security/leases", handlers.HandleSecurityLeases)
 	APIRouter.HandleFunc("/v1/security/audit", handlers.HandleSecurityAudit)
 	APIRouter.HandleFunc("/v1/security/status", handlers.HandleSecurityStatus)
+	APIRouter.HandleFunc("/v1/security/mode", handlers.HandleSecurityMode)
 	APIRouter.HandleFunc("/v1/memory", handlers.HandleMemory)
 	APIRouter.HandleFunc("/v1/memory/explain", handlers.HandleMemoryExplain)
 	APIRouter.HandleFunc("/v1/memory/export", handlers.HandleMemoryExport)
@@ -355,6 +393,24 @@ func (a *App) startup(ctx context.Context) {
 	APIRouter.HandleFunc("/v1/markets", handlers.HandleMarketQuotes)
 	APIRouter.HandleFunc("/v1/sphere/document", handlers.HandleSphereDocument)
 	APIRouter.HandleFunc("/v1/sphere/workspace", handlers.HandleSphereWorkspace)
+	APIRouter.HandleFunc("/v1/sphere/state", handlers.HandleSphereState)
+	APIRouter.HandleFunc("/v1/sphere/objects", handlers.HandleSphereObjects)
+	APIRouter.HandleFunc("/v1/sphere/context", handlers.HandleSphereContext)
+	APIRouter.HandleFunc("/v1/sphere/send_to", handlers.HandleSphereSendTo)
+	APIRouter.HandleFunc("/v1/sphere/search", handlers.HandleSphereSearch)
+	APIRouter.HandleFunc("/v1/sphere/trips", handlers.HandleSphereTrips)
+	APIRouter.HandleFunc("/v1/sphere/trips/impact", handlers.HandleSphereTripImpact)
+	APIRouter.HandleFunc("/v1/sphere/documents", handlers.HandleSphereDocuments)
+	APIRouter.HandleFunc("/v1/sphere/documents/propose_change", handlers.HandleSphereDocumentProposeChange)
+	APIRouter.HandleFunc("/v1/sphere/documents/apply_change", handlers.HandleSphereDocumentApplyChange)
+	APIRouter.HandleFunc("/v1/sphere/plans", handlers.HandleSpherePlans)
+	APIRouter.HandleFunc("/v1/sphere/plans/task", handlers.HandleSpherePlanTask)
+	APIRouter.HandleFunc("/v1/sphere/research", handlers.HandleSphereResearch)
+	APIRouter.HandleFunc("/v1/sphere/research/clips", handlers.HandleSphereResearchClips)
+	APIRouter.HandleFunc("/v1/sphere/research/briefing", handlers.HandleSphereResearchBriefing)
+	APIRouter.HandleFunc("/v1/sphere/browser/tabs", handlers.HandleSphereBrowserTabs)
+	APIRouter.HandleFunc("/v1/sphere/browser/action", handlers.HandleSphereBrowserTabAction)
+	APIRouter.HandleFunc("/v1/sphere/browser/screenshot", handlers.HandleSphereBrowserScreenshot)
 	APIRouter.HandleFunc("/v1/secrets", handlers.HandleSecrets)
 	APIRouter.HandleFunc("/v1/settings", handlers.HandleSettings)
 	APIRouter.HandleFunc("/v1/settings/reset", handlers.HandleSettingsReset)
@@ -381,6 +437,17 @@ func (a *App) startup(ctx context.Context) {
 	APIRouter.HandleFunc("/v1/mail/action", handlers.HandleMailAction)
 	APIRouter.HandleFunc("/v1/mail/policies", handlers.HandleMailPolicies)
 	APIRouter.HandleFunc("/v1/mail/calendar", handlers.HandleMailCalendar)
+	APIRouter.HandleFunc("/v1/geoint/entities", handlers.HandleGeoIntEntities)
+	APIRouter.HandleFunc("/v1/geoint/relations", handlers.HandleGeoIntRelations)
+	APIRouter.HandleFunc("/v1/geoint/contacts", handlers.HandleGeoIntContacts)
+	APIRouter.HandleFunc("/v1/geoint/aircraft", handlers.HandleGeoIntAircraft)
+	APIRouter.HandleFunc("/v1/geoint/satellites", handlers.HandleGeoIntSatellites)
+	APIRouter.HandleFunc("/v1/geoint/vessels", handlers.HandleGeoIntVessels)
+	APIRouter.HandleFunc("/v1/geoint/cctv", handlers.HandleGeoIntCCTV)
+	APIRouter.HandleFunc("/v1/geoint/cctv/frame", handlers.HandleGeoIntCCTVFrame)
+	APIRouter.HandleFunc("/v1/geoint/hazards", handlers.HandleGeoIntHazards)
+	APIRouter.HandleFunc("/v1/geoint/correlations", handlers.HandleGeoIntCorrelations)
+	APIRouter.HandleFunc("/v1/geoint/status", handlers.HandleGeoIntStatus)
 
 	log.Println("✅ VGT AETHEL :: API-ROUTER BEREIT")
 
@@ -435,6 +502,9 @@ func (a *App) shutdown(ctx context.Context) {
 	if a.operations != nil {
 		a.operations.Stop()
 	}
+	if a.geoint != nil {
+		a.geoint.Stop()
+	}
 	log.Println("🔴 VGT AETHEL :: SHUTDOWN")
 }
 
@@ -458,6 +528,49 @@ func (a *App) SelectDirectory() string {
 		return ""
 	}
 	return dir
+}
+
+// SelectCodeProject grants the explicitly selected project read/write access
+// for the current coding session. Aethel runtime data is never auto-selected.
+func (a *App) SelectCodeProject() map[string]string {
+	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{Title: "Projekt in VGT Code öffnen"})
+	if err != nil {
+		log.Printf("VGT Code project dialog failed: %v", err)
+		return map[string]string{"status": "error", "message": "Projekt-Auswahl fehlgeschlagen."}
+	}
+	if strings.TrimSpace(dir) == "" {
+		return map[string]string{"status": "cancelled"}
+	}
+	if state == nil {
+		return map[string]string{"status": "error", "message": "Aethel Core ist noch nicht bereit."}
+	}
+	if err := state.AddMount(dir, security.MountWrite, 24*time.Hour); err != nil {
+		log.Printf("VGT Code project authorization failed: %v", err)
+		return map[string]string{"status": "error", "message": "Projekt konnte nicht freigegeben werden."}
+	}
+	if err := handlers.SetCodeWorkspaceRoot(dir); err != nil {
+		log.Printf("VGT Code project activation failed: %v", err)
+		return map[string]string{"status": "error", "message": "Projekt konnte nicht aktiviert werden."}
+	}
+	a.codeMu.Lock()
+	previous := a.codePath
+	a.codePath = dir
+	a.codeMu.Unlock()
+	if previous != "" && !strings.EqualFold(previous, dir) {
+		_ = state.RemoveMount(previous, security.MountWrite)
+	}
+	return map[string]string{"status": "success", "name": filepath.Base(dir), "path": dir}
+}
+
+func (a *App) CloseCodeProject() {
+	a.codeMu.Lock()
+	path := a.codePath
+	a.codePath = ""
+	a.codeMu.Unlock()
+	handlers.ClearCodeWorkspaceRoot()
+	if state != nil && path != "" {
+		_ = state.RemoveMount(path, security.MountWrite)
+	}
 }
 
 // GetVersion returns the current version string

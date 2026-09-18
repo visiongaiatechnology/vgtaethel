@@ -1,0 +1,54 @@
+# STATUS: DIAMANT VGT SUPREME
+
+# Local AETHEL operator state. Never publish prompts, sessions, keys, leases,
+# screenshots, reports, personal profiles, model caches, or audit journals.
+**/vgt_workspace/**
+!**/vgt_workspace/.gitkeep
+**/_logs/**
+**/_archive/**
+
+# Release/build outputs
+**/build/bin/**
+*.exe
+*.exe~
+*.test
+*.out
+*.pfx
+*.p12
+*.pem
+*.key
+
+# Local dependency/build caches
+**/node_modules/**
+**/target/**
+**/.next/**
+**/.test-runtime/**
+
+# Local checkout of the upstream native voice dependency. Go resolves the
+# versioned module; release builds use the reviewed runtime DLLs at go-aethel/.
+go-aethel/sherpa-onnx-go-windows/
+
+# Local environment and tool state
+.env
+.env.*
+!.env.example
+.agents/
+.gemini/
+.idea/
+.vs/
+*.suo
+*.user
+*.userosscache
+
+# Operating-system metadata
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Root runtime DLL copies (canonical reviewed DLLs reside in go-aethel/)
+/*.dll
+
+# Local repository backups, review snapshots, and cartography
+aethel-github*/
+.aethel_cartography.md
+go-aethel/design-review-*.png

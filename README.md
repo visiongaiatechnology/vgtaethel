@@ -13,21 +13,23 @@
 ### Sovereign Strategic Intelligence OS
 
 [![License](https://img.shields.io/badge/License-AGPLv3-blue?style=for-the-badge)](https://www.gnu.org/licenses/agpl-3.0)
-[![Version](https://img.shields.io/badge/Version-1.0.0--beta.3-D4AF37?style=for-the-badge)](#-beta-v3-changelog)
-[![Status](https://img.shields.io/badge/Status-BETA_V3-111111?style=for-the-badge)](#-beta-software--experimental-rd)
+[![Version](https://img.shields.io/badge/Version-1.0.0--beta.4-D4AF37?style=for-the-badge)](#-beta-v4-changelog)
+[![Status](https://img.shields.io/badge/Status-DIAMANT_VGT_SUPREME-111111?style=for-the-badge)](#-beta-software--experimental-rd)
 [![Go](https://img.shields.io/badge/Go-1.26.6-00ADD8?style=for-the-badge&logo=go)](https://go.dev)
 [![Framework](https://img.shields.io/badge/Wails-2.15.0-DF0000?style=for-the-badge)](https://wails.io)
 [![Platform](https://img.shields.io/badge/Platform-Windows_10%2F11_x64-0078D4?style=for-the-badge&logo=windows)](#)
-[![Architecture](https://img.shields.io/badge/Architecture-Local--First-brightgreen?style=for-the-badge)](#-architecture)
+[![Architecture](https://img.shields.io/badge/Architecture-Local--First_Sovereign_OS-brightgreen?style=for-the-badge)](ARCHITECTURE.md)
+[![VGT Coder](https://img.shields.io/badge/VGT_Coder-Agentic_IDE-cyan?style=for-the-badge)](#-vgt-coder-autonomous-agentic-ide)
+[![Sphere 2.0](https://img.shields.io/badge/Sphere_2.0-Operations_Desktop-purple?style=for-the-badge)](#-sphere-20-personal-operations-desktop-os)
 [![Vault](https://img.shields.io/badge/Vault-AES--256--GCM-gold?style=for-the-badge)](#)
 [![KeyStore](https://img.shields.io/badge/KeyStore-Windows_DPAPI-purple?style=for-the-badge)](#)
 [![TTS](https://img.shields.io/badge/TTS-Sherpa--ONNX_(Offline)-brightgreen?style=for-the-badge)](#-sherpa-onnx-integration-guide)
 [![Audit](https://img.shields.io/badge/Audit_Log-Blockchain--chained-purple?style=for-the-badge)](#)
 [![OSINT](https://img.shields.io/badge/OSINT-SHADOW_COMMAND-D4AF37?style=for-the-badge)](#-shadow-osint-command-mode)
-[![Orchestrator](https://img.shields.io/badge/Orchestrator-AI--Kernel--v3-cyan?style=for-the-badge)](#-orchestration--intent-routing)
+[![Security Gate](https://img.shields.io/badge/Security_Mode-Vollzugriff%20%7C%20Interaktiv-00f0ff?style=for-the-badge)](#-dual-permission-modes-vollzugriff-vs-interaktiv)
 [![VGT](https://img.shields.io/badge/VGT-VisionGaiaTechnology-cyan?style=for-the-badge)](https://visiongaiatechnology.de)
 
-**SOVEREIGN AI OS · SHADOW OSINT · WEBGL COMMAND GLOBE · ORCHESTRATOR · PERSONAL CORE · GLOBAL WATCH · NATIVE DESKTOP · OFFLINE TTS**
+**SOVEREIGN AI OS · VGT CODER AGENTIC IDE · SPHERE 2.0 DESKTOP · SHADOW OSINT · COMMAND GLOBE · DUAL PERMISSION MODES · OFFLINE SHERPA-ONNX**
 
 <img width="50%" alt="VGT AETHEL Neural Interface" src="https://github.com/user-attachments/assets/509b3a60-ea7f-44a8-8c11-bc61bbbcc188" />
 
@@ -35,32 +37,36 @@
 
 ---
 
-## ✨ Beta V3 Changelog
+## ✨ Beta V4 Changelog
 
-> **Strategic Command Build:** Beta V3 expands AETHEL from a personal intelligence workspace into an evidence-bound OSINT and operational analysis environment. Existing Beta V2 capabilities remain available.
+> **DIAMANT VGT SUPREME Architecture Build:** Beta V4 (`1.0.0-beta.4`) introduces the **VGT Coder Autonomous Agentic IDE**, the **Sphere 2.0 Personal Operations Desktop OS**, a dynamic **Dual-Mode Security Engine** (`VOLLZUGRIFF` vs. `INTERAKTIV`), and an exhaustive technical cartography mapped in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-| Area | What changed in Beta V3 |
+| Area | What changed in Beta V4 |
 |---|---|
-| **SHADOW OSINT** | New compartmented military OSINT mode with its own editable system doctrine and a complete black/gold strategic-command interface. |
-| **3D Command Globe** | New local WebGL globe with rotation, zoom, AI-assessed theaters, pulsing regional markers and animated great-circle conflict vectors. |
-| **Directed Conflict Graph** | Evidence-bound attacker → target relationships for attacks, invasion, strikes, blockade, occupation, proxy action, cyberattack and military support. |
-| **Epistemic Integrity** | Every regional assessment and conflict vector must cite exact batch evidence. Generic tension, historic hostility and unsupported direction are rejected. |
-| **40–60 Intelligence Batches** | Bounded collection and analysis pipeline modeled after SHADOW Intel, with encrypted state, source rotation and operator-triggered analysis. |
-| **Source Command** | Large editable registry for military, official, geopolitical, economic, energy, cyber and space sources, plus Telegram public-preview collection for `militaernews`. |
-| **Web/RSS Discovery** | Official press pages and RSS directories can securely discover advertised feeds or bounded same-origin headline links. |
-| **Daily Master Dossiers** | Daily synthesis from multiple batch reports, with evidence preservation and JSON/Markdown export including directed conflict vectors. |
-| **Global Watch Accuracy** | Regional coloring is now fail-closed: no deterministic or hybrid fallback scores. A region appears only after an evidence-bound AI assessment. |
-| **Feed Separation** | News remains in the news feed; earthquakes and volcanic events stay isolated in dedicated natural-hazard layers and are excluded from automatic AI risk context. |
-| **Full-Shell Mode Skin** | Header, sidebar, navigation, model controls, system HUD and workspace surfaces switch coherently into the SHADOW command palette. |
-| **Hardening** | Strict structured JSON, response-size limits, bounded object counts, same-origin frontend requests, timeouts, atomic report persistence and rollback on storage failure. |
-| **Release Identity** | Unified `1.0.0-beta.3` / `BETA V3` branding across frontend, backend, Wails metadata, installer, release notes and CI. |
+| **VGT Coder (Agentic IDE)** | Full autonomous coding agent runtime (`go-aethel/coder/`) capable of multi-turn software development, automated AST inspection, file rewriting, project search, test execution, and Git diff synthesis. |
+| **Multi-Model Orchestration** | Dual-model architecture separating the **Coding Worker Model** (code generation & debugging) from the **Tool Orchestrator Model** (tool calling, argument verification, and step planning). |
+| **Centered Cybernetic Layout** | Chat composer (`.vgt-code-composer`) and message history are cleanly centered in a focused 840px column, providing responsive aesthetics across 1080p, 1440p, and 4K ultra-wide monitors. |
+| **Zero-Latency Conversation Restore** | Historical sessions render instantly from local cache without network blocking. Selecting a previous session immediately keeps the chat composer active and ready for follow-up prompts. |
+| **Fast-Path Sync Engine** | Bypassed redundant Git diff scans on completed terminal sessions, reducing conversation switching latency from multi-second blocking to <1 ms. |
+| **Dual Permission Modes** | **`VOLLZUGRIFF` (Full Access):** Grants autonomous execution rights for safe, moderate, and high-risk workspace commands and file writes without interrupting confirmation pop-ups. Hard blocks for destructive sabotage (`RiskForbidden`) remain strictly enforced.<br>**`INTERAKTIV` (Normal Mode):** Dispatches interactive operator confirmation pop-ups for sensitive actions. Controlled via cybernetic UI toggle and persisted across restarts. |
+| **Workspace Authority & Path Jail** | `ValidatePathForAccess` resolves paths dynamically against the active project workspace root (`CurrentCodeWorkspaceRoot()`), eliminating false jail violations during project development. |
+| **Write-Enabled Folder Mounts** | `MountFolderSkill` grants `security.MountWrite` permissions and expands lease durations up to 7 days (168 hours / 10,080 minutes). |
+| **Sphere 2.0 Desktop OS** | Virtual Desktop Environment supporting 6 dedicated desktops (`PERSONAL`, `WORK`, `RESEARCH`, `TRAVEL`, `PROJECT`, `INCIDENT`), 8-way window resize handles, state persistence, and ambient lighting. |
+| **Universal Context Bus & Send To...** | Unified entity dispatch system allowing 1-click transfers of tasks, documents, clippings, trips, and plans between Sphere apps (`Writer`, `Browser`, `Planner`, `Research`, `Travel`, `Files`). |
+| **AI Track Changes Diff Review** | VGT Writer features an integrated AI Track Changes engine with word-level insertions/deletions diffing, visual diff review dialogs, and operator accept/reject controls. |
+| **Research Desk & Provenance** | Evidence clipping workbench that captures citations and sources, producing 1-click synthesized Markdown intelligence briefings. |
+| **Trip Planner & Risk Correlation** | Intelligent trip lifecycle engine correlating itineraries with real-time Global Watch intelligence feeds, active conflict vectors, and travel alerts. |
+| **Master Planner & Dependencies** | Hierarchical goal and milestone tracking with automated task dependency graph resolution (`Blocks` / `DependsOn`). |
+| **Offline Sherpa-ONNX Pipeline** | Native CGo Sherpa-ONNX speech engine (`onnxruntime.dll`, `sherpa-onnx-c-api.dll`) delivering 100% local, offline neural voice synthesis and transcription with a quick-mute toggle. |
+| **Non-Destructive Build Pipeline** | Specialized Wails build workflow (`scripts/build_preserve.ps1`) ensuring `./vgt_workspace`, configs, local databases, and models are preserved during compilation. |
+| **Complete System Cartography** | Published [`ARCHITECTURE.md`](ARCHITECTURE.md), an authoritative 2,100+ line technical architecture document detailing all 18 subsystems, 19 operational viewports, and complete data flows. |
 
 ### Verification status
 
-- `go test ./... -count=1` — passed
+- `go test ./... -count=1` — passed (100% across all packages)
 - `go vet -buildvcs=false ./...` — passed
 - `govulncheck ./...` — no reachable vulnerabilities
-- Wails `2.15.0` production build — passed with `Clean Bin Dir: false`
+- Wails `2.15.0` non-destructive build — passed (`AETHEL.exe` 63.3 MB generated)
 
 ---
 
@@ -125,86 +131,87 @@ AETHEL implements a **strict separation of intelligence, execution and communica
 
 ---
 
-## 🏛️ Architecture
+## 🏛️ System Architecture & Technical Cartography
+
+> 📖 **Authoritative Specification Document:**  
+> The full system architecture, dependency graphs, IPC boundaries, data flows, and security models are exhaustively documented in **[`ARCHITECTURE.md`](ARCHITECTURE.md)** (2,100+ lines of authoritative technical cartography).
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                      OPERATOR (WAILS DESKTOP)                         │
-│         ES6 Frontend — 59 Modules — Embedded via go:embed            │
-│  Chat · Sphere · Global Watch · SHADOW OSINT · Runs · Workbench      │
-│  Personal Mode · Voice · Security · Tasks · Memory · Diagnostics     │
-├──────────────────────────────────────────────────────────────────────┤
-│                       REST API v1 (HTTP/JSON)                         │
-├──────────────────────────────────────────────────────────────────────┤
-│                  GO CORTEX — MODULAR (242 Go files)                   │
-│                                                                      │
-│  ┌─────────────────┬──────────────┬────────────────┬──────────────┐ │
-│  │  AI Orchestrator│ Chat Engine  │  Guard Kernel  │  Voice       │ │
-│  │  (v2)           │ (Streaming)  │  (Policy +     │  Engine      │ │
-│  │  Intent Router  │              │   Audit Log)   │  Sherpa      │ │
-│  │  Token Optimizer│              │                │  SAPI5       │ │
-│  │  Provider Health│              │                │  Whisper     │ │
-│  └─────────────────┴──────────────┴────────────────┴──────────────┘ │
-│                                                                      │
-│  ┌─────────────────┬──────────────┬────────────────┬──────────────┐ │
-│  │  Skills Layer   │  Run Engine  │  Sealed Store  │  Personal    │ │
-│  │  skills_gui     │  (Persistent │  (AES-256-GCM) │  Core        │ │
-│  │  skills_fs      │   State      │                │  Memory      │ │
-│  │  skills_browser │   Machine)   │  Key Store     │  Profile     │ │
-│  │  writer_tool    │              │  (DPAPI)       │  Consent     │ │
-│  └─────────────────┴──────────────┴────────────────┴──────────────┘ │
-│                                                                      │
-│  ┌─────────────────┬──────────────┬────────────────┬──────────────┐ │
-│  │  Global Watch   │ SHADOW OSINT │  Cases &       │  Feed        │ │
-│  │  Local Globe    │ WebGL Globe  │  Evidence      │  Reader      │ │
-│  │  News/Hazards   │ Conflict DAG │  Workbench     │  RSS/Web/TG  │ │
-│  │  AI Risk        │ 40–60 Batch  │  Chain Custody │  Sources     │ │
-│  └─────────────────┴──────────────┴────────────────┴──────────────┘ │
-├──────────────────────────────────────────────────────────────────────┤
-│                        NEXUS MEMORY STORE                             │
-│           ./vgt_workspace  (Sealed JSON / Sled DB)                   │
-└──────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                               OPERATOR (WAILS DESKTOP)                                 │
+│                   ES6 Frontend — 65+ Modules — Embedded via go:embed                   │
+│   Chat · VGT Coder · Sphere 2.0 · Global Watch · SHADOW OSINT · Runs · Workbench       │
+│   Personal Mode · Offline Voice · Security · Tasks · Memory · Diagnostics · Settings   │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│                                REST API v1 (HTTP/JSON)                                 │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│                       GO CORTEX — MODULAR (250+ Go Source Files)                       │
+│                                                                                        │
+│  ┌──────────────────┬─────────────────┬──────────────────┬──────────────────────────┐  │
+│  │  AI Orchestrator │ Chat Engine     │ Security Kernel  │ Voice Pipeline           │  │
+│  │  (Multi-Model)   │ (Streaming)     │ (PolicyEngine +  │ (Sherpa-ONNX Native CGo, │  │
+│  │  Intent Router   │ Agent Run Loops │  Blockchain Log) │  Local Offline VAD/TTS)  │  │
+│  └──────────────────┴─────────────────┴──────────────────┴──────────────────────────┘  │
+│                                                                                        │
+│  ┌──────────────────┬─────────────────┬──────────────────┬──────────────────────────┐  │
+│  │  VGT Coder IDE   │ Sphere 2.0 OS   │ Skills Registry  │ Personal Core            │  │
+│  │  (Worker+Orch,   │ (6 Desktops,    │ (Path Jail,      │ (Encrypted Memory,       │  │
+│  │   AST Diff,      │  Context Bus,   │  Write Mounts,   │  Profile, Habits,        │  │
+│  │   Vollzugriff)   │  Track Changes) │  GUI, Browser)   │  Operations Queue)       │  │
+│  └──────────────────┴─────────────────┴──────────────────┴──────────────────────────┘  │
+│                                                                                        │
+│  ┌──────────────────┬─────────────────┬──────────────────┬──────────────────────────┐  │
+│  │  Global Watch    │ SHADOW OSINT    │ Cases & Evidence │ Encrypted Mailbox        │  │
+│  │  (3D Globe,      │ (Conflict DAG,  │ (Workbench,      │ (TLS IMAP/SMTP,          │  │
+│  │   AI Risk Map)   │  40–60 Batch)   │  Chain Custody)  │  Threat Scoring)         │  │
+│  └──────────────────┴─────────────────┴──────────────────┴──────────────────────────┘  │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│                               NEXUS PERSISTENT STORES                                  │
+│       ./vgt_workspace (Sealed AES-256-GCM / DPAPI Key Store / Sled DB / Parquet)       │
+└────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+For complete technical specifications across all 18 subsystems and 19 operational viewports, refer to **[`ARCHITECTURE.md`](ARCHITECTURE.md)**.
 
 <img width="1920" height="1009" alt="image" src="https://github.com/user-attachments/assets/89b8377b-7336-4ceb-9cd7-47ac44ba979f" />
 
-
 ---
 
-## 📊 Beta V3 Capability Matrix
+## 📊 Beta V4 Capability Matrix
 
-| Area | Beta V3 |
+| Area | Beta V4 (DIAMANT VGT SUPREME) |
 |---|---|
-| **SHADOW OSINT** | Compartmented military intelligence mode with dedicated doctrine, encrypted state and black/gold command interface. |
+| **VGT Coder (Agentic IDE)** | Autonomous software engineering environment with multi-turn reasoning, automatic AST fingerprinting, file rewriting, project search, test execution, and Git diff synthesis. |
+| **Dual-Model Orchestration** | Dedicated separation between Coding Worker Model (code generation/debugging) and Tool Orchestrator Model (plan synthesis/tool invocation). |
+| **Centered Cybernetic Layout** | Responsive 840px centered chat composer and message history with seamless scaling across ultra-wide monitors. |
+| **Zero-Latency History Restore** | Instant cached session rendering without network blocking; persistent chat composer visibility; sub-millisecond fast-path synchronization. |
+| **Dual Permission Modes** | **`VOLLZUGRIFF` (Full Access):** Autonomous execution of safe, moderate, and high-risk workspace actions without confirmation pop-ups.<br>**`INTERAKTIV` (Normal Mode):** Operator confirmation pop-ups for critical actions. Persisted across sessions and toggled via 1-click cybernetic UI badge. |
+| **Workspace Authority & Mounts** | Dynamic path jail integration against the active project workspace root (`CurrentCodeWorkspaceRoot()`) with write mounts up to 7 days (168 hours). |
+| **Sphere 2.0 Desktop OS** | 6 Virtual Desktops (`PERSONAL`, `WORK`, `RESEARCH`, `TRAVEL`, `PROJECT`, `INCIDENT`), 8-way resize handles, focus stacking, and spatial state persistence. |
+| **Universal Context Bus & Send To...** | 1-click cross-application entity transfers between Writer, Browser, Planner, Research, and Travel tools. |
+| **AI Track Changes Engine** | Word-level insertions and deletions diff review for documents with operator accept/reject controls in VGT Writer. |
+| **Research Desk & Provenance** | Evidence clipping workbench that captures citations and sources, producing 1-click synthesized Markdown intelligence briefings. |
+| **Trip Planner & Risk Correlation** | Intelligent trip lifecycle engine correlating itineraries with real-time Global Watch intelligence feeds, active conflict vectors, and travel alerts. |
+| **Master Planner & Dependencies** | Hierarchical goal and milestone tracking with automated task dependency graph resolution (`Blocks` / `DependsOn`). |
+| **Offline Sherpa-ONNX Voice** | 100% offline local speech synthesis and recognition powered by CGo ONNX Runtime bindings (`onnxruntime.dll`, `sherpa-onnx-c-api.dll`) with a quick-mute toggle. |
+| **SHADOW OSINT** | Compartmented military intelligence mode with dedicated doctrine, encrypted state, and black/gold command interface. |
 | **Conflict Command Globe** | Local WebGL earth with evidence-bound regions and directed attacker-to-target vectors. |
-| **Batch Intelligence** | Rotating collection, strict 40–60 item analysis and daily master-dossier synthesis. |
+| **Batch Intelligence** | Rotating collection, strict 40–60 item analysis, and daily master-dossier synthesis. |
 | **Regional Risk Authority** | AI-only, evidence-bound scores. Missing AI assessment results in no score rather than an algorithmic substitute. |
-| **AI Orchestration** | Separation between normal AI model and orchestrator. The main model generates solutions; the orchestrator coordinates AETHEL, tools, UI and execution. |
-| **Intent Routing** | Deterministic routing between chat, agent task, UI control, writer task and Global Watch. A greeting no longer accidentally triggers computer control. |
-| **Token Optimization** | Instead of always explaining the full system, the model receives compact, goal-specific context and tool packages. |
-| **Agent Runs** | Improved planning chains, persistent state, pause/resume, crash recovery, cost budgets, tool evidence and verifiable completion reports. |
-| **Approvals** | Signed, argument-bound one-time approvals appear as global pop-ups — regardless of which UI area the user is in. |
-| **Provider System** | Central registry for Groq, OpenAI, DeepSeek, Gemini, Claude and local Ollama models. Only actually configured providers and available local models are shown. |
-| **Reasoning Control** | Provider- and model-specific reasoning levels, capability gates, context limits and output limits. |
-| **Provider Health** | Health checks, visible error states, fallback decisions and live model detection. |
-| **Groq Stability** | Payload normalization, correct tool-call sequences, protection against invalid assistant messages, robust registry fallback via Wails. |
-| **Personal Core** | Own identity, name, location, interests, consent, humor, honesty and proactivity. AETHEL greets the user personally and considers their local situation. |
-| **Personal Assistance** | Optional startup analysis with news, regional relevance, assessment and readable situation report. |
-| **Memory** | Encrypted personal profiles and memories, traceable origin, improved hybrid retrieval from TF-IDF, word overlap, recency and importance. |
-| **Sphere Workspace** | Desktop-like workspace with writer, internal browser, live run flow, media control, weather and market data widgets. |
-| **Writer** | AETHEL can create and edit documents via an explicit, provider-independent tool contract. |
-| **Code Cartography** | New agent mode that recursively analyzes code projects, describes files and documents architecture and dependencies as a Markdown map. |
-| **Global Watch** | Local, textured 3D globe with borders, events, cities, earthquakes, volcanoes, news, regional risks and automatic rotation. |
-| **Intelligence Layer** | News correlation, regional situation pictures, alerts, risk scoring, briefings, time windows, watchlists and AI-guided map focus. |
-| **Feeds & Reader** | Configurable and removable RSS/danger sources, strict time filters and internal reading mode for articles. |
-| **Cases & Evidence** | Cases, evidence capture, isolated case contexts, entities, relationships and controlled pseudonymization/re-identification. |
-| **Multilanguage** | UI foundation for German, English, Russian and Spanish; briefings can be generated in the selected language. |
-| **UI/UX** | Complete futuristic redesign, new loader with manual "Start", revised warning, Agent Tracker, Run Center and responsive Sphere window. |
-| **Status Truth** | Unreachable APIs, voices or providers are no longer falsely shown as "Active". Errors remain visible. |
-| **Performance** | GPU-intensive animations reduced. The globe uses time-based rotation and limited frame rate instead of continuous rendering. |
-| **Security** | Hardened path jails, mount limits, process execution, browser egress, mail, voice uploads, authority stores, approvals and audit persistence. |
-| **Release Engineering** | Beta-V2 versioning in loader, UI, backend, installer and CI; GitHub release workflow, signature hooks, diagnostic packages, checksums and pinned native dependencies. |
-| **Startup Stability** | Deterministic EXE workspace, core-readiness handshake and registry retries prevent empty model lists and wrong configurations at startup. |
+| **AI Orchestration** | Separation between normal AI model and orchestrator. The main model generates solutions; the orchestrator coordinates AETHEL, tools, UI, and execution. |
+| **Intent Routing** | Deterministic routing between chat, agent task, UI control, writer task, and Global Watch. |
+| **Token Optimization** | Compact, goal-specific context and tool packages per request instead of full system context on every call. |
+| **Agent Runs** | Planning chains, persistent state, pause/resume, crash recovery, cost budgets, tool evidence, and verifiable completion reports. |
+| **Approvals** | Signed, argument-bound one-time approvals appear as global pop-ups across all UI views. |
+| **Provider System** | Central registry for Groq, OpenAI, DeepSeek, Gemini, Claude, and local Ollama models. Only configured providers and available local models are shown. |
+| **Personal Core** | Own identity, name, location, interests, consent, humor, honesty, and proactivity with startup situation briefings. |
+| **Nexus Memory** | Encrypted personal profiles and memories with hybrid retrieval (TF-IDF + word overlap + recency + importance). |
+| **Global Watch** | Local, textured 3D globe with borders, events, cities, earthquakes, volcanoes, news, regional risks, and automatic rotation. |
+| **Cases & Evidence** | Isolated case contexts, entity/relationship tracking, and controlled pseudonymization/re-identification. |
+| **Multilanguage UI** | Multi-language support for German, English, Russian, and Spanish; briefings generatable in selected language. |
+| **Security Hardening** | Hardened path jails, mount limits, process execution, browser egress, mail, voice uploads, authority stores, approvals, and audit persistence. |
+| **Non-Destructive Build Pipeline** | Specialized Wails build workflow (`scripts/build_preserve.ps1`) preserving `./vgt_workspace`, configs, local databases, and models during compilation. |
+| **Complete System Cartography** | Authoritative [`ARCHITECTURE.md`](ARCHITECTURE.md) documenting all 18 subsystems, 19 operational viewports, and complete data flows. |
 
 <img width="1920" height="1009" alt="image" src="https://github.com/user-attachments/assets/3b8d0cfe-7309-460c-a8f9-3c6dbace73c6" />
 
@@ -764,18 +771,18 @@ API keys and provider settings are entered through AETHEL's first-run setup and 
 |---|---|
 | **Language** | Go 1.26.6 |
 | **Framework** | Wails 2.15.0 Desktop (WebView2 — embedded frontend) |
-| **Architecture** | Local-first modular Go runtime with pinned Go modules and native Sherpa-ONNX runtime |
+| **Architecture** | Local-first modular Go runtime with pinned Go modules and native Sherpa-ONNX runtime ([`ARCHITECTURE.md`](ARCHITECTURE.md)) |
 | **Platform** | Windows 10/11 x64 (official) |
-| **Backend Source Files** | 242 Go source and test files |
-| **Frontend Modules** | 59 JavaScript modules (embedded via `go:embed`) |
+| **Backend Source Files** | 250+ Go source and test files |
+| **Frontend Modules** | 65+ JavaScript modules (embedded via `go:embed`) |
 | **Vault Encryption** | AES-256-GCM |
 | **Key Storage** | Windows DPAPI (`config.key.dpapi`) |
 | **Local State** | `AETHEL-SEAL-v1:` sealed encrypted stores |
 | **Audit Log** | SHA-256 blockchain-chained + `ValidateChain()` |
-| **TTS Primary** | Sherpa-ONNX (offline ONNX neural models) |
+| **TTS Primary** | Sherpa-ONNX (offline ONNX neural models via CGo runtime) |
 | **TTS Fallback** | Windows SAPI5 (local, no API key) |
-| **STT Primary** | Groq Whisper `whisper-large-v3-turbo` |
-| **Memory Persistence** | `./vgt_workspace` (sealed JSON / Sled DB) |
+| **STT Primary** | Groq Whisper `whisper-large-v3-turbo` + Local Sherpa-ONNX |
+| **Memory Persistence** | `./vgt_workspace` (sealed JSON / Sled DB / Parquet) |
 | **Supported Languages** | DE, EN, ES, FR, RU |
 | **License** | AGPLv3 |
 
@@ -783,7 +790,37 @@ API keys and provider settings are entered through AETHEL's first-run setup and 
 
 ## 📋 Changelog
 
-### 1.0.0-beta.3 — Strategic Command Build *(Current)*
+### 1.0.0-beta.4 — DIAMANT VGT SUPREME Architecture Build *(Current)*
+
+#### VGT Coder (Autonomous Engineering Workspace)
+- **Autonomous Agentic IDE:** Full multi-turn software development agent (`go-aethel/coder/`) capable of inspecting projects, editing files, running tests, and managing Git worktrees.
+- **Dual-Model Orchestration:** Specialized separation between Coding Worker Model (code generation/debugging) and Tool Orchestrator Model (tool call validation and plan coordination).
+- **Centered Cybernetic Layout:** Centered 840px chat composer (`.vgt-code-composer`) and message history, providing responsive aesthetics across 1080p, 1440p, and 4K monitors.
+- **Zero-Latency History Restore:** Instant session rendering directly from memory cache; persistent chat composer visibility; automatic project context restore; sub-millisecond fast-path sync.
+- **Dual Permission Modes:**
+  - **`VOLLZUGRIFF` (Full Access):** Autonomous execution of safe, moderate, and high-risk workspace actions without confirmation pop-ups. Hard blocks for destructive sabotage (`RiskForbidden`) remain enforced.
+  - **`INTERAKTIV` (Normal Mode):** Operator confirmation pop-ups for critical actions. Persisted across sessions and toggled via 1-click cybernetic UI badge.
+- **Workspace Authority & Dynamic Path Jail:** `ValidatePathForAccess` resolves paths dynamically against active project workspace root (`CurrentCodeWorkspaceRoot()`), eliminating false jail violations during project development.
+- **Write-Enabled Folder Mounts:** `MountFolderSkill` grants `security.MountWrite` permissions and expands lease durations up to 7 days (168 hours / 10,080 minutes).
+- **AST Diff Review Engine:** Real-time unified and split diff view for code reviews before and after agent runs.
+
+#### Sphere 2.0 (Personal Operations Desktop OS)
+- **Virtual Desktops:** 6 dedicated virtual desktops (`PERSONAL`, `WORK`, `RESEARCH`, `TRAVEL`, `PROJECT`, `INCIDENT`) with spatial state persistence and ambient lighting.
+- **Universal Context Bus & Send To...:** 1-click cross-application entity transfers between Writer, Browser, Planner, Research, and Travel tools.
+- **AI Track Changes Engine:** Word-level insertions and deletions diff review for documents with operator accept/reject controls in VGT Writer.
+- **Research Desk & Provenance:** Evidence clipping workbench that captures citations and sources, producing 1-click synthesized Markdown intelligence briefings.
+- **Trip Planner & Risk Correlation:** Intelligent trip lifecycle engine correlating itineraries with real-time Global Watch intelligence feeds, active conflict vectors, and travel alerts.
+- **Master Planner & Dependencies:** Hierarchical goal and milestone tracking with automated task dependency graph resolution (`Blocks` / `DependsOn`).
+
+#### Offline Voice & Security Architecture
+- **Offline Sherpa-ONNX Voice Pipeline:** 100% offline local speech synthesis and recognition powered by CGo ONNX Runtime bindings (`onnxruntime.dll`, `sherpa-onnx-c-api.dll`) with a quick-mute toggle.
+- **Hardened Security & Governance Kernel:** Multi-tier PolicyEngine evaluating capability leases, one-time overrides, and permission modes with blockchain audit logging.
+- **Non-Destructive Build Pipeline:** Specialized Wails build workflow (`scripts/build_preserve.ps1`) preserving `./vgt_workspace`, configs, local databases, and models during compilation.
+- **Exhaustive System Cartography:** Published [`ARCHITECTURE.md`](ARCHITECTURE.md), an authoritative 2,100+ line technical architecture document detailing all 18 subsystems, 19 operational viewports, and complete data flows.
+
+---
+
+### 1.0.0-beta.3 — Strategic Command Build *(archived)*
 
 - Added the compartmented SHADOW OSINT mode and independent editable doctrine.
 - Added a local WebGL 3D command globe with evidence-bound regions.
@@ -885,16 +922,16 @@ Go Cortex (pure stdlib). Guard Kernel. AES-256-GCM vault. Blockchain audit log. 
 
 ---
 
-## 🚧 Known Limitations (1.0.0-beta.3)
+## 🚧 Known Limitations (1.0.0-beta.4)
 
 - No automatic update system
 - Single-operator only — no multi-user support
-- Groq API key required for Whisper STT (offline fallback: Windows SAPI)
-- Sherpa-ONNX requires CGO + GCC compiler + manual DLL and model setup
+- Groq API key required for Whisper STT (offline fallback: local Sherpa-ONNX & Windows SAPI)
+- Sherpa-ONNX requires CGO + GCC compiler + reviewed runtime DLLs (`onnxruntime.dll`, `sherpa-onnx-c-api.dll`)
 - Official platform focus: Windows 10/11 x64 (macOS/Linux builds possible without GUI control features)
 - No HTTPS (localhost only — TLS optionally upgradeable)
 - OSINT quality depends on source availability, provider access and evidence present in completed batches
-- Directed conflict vectors appear only in new Beta V3 analyses; archived Beta V2 dossiers are not retroactively rewritten
+- Directed conflict vectors appear only in new analyses; archived Beta V2 dossiers are not retroactively rewritten
 
 ---
 
@@ -929,6 +966,13 @@ Go Cortex (pure stdlib). Guard Kernel. AES-256-GCM vault. Blockchain audit log. 
 | 40–60 Item Intelligence Batches | ✅ Done (beta.3) |
 | Daily Master Dossiers & Export | ✅ Done (beta.3) |
 | AI-Only Regional Risk Authority | ✅ Done (beta.3) |
+| VGT Coder (Autonomous Agentic IDE) | ✅ Done (beta.4) |
+| Dual Permission Modes (VOLLZUGRIFF / INTERAKTIV) | ✅ Done (beta.4) |
+| Sphere 2.0 Personal Operations Desktop OS | ✅ Done (beta.4) |
+| Universal Context Bus & Send To... Dispatcher | ✅ Done (beta.4) |
+| AI Track Changes & Diff Review Engine | ✅ Done (beta.4) |
+| Zero-Latency Conversation Restore & Fast Sync | ✅ Done (beta.4) |
+| Complete Technical Cartography (ARCHITECTURE.md) | ✅ Done (beta.4) |
 
 ---
 
@@ -974,6 +1018,6 @@ Enterprise deployments, TIER-0 audits (VGT SafetySys™) and commercial exceptio
 
 [![VGT](https://img.shields.io/badge/VisionGaia-Technology-cyan?style=for-the-badge)](https://visiongaiatechnology.de)
 
-*VGT AETHEL 1.0.0-beta.3 — Sovereign Strategic Intelligence OS // SHADOW OSINT // WebGL Command Globe // Directed Conflict Vectors // AI Orchestrator // Personal Core // Global Watch // Sphere Workspace // Intelligence Workbench // Wails 2.15 Desktop // Go 1.26.6 // DPAPI Key Store // AES-256-GCM Sealed Stores // Guard Kernel // Tamper-Evident Audit // Sherpa-ONNX Offline TTS // Durable Agent Runs // 59 Frontend Modules // DE/EN/ES/FR/RU // AGPLv3 // Windows 10/11 x64*
+*VGT AETHEL 1.0.0-beta.4 — Sovereign Strategic Intelligence OS & Autonomous Engineering Environment // VGT Coder Agentic IDE // Sphere 2.0 Desktop OS // Dual Permission Modes (VOLLZUGRIFF / INTERAKTIV) // SHADOW OSINT // WebGL Command Globe // Universal Context Bus // AI Track Changes // Wails 2.15 Desktop // Go 1.26.6 // DPAPI Key Store // AES-256-GCM Sealed Stores // Guard Kernel // Tamper-Evident Blockchain Audit // Sherpa-ONNX Offline TTS // 65+ Frontend Modules // DE/EN/ES/FR/RU // AGPLv3 // Windows 10/11 x64*
 
 </div>

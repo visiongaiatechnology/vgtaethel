@@ -112,6 +112,7 @@ type CompensationRecord struct {
 }
 
 type RunTrace struct {
+	Sequence  uint64    `json:"sequence"`
 	Timestamp time.Time `json:"timestamp"`
 	Event     string    `json:"event"`
 	StepID    string    `json:"step_id,omitempty"`
@@ -238,6 +239,9 @@ func (e *RunEngine) load() error {
 		if run.DeadlineAt.IsZero() {
 			run.DeadlineAt = run.CreatedAt.Add(time.Hour)
 		}
+		for index := range run.Trace {
+			run.Trace[index].Sequence = uint64(index + 1)
+		}
 		for index := range run.Steps {
 			step := &run.Steps[index]
 			if step.IdempotencyKey == "" {
@@ -309,10 +313,11 @@ func cloneRun(run AgentRun) AgentRun {
 }
 
 func appendRunTrace(trace []RunTrace, event, detail, stepID string) []RunTrace {
-	trace = append(trace, RunTrace{Timestamp: time.Now().UTC(), Event: event, Detail: ClampRunDetail(detail), StepID: stepID})
-	if len(trace) > 300 {
-		return trace[len(trace)-300:]
+	sequence := uint64(1)
+	if len(trace) > 0 {
+		sequence = trace[len(trace)-1].Sequence + 1
 	}
+	trace = append(trace, RunTrace{Sequence: sequence, Timestamp: time.Now().UTC(), Event: event, Detail: ClampRunDetail(detail), StepID: stepID})
 	return trace
 }
 
@@ -543,7 +548,7 @@ func (e *RunEngine) AppendAgentToolSteps(id string, calls []AgentToolCall) (Agen
 	if !ok {
 		return AgentRun{}, errors.New("run not found")
 	}
-	if run.Mode != "chat_agent" || run.Status != RunRunning {
+	if !isConversationalAgentMode(run.Mode) || run.Status != RunRunning {
 		return AgentRun{}, errors.New("chat agent run is not active")
 	}
 	profile := e.profiles[run.ProfileID]
@@ -595,7 +600,7 @@ func (e *RunEngine) UpdateAgentProgress(id string, messages []json.RawMessage, t
 	if !ok {
 		return AgentRun{}, errors.New("run not found")
 	}
-	if run.Mode != "chat_agent" {
+	if !isConversationalAgentMode(run.Mode) {
 		return AgentRun{}, errors.New("run is not a chat agent")
 	}
 	run.AgentMessages = make([]json.RawMessage, len(messages))
@@ -613,6 +618,37 @@ func (e *RunEngine) UpdateAgentProgress(id string, messages []json.RawMessage, t
 		return AgentRun{}, err
 	}
 	return cloneRun(run), nil
+}
+
+// BeginAgentInference publishes an operator-facing lifecycle event before the
+// provider request starts. It contains no private chain-of-thought content.
+func (e *RunEngine) BeginAgentInference(id string) (AgentRun, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	run, ok := e.runs[id]
+	if !ok {
+		return AgentRun{}, errors.New("run not found")
+	}
+	if run.Status != RunRunning || !isConversationalAgentMode(run.Mode) {
+		return AgentRun{}, errors.New("run is not available for inference")
+	}
+	run.UpdatedAt = time.Now().UTC()
+	run.Trace = appendRunTrace(run.Trace, "model_started", fmt.Sprintf("Model turn %d is analyzing repository evidence and selecting the next verifiable action.", run.AgentTurn+1), "")
+	run.Continuity.Phase = PhasePlanning
+	e.runs[id] = run
+	if err := e.saveLocked(); err != nil {
+		return AgentRun{}, err
+	}
+	return cloneRun(run), nil
+}
+
+func isConversationalAgentMode(mode string) bool {
+	switch strings.TrimSpace(mode) {
+	case "chat_agent", "agent_team", "vgt_code":
+		return true
+	default:
+		return false
+	}
 }
 
 func (e *RunEngine) CompleteAgent(id, report string, messages []json.RawMessage) (AgentRun, error) {

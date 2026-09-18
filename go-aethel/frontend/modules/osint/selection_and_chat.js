@@ -9,11 +9,13 @@ import {
   appendTextElement
 } from './projection.js';
 import { epistemicLayer } from './hazards.js';
-import { focusGlobeOnLonLat } from './globe_render.js';
+import { clearPins, focusGlobeOnLonLat } from './globe_render.js';
 import { refreshOSINTFeed } from './feed_and_risks.js';
 
 // Re-export pure helper so existing importers of selection_and_chat keep working.
 export { epistemicLayer };
+
+let selectedDirectEvent = null;
 
 export function fillIntelDetailPanel(kind, fields) {
     const empty = document.getElementById('gw-intel-empty');
@@ -36,7 +38,7 @@ export function fillIntelDetailPanel(kind, fields) {
 }
 
 export function currentSelectedEvent() {
-    return localGlobeSelectedIndex >= 0 ? activeFeedEvents[localGlobeSelectedIndex] || null : null;
+    return selectedDirectEvent || (localGlobeSelectedIndex >= 0 ? activeFeedEvents[localGlobeSelectedIndex] || null : null);
 }
 
 export function selectedEventPrompt(event, action) {
@@ -139,6 +141,7 @@ export function wireSelectedEventAIActions() {
 
 export function showSelectionDetails(ev, pin) {
     if (!ev) return;
+    selectedDirectEvent = ev;
     const panel = document.getElementById('gw-selection-panel');
     const layerEl = document.getElementById('gw-selection-layer');
     const titleEl = document.getElementById('gw-selection-title');
@@ -168,14 +171,45 @@ export function showSelectionDetails(ev, pin) {
         }
         titleEl.textContent = ev.title || ev.source || 'Selection';
         metaEl.textContent = `${lat}°, ${lon}° · ${String(ev.domain || 'general').toUpperCase()}${time ? ' · ' + time : ''}${ev.source ? ' · ' + ev.source : ''}${ev.provenance ? ' · ' + ev.provenance : ''}${ev.id ? ' · id=' + ev.id : ''}`;
-        bodyEl.textContent = ev.summary || 'Keine Detailbeschreibung. Layer: ' + layer.toUpperCase() + ' (nicht automatisch verifiziert).';
+        const evidenceCount = Array.isArray(ev.evidence_ids) ? ev.evidence_ids.length : 0;
+        bodyEl.textContent = `${ev.summary || 'Keine Detailbeschreibung.'}\n\nASSESSMENT: ${ev.assessment_status || layer.toUpperCase()} · CONFIDENCE: ${Number(ev.confidence) || 0}% · FRESHNESS: ${Math.round((Number(ev.freshness) || 0) * 100)}% · LOCATION: ${ev.location_precision || 'UNKNOWN'} · EVIDENCE: ${evidenceCount}`;
         if (mediaEl) {
             mediaEl.classList.add('has-content');
-            mediaEl.textContent = String(ev.domain || 'OBS').toUpperCase() + ' · ' + layer.toUpperCase();
+            mediaEl.replaceChildren();
+            const cameraStream = String(ev.domain || '').toLowerCase() === 'camera' ? safeExternalURL(ev.stream) : null;
+            if (cameraStream) {
+                const isVideo = /\.(mp4|webm|ogv)(?:$|\?)/i.test(cameraStream.pathname + cameraStream.search);
+                const player = document.createElement(isVideo ? 'video' : 'img');
+                player.src = cameraStream.toString();
+                player.className = 'gw-camera-popup-player';
+                player.referrerPolicy = 'no-referrer';
+                if (isVideo) {
+                    player.controls = true;
+                    player.autoplay = true;
+                    player.muted = true;
+                    player.playsInline = true;
+                } else {
+                    player.alt = `Live camera: ${String(ev.title || 'Public camera')}`;
+                }
+                const failure = () => {
+                    const message = document.createElement('span');
+                    message.textContent = 'Kamerastream nicht direkt abspielbar (Format, CORS oder Quelle offline).';
+                    mediaEl.replaceChildren(message);
+                };
+                player.addEventListener('error', failure, { once: true });
+                mediaEl.appendChild(player);
+                bodyEl.textContent = 'Eingebetteter HTTPS-Kamerastream · Quelle wird nicht an Drittanbieter weitergereicht.';
+            } else {
+                mediaEl.textContent = String(ev.domain || 'OBS').toUpperCase() === 'CAMERA' ? 'CAMERA · KEIN STREAM KONFIGURIERT' : String(ev.domain || 'OBS').toUpperCase() + ' · ' + layer.toUpperCase();
+            }
         }
         if (closeBtn && !closeBtn._gwBound) {
             closeBtn._gwBound = true;
-            closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+            closeBtn.addEventListener('click', () => {
+                panel.classList.add('hidden');
+                selectedDirectEvent = null;
+                clearPins();
+            });
         }
         wireSelectedEventAIActions();
         const promoteBtn = document.getElementById('gw-selection-promote');
@@ -189,10 +223,28 @@ export function showSelectionDetails(ev, pin) {
         if (focusBtn && !focusBtn._gwBound) {
             focusBtn._gwBound = true;
             focusBtn.addEventListener('click', () => {
-                const idx = localGlobeSelectedIndex;
-                const e2 = (idx >= 0 && activeFeedEvents[idx]) ? activeFeedEvents[idx] : ev;
-                if (e2 && e2.lon != null && e2.lat != null) focusGlobeOnLonLat(e2.lon, e2.lat);
+                const e2 = currentSelectedEvent() || ev;
+                if (e2 && e2.lon != null && e2.lat != null) {
+                    if (String(e2.provenance || '').includes('geoint') || String(e2.provenance || '').includes('shadow-evidence')) {
+                        window.dispatchEvent(new CustomEvent('aethel:geo-focus', { detail: { lat: e2.lat, lon: e2.lon, altitude: Math.max(15000, Number(e2.altitude || 0) + 10000) } }));
+                    } else focusGlobeOnLonLat(e2.lon, e2.lat);
+                }
             });
+        }
+        const shadowBtn = document.getElementById('gw-selection-open-shadow');
+        if (shadowBtn && !shadowBtn._gwBound) {
+            shadowBtn._gwBound = true;
+            shadowBtn.addEventListener('click', () => {
+                const selected = currentSelectedEvent();
+                if (selected?.report_id) sessionStorage.setItem('aethel.shadow.openReport', String(selected.report_id));
+                document.getElementById('nav-btn-shadow')?.click();
+                window.dispatchEvent(new CustomEvent('aethel:shadow-open-report', { detail: { reportID: selected?.report_id || '' } }));
+            });
+        }
+        const trackBtn = document.getElementById('gw-selection-track');
+        if (trackBtn) {
+            trackBtn.disabled = !ev.track_id;
+            trackBtn.onclick = ev.track_id ? () => window.dispatchEvent(new CustomEvent('aethel:geo-track', { detail: { entityID: ev.track_id } })) : null;
         }
         return;
     }
@@ -367,9 +419,8 @@ export function showCameraDetails(cam, p) {
 }
 
 export async function promoteCurrentSelection() {
-    const idx = localGlobeSelectedIndex;
-    if (idx < 0 || !activeFeedEvents[idx]) return;
-    const ev = activeFeedEvents[idx];
+    const ev = currentSelectedEvent();
+    if (!ev) return;
     const eventId = ev.id || ev.ID || '';
     if (window.AETHEL_PROMOTE_TO_CASE) {
         await window.AETHEL_PROMOTE_TO_CASE(ev.title, ev.summary, ev.source, ev.lat, ev.lon, eventId);
