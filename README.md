@@ -14,7 +14,7 @@
 
 [![License](https://img.shields.io/badge/License-AGPLv3-blue?style=for-the-badge)](https://www.gnu.org/licenses/agpl-3.0)
 [![Version](https://img.shields.io/badge/Version-1.0.0--beta.4-D4AF37?style=for-the-badge)](#-beta-v4-changelog)
-[![Status](https://img.shields.io/badge/Status-DIAMANT_VGT_SUPREME-111111?style=for-the-badge)](#-beta-software--experimental-rd)
+[![Status](https://img.shields.io/badge/Status-ACTIVE_BETA-111111?style=for-the-badge)](#-beta-software--experimental-rd)
 [![Go](https://img.shields.io/badge/Go-1.26.6-00ADD8?style=for-the-badge&logo=go)](https://go.dev)
 [![Framework](https://img.shields.io/badge/Wails-2.15.0-DF0000?style=for-the-badge)](https://wails.io)
 [![Platform](https://img.shields.io/badge/Platform-Windows_10%2F11_x64-0078D4?style=for-the-badge&logo=windows)](#)
@@ -39,11 +39,11 @@
 
 ## ✨ Beta V4 Changelog
 
-> **DIAMANT VGT SUPREME Architecture Build:** Beta V4 (`1.0.0-beta.4`) introduces the **VGT Coder Autonomous Agentic IDE**, the **Sphere 2.0 Personal Operations Desktop OS**, a dynamic **Dual-Mode Security Engine** (`VOLLZUGRIFF` vs. `INTERAKTIV`), and an exhaustive technical cartography mapped in [`ARCHITECTURE.md`](ARCHITECTURE.md).
+> **Beta V4 (`1.0.0-beta.4`) Architecture Update:** Beta V4 introduces the **VGT Coder (Autonomous Coding Agent)**, the **Sphere 2.0 Personal Operations Desktop OS**, a dynamic **Dual-Mode Security Engine** (`VOLLZUGRIFF` vs. `INTERAKTIV`), and an exhaustive technical cartography mapped in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 | Area | What changed in Beta V4 |
 |---|---|
-| **VGT Coder (Agentic IDE)** | Full autonomous coding agent runtime (`go-aethel/coder/`) capable of multi-turn software development, automated AST inspection, file rewriting, project search, test execution, and Git diff synthesis. |
+| **VGT Coder (Coding Agent)** | Experimental autonomous coding agent runtime (`go-aethel/coder/`) capable of multi-turn software development, AST inspection, file rewriting, project search, test execution, and Git diff synthesis. |
 | **Multi-Model Orchestration** | Dual-model architecture separating the **Coding Worker Model** (code generation & debugging) from the **Tool Orchestrator Model** (tool calling, argument verification, and step planning). |
 | **Centered Cybernetic Layout** | Chat composer (`.vgt-code-composer`) and message history are cleanly centered in a focused 840px column, providing responsive aesthetics across 1080p, 1440p, and 4K ultra-wide monitors. |
 | **Zero-Latency Conversation Restore** | Historical sessions render instantly from local cache without network blocking. Selecting a previous session immediately keeps the chat composer active and ready for follow-up prompts. |
@@ -179,9 +179,9 @@ For complete technical specifications across all 18 subsystems and 19 operationa
 
 ## 📊 Beta V4 Capability Matrix
 
-| Area | Beta V4 (DIAMANT VGT SUPREME) |
+| Area | Beta V4 Updates |
 |---|---|
-| **VGT Coder (Agentic IDE)** | Autonomous software engineering environment with multi-turn reasoning, automatic AST fingerprinting, file rewriting, project search, test execution, and Git diff synthesis. |
+| **VGT Coder (Coding Agent)** | Experimental software development environment with multi-turn reasoning, AST inspection, file rewriting, project search, test execution, and Git diff synthesis. |
 | **Dual-Model Orchestration** | Dedicated separation between Coding Worker Model (code generation/debugging) and Tool Orchestrator Model (plan synthesis/tool invocation). |
 | **Centered Cybernetic Layout** | Responsive 840px centered chat composer and message history with seamless scaling across ultra-wide monitors. |
 | **Zero-Latency History Restore** | Instant cached session rendering without network blocking; persistent chat composer visibility; sub-millisecond fast-path synchronization. |
@@ -790,10 +790,10 @@ API keys and provider settings are entered through AETHEL's first-run setup and 
 
 ## 📋 Changelog
 
-### 1.0.0-beta.4 — DIAMANT VGT SUPREME Architecture Build *(Current)*
+### 1.0.0-beta.4 — Architecture & Desktop Overhaul *(Current)*
 
-#### VGT Coder (Autonomous Engineering Workspace)
-- **Autonomous Agentic IDE:** Full multi-turn software development agent (`go-aethel/coder/`) capable of inspecting projects, editing files, running tests, and managing Git worktrees.
+#### VGT Coder (Experimental Coding Agent)
+- **Autonomous Coding Agent:** Experimental multi-turn software development agent (`go-aethel/coder/`) capable of inspecting projects, editing files, running tests, and managing Git worktrees.
 - **Dual-Model Orchestration:** Specialized separation between Coding Worker Model (code generation/debugging) and Tool Orchestrator Model (tool call validation and plan coordination).
 - **Centered Cybernetic Layout:** Centered 840px chat composer (`.vgt-code-composer`) and message history, providing responsive aesthetics across 1080p, 1440p, and 4K monitors.
 - **Zero-Latency History Restore:** Instant session rendering directly from memory cache; persistent chat composer visibility; automatic project context restore; sub-millisecond fast-path sync.
@@ -1008,7 +1008,7 @@ Go Cortex (pure stdlib). Guard Kernel. AES-256-GCM vault. Blockchain audit log. 
 
 VGT AETHEL is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. Any derivative work or network-deployed modification must be published under the same license.
 
-Enterprise deployments, TIER-0 audits (VGT SafetySys™) and commercial exception licenses: [visiongaiatechnology.de](https://visiongaiatechnology.de)
+Commercial inquiries and custom licensing: [visiongaiatechnology.de](https://visiongaiatechnology.de)
 
 ---
 
@@ -1018,6 +1018,6 @@ Enterprise deployments, TIER-0 audits (VGT SafetySys™) and commercial exceptio
 
 [![VGT](https://img.shields.io/badge/VisionGaia-Technology-cyan?style=for-the-badge)](https://visiongaiatechnology.de)
 
-*VGT AETHEL 1.0.0-beta.4 — Sovereign Strategic Intelligence OS & Autonomous Engineering Environment // VGT Coder Agentic IDE // Sphere 2.0 Desktop OS // Dual Permission Modes (VOLLZUGRIFF / INTERAKTIV) // SHADOW OSINT // WebGL Command Globe // Universal Context Bus // AI Track Changes // Wails 2.15 Desktop // Go 1.26.6 // DPAPI Key Store // AES-256-GCM Sealed Stores // Guard Kernel // Tamper-Evident Blockchain Audit // Sherpa-ONNX Offline TTS // 65+ Frontend Modules // DE/EN/ES/FR/RU // AGPLv3 // Windows 10/11 x64*
+*VGT AETHEL 1.0.0-beta.4 — Sovereign Strategic Intelligence OS & Development Environment // VGT Coder Coding Agent // Sphere 2.0 Desktop OS // Dual Permission Modes (VOLLZUGRIFF / INTERAKTIV) // SHADOW OSINT // WebGL Command Globe // Universal Context Bus // AI Track Changes // Wails 2.15 Desktop // Go 1.26.6 // DPAPI Key Store // AES-256-GCM Sealed Stores // Guard Kernel // Tamper-Evident Blockchain Audit // Sherpa-ONNX Offline TTS // 65+ Frontend Modules // DE/EN/ES/FR/RU // AGPLv3 // Windows 10/11 x64*
 
 </div>
