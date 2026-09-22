@@ -46,6 +46,7 @@ func main() {
 		MinWidth:          1024,
 		MinHeight:         700,
 		DisableResize:     false,
+		Frameless:         true,
 		StartHidden:       false,
 		HideWindowOnClose: false,
 		BackgroundColour:  &options.RGBA{R: 8, G: 8, B: 18, A: 255},
@@ -64,6 +65,7 @@ func main() {
 			WebviewIsTransparent: false,
 			WindowIsTranslucent:  false,
 			DisableWindowIcon:    false,
+			Theme:                windows.Dark,
 		},
 	})
 	if err != nil {

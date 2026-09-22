@@ -637,6 +637,92 @@ function setupEventListeners() {
     }
     // Load initial
     loadNeuralCoreEvaluation(false);
+
+    // Setup Custom Window Controls (Frameless Wails Desktop Window)
+    function setupWindowControls() {
+        const btnMin = document.getElementById("win-btn-minimize");
+        const btnMax = document.getElementById("win-btn-maximize");
+        const btnClose = document.getElementById("win-btn-close");
+        const iconMax = document.getElementById("win-icon-max");
+        const iconRestore = document.getElementById("win-icon-restore");
+        const headerBar = document.querySelector(".top-system-bar") || document.querySelector(".header-bar");
+
+        const updateMaxState = async () => {
+            try {
+                let isMax = false;
+                if (window.runtime?.WindowIsMaximised) {
+                    isMax = await window.runtime.WindowIsMaximised();
+                } else if (window.go?.main?.App?.WindowIsMaximised) {
+                    isMax = await window.go.main.App.WindowIsMaximised();
+                }
+                if (iconMax && iconRestore) {
+                    if (isMax) {
+                        iconMax.classList.add("hidden");
+                        iconRestore.classList.remove("hidden");
+                    } else {
+                        iconMax.classList.remove("hidden");
+                        iconRestore.classList.add("hidden");
+                    }
+                }
+            } catch (_) {}
+        };
+
+        if (btnMin) {
+            btnMin.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (window.runtime?.WindowMinimise) {
+                    window.runtime.WindowMinimise();
+                } else if (window.go?.main?.App?.WindowMinimise) {
+                    window.go.main.App.WindowMinimise();
+                }
+            });
+        }
+
+        if (btnMax) {
+            btnMax.addEventListener("click", async (e) => {
+                e.stopPropagation();
+                if (window.runtime?.WindowToggleMaximise) {
+                    window.runtime.WindowToggleMaximise();
+                } else if (window.go?.main?.App?.WindowToggleMaximise) {
+                    window.go.main.App.WindowToggleMaximise();
+                }
+                setTimeout(updateMaxState, 150);
+            });
+        }
+
+        if (btnClose) {
+            btnClose.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (window.runtime?.Quit) {
+                    window.runtime.Quit();
+                } else if (window.go?.main?.App?.WindowClose) {
+                    window.go.main.App.WindowClose();
+                } else {
+                    window.close();
+                }
+            });
+        }
+
+        if (headerBar) {
+            headerBar.addEventListener("dblclick", (e) => {
+                if (e.target.closest("button, input, select, a, .hud-action, .aethel-window-controls")) return;
+                if (window.runtime?.WindowToggleMaximise) {
+                    window.runtime.WindowToggleMaximise();
+                } else if (window.go?.main?.App?.WindowToggleMaximise) {
+                    window.go.main.App.WindowToggleMaximise();
+                }
+                setTimeout(updateMaxState, 150);
+            });
+        }
+
+        window.addEventListener("resize", () => {
+            updateMaxState();
+        });
+
+        setTimeout(updateMaxState, 300);
+    }
+
+    setupWindowControls();
 }
 
 function legacyWakeWordListenerDisabled() {

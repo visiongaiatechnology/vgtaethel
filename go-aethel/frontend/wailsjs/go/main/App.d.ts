@@ -14,3 +14,11 @@ export function SelectCodeProject():Promise<Record<string, string>>;
 export function SelectDirectory():Promise<string>;
 
 export function ShowWindow():Promise<void>;
+
+export function WindowClose():Promise<void>;
+
+export function WindowIsMaximised():Promise<boolean>;
+
+export function WindowMinimise():Promise<void>;
+
+export function WindowToggleMaximise():Promise<void>;

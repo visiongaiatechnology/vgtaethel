@@ -13,7 +13,7 @@
 ### Sovereign Strategic Intelligence OS
 
 [![License](https://img.shields.io/badge/License-AGPLv3-blue?style=for-the-badge)](https://www.gnu.org/licenses/agpl-3.0)
-[![Version](https://img.shields.io/badge/Version-1.0.0--beta.4-D4AF37?style=for-the-badge)](#-beta-v4-changelog)
+[![Version](https://img.shields.io/badge/Version-1.0.0--beta.4.1-D4AF37?style=for-the-badge)](#-beta-v4-changelog)
 [![Status](https://img.shields.io/badge/Status-ACTIVE_BETA-111111?style=for-the-badge)](#-beta-software--experimental-rd)
 [![Go](https://img.shields.io/badge/Go-1.26.6-00ADD8?style=for-the-badge&logo=go)](https://go.dev)
 [![Framework](https://img.shields.io/badge/Wails-2.15.0-DF0000?style=for-the-badge)](https://wails.io)
@@ -39,10 +39,11 @@
 
 ## ✨ Beta V4 Changelog
 
-> **Beta V4 (`1.0.0-beta.4`) Architecture Update:** Beta V4 introduces the **VGT Coder (Autonomous Coding Agent)**, the **Sphere 2.0 Personal Operations Desktop OS**, a dynamic **Dual-Mode Security Engine** (`VOLLZUGRIFF` vs. `INTERAKTIV`), and an exhaustive technical cartography mapped in [`ARCHITECTURE.md`](ARCHITECTURE.md).
-
-| Area | What changed in Beta V4 |
+> **Beta V4.1 (`1.0.0-beta.4.1`) Architecture & UI Update:** Beta V4.1 introduces a **Custom Frameless Window Titlebar** matching Aethel's cybernetic design, native Wails drag zones, integrated window controls (minimize, maximize/restore, close), alongside the **VGT Coder (Autonomous Coding Agent)**, the **Sphere 2.0 Personal Operations Desktop OS**, a dynamic **Dual-Mode Security Engine** (`VOLLZUGRIFF` vs. `INTERAKTIV`), and an exhaustive technical cartography mapped in [`ARCHITECTURE.md`](ARCHITECTURE.md).
+ 
+| Area | What changed in Beta V4.1 |
 |---|---|
+| **Custom Frameless Titlebar** | Native OS title bar eliminated in favor of a sovereign cybernetic dark-glass title bar with `--wails-draggable: drag` regions, responsive minimize/maximize/close controls, and double-click window toggle. |
 | **VGT Coder (Coding Agent)** | Experimental autonomous coding agent runtime (`go-aethel/coder/`) capable of multi-turn software development, AST inspection, file rewriting, project search, test execution, and Git diff synthesis. |
 | **Multi-Model Orchestration** | Dual-model architecture separating the **Coding Worker Model** (code generation & debugging) from the **Tool Orchestrator Model** (tool calling, argument verification, and step planning). |
 | **Centered Cybernetic Layout** | Chat composer (`.vgt-code-composer`) and message history are cleanly centered in a focused 840px column, providing responsive aesthetics across 1080p, 1440p, and 4K ultra-wide monitors. |
@@ -790,7 +791,15 @@ API keys and provider settings are entered through AETHEL's first-run setup and 
 
 ## 📋 Changelog
 
-### 1.0.0-beta.4 — Architecture & Desktop Overhaul *(Current)*
+### 1.0.0-beta.4.1 — Custom Frameless Window & Cybernetic Titlebar *(Current)*
+
+- **Frameless Window Architecture:** Eliminated the native OS window titlebar and borders via Wails `Frameless: true` and Windows dark theme configuration.
+- **Cybernetic Glass Titlebar:** Integrated custom window controls (`—` minimize, `▢` maximize/restore, `✕` close) directly into `.top-system-bar` in Aethel's signature cybernetic dark-glass aesthetic.
+- **Native Wails Dragging:** Entire upper system bar operates as a native window drag region via `--wails-draggable: drag` with proper `--wails-draggable: no-drag` protection for all interactive controls.
+- **Double-Click Maximize:** Native desktop behavior allowing double-clicking the header bar to toggle maximize/restore state, accompanied by dynamic SVG icon synchronization.
+- **Go Runtime Window Bindings:** Exposed `WindowMinimise()`, `WindowToggleMaximise()`, `WindowClose()`, and `WindowIsMaximised()` on the Go `App` struct.
+
+### 1.0.0-beta.4 — Architecture & Desktop Overhaul *(archived)*
 
 #### VGT Coder (Experimental Coding Agent)
 - **Autonomous Coding Agent:** Experimental multi-turn software development agent (`go-aethel/coder/`) capable of inspecting projects, editing files, running tests, and managing Git worktrees.

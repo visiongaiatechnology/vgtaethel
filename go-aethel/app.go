@@ -598,3 +598,33 @@ func isAPIPath(p string) bool {
 		strings.HasPrefix(p, "/v1/") ||
 		strings.HasPrefix(p, "/browser/")
 }
+
+// WindowMinimise minimises the Wails application window.
+func (a *App) WindowMinimise() {
+	if a.ctx != nil {
+		runtime.WindowMinimise(a.ctx)
+	}
+}
+
+// WindowToggleMaximise toggles between maximised and restored window state.
+func (a *App) WindowToggleMaximise() {
+	if a.ctx != nil {
+		runtime.WindowToggleMaximise(a.ctx)
+	}
+}
+
+// WindowClose gracefully shuts down the Wails application.
+func (a *App) WindowClose() {
+	if a.ctx != nil {
+		runtime.Quit(a.ctx)
+	}
+}
+
+// WindowIsMaximised returns true if the application window is currently maximised.
+func (a *App) WindowIsMaximised() bool {
+	if a.ctx != nil {
+		return runtime.WindowIsMaximised(a.ctx)
+	}
+	return false
+}
+
