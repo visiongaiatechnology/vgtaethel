@@ -23,10 +23,12 @@ import { initMailWorkspace } from './modules/mail_workspace.js';
 import { initOperatorWorkbench } from './modules/operator_workbench.js';
 import { initShadowOSINT } from './modules/shadow_osint.js';
 import { initVGTCode } from './modules/vgt_code.js';
+import { ensureServerAuthGate } from './modules/server_auth.js';
 
 // Initialize Application
 
 async function init() {
+    await ensureServerAuthGate();
     state.views = {
         core: document.getElementById("view-core"),
         chat: document.getElementById("view-chat"),

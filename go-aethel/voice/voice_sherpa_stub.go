@@ -1,7 +1,7 @@
-//go:build !cgo
+//go:build !cgo || (!windows && !sherpa)
 
-// Sherpa-ONNX stub for non-CGO builds.
-// Provides empty/noop implementations so the project compiles without GCC.
+// Sherpa-ONNX stub for non-CGO or server builds without native Sherpa libraries.
+// Provides empty/noop implementations so the project compiles without GCC/Sherpa SOs.
 package voice
 
 import (

@@ -1,14 +1,10 @@
+// STATUS: DIAMANT VGT SUPREME
 package main
 
 import (
 	"embed"
 	"io/fs"
 	"log"
-
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
-	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 //go:embed frontend/*
@@ -23,14 +19,28 @@ func main() {
 			panic(recovered)
 		}
 	}()
+
+	opts := parseServerRuntimeOptions()
+
 	if !isBindingsBuild() {
 		runtimeDir, err := configureRuntimeWorkingDirectory()
 		if err != nil {
 			log.Fatalf("AETHEL runtime workspace unavailable: %v", err)
 		}
 		log.Printf("[RUNTIME] Persistent workspace root: %s", runtimeDir)
+
+		exitAfterProvision, err := handlePasswordProvisionCLI(opts)
+		if err != nil {
+			log.Fatalf("AETHEL password configuration failed: %v", err)
+		}
+		if exitAfterProvision {
+			return
+		}
+
+		if err := initServerAuth(opts.ServerMode); err != nil {
+			log.Fatalf("AETHEL server authentication subsystem failed: %v", err)
+		}
 	}
-	log.Println("🛡️ VGT AETHEL :: INITIALISIERUNG (WAILS DESKTOP)...")
 
 	app := NewApp()
 
@@ -39,36 +49,16 @@ func main() {
 		log.Fatalf("Failed to load embedded frontend: %v", err)
 	}
 
-	err = wails.Run(&options.App{
-		Title:             "VGT AETHEL",
-		Width:             1440,
-		Height:            900,
-		MinWidth:          1024,
-		MinHeight:         700,
-		DisableResize:     false,
-		Frameless:         true,
-		StartHidden:       false,
-		HideWindowOnClose: false,
-		BackgroundColour:  &options.RGBA{R: 8, G: 8, B: 18, A: 255},
-		AssetServer: &assetserver.Options{
-			Assets:  sub,
-			Handler: APIHandler,
-		},
-		OnStartup:     app.startup,
-		OnDomReady:    app.domReady,
-		OnBeforeClose: app.beforeClose,
-		OnShutdown:    app.shutdown,
-		Bind: []interface{}{
-			app,
-		},
-		Windows: &windows.Options{
-			WebviewIsTransparent: false,
-			WindowIsTranslucent:  false,
-			DisableWindowIcon:    false,
-			Theme:                windows.Dark,
-		},
-	})
-	if err != nil {
-		log.Fatalf("Wails failed: %v", err)
+	if opts.ServerMode && !isBindingsBuild() {
+		log.Println("🛡️ VGT AETHEL :: INITIALISIERUNG (SERVER MODUS)...")
+		if err := runHTTPServer(app, sub, opts); err != nil {
+			log.Fatalf("Server failed: %v", err)
+		}
+		return
+	}
+
+	log.Println("🛡️ VGT AETHEL :: INITIALISIERUNG (WAILS DESKTOP)...")
+	if err := runDesktopWindow(app, sub); err != nil {
+		log.Fatalf("Desktop runtime failed: %v", err)
 	}
 }

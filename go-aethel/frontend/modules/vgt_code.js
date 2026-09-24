@@ -172,9 +172,20 @@ function populateModelSelect(select, models, storageKey, fallback) {
 
 async function openCodeProject() {
     const selector = window.go?.main?.App?.SelectCodeProject;
-    if (typeof selector !== 'function') return showToast('Native project picker is unavailable.', 'error');
     try {
-        const result = await selector();
+        let result;
+        if (typeof selector === 'function') {
+            result = await selector();
+        } else {
+            const enteredPath = window.prompt('Server-Projektpfad für VGT Code eingeben (z. B. /opt/projekt):', '');
+            if (!enteredPath || !enteredPath.trim()) return;
+            const resp = await fetch(`${state.API_BASE}/v1/code/workspace/project`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({ path: enteredPath.trim() }),
+            });
+            result = await decodeResponse(resp, 'Project selection');
+        }
         if (!result || result.status === 'cancelled') return;
         if (result.status !== 'success' || !result.path) throw new Error(result.message || 'Project selection failed.');
         codeState.project = { name: result.name || 'Project', path: result.path };
@@ -191,7 +202,11 @@ async function closeCodeProject() {
     codeState.project = null;
     codeState.activePath = '';
     const closer = window.go?.main?.App?.CloseCodeProject;
-    if (typeof closer === 'function') await closer().catch(error => console.warn('Project close binding failed', error));
+    if (typeof closer === 'function') {
+        await closer().catch(error => console.warn('Project close binding failed', error));
+    } else {
+        await fetch(`${state.API_BASE}/v1/code/workspace/project`, { method: 'DELETE' }).catch(() => {});
+    }
     setProjectUI(false);
 }
 

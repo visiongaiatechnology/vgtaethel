@@ -14,7 +14,6 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -127,8 +126,12 @@ func (s *Sapi5TTSProvider) Synthesize(text string, voice string) ([]byte, string
 		}
 	`, strings.ReplaceAll(voice, "'", "''"), strings.ReplaceAll(tempWav, "'", "''"), strings.ReplaceAll(ssml, "'", "''"))
 
-	cmd := exec.Command(security.GetPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	psPath := security.GetPowerShellPath()
+	if psPath == "" {
+		return nil, "", errors.New("SAPI5 is only supported on Windows")
+	}
+	cmd := exec.Command(psPath, "-NoProfile", "-NonInteractive", "-Command", psScript)
+	hideCommandWindow(cmd)
 	err = cmd.Run()
 	if err != nil {
 		return nil, "", fmt.Errorf("PowerShell SAPI5 failed: %v", err)
@@ -276,10 +279,15 @@ func (vr *VoiceRegistry) DisableSAPI5() {
 // scanLocalSAPI5Voices queries Windows for installed SAPI5 voices
 func (vr *VoiceRegistry) scanLocalSAPI5Voices() {
 	var profiles []VoiceProfile
+	psPath := security.GetPowerShellPath()
+	if psPath == "" {
+		vr.sapi5Voices = profiles
+		return
+	}
 
 	psCmd := "Add-Type -AssemblyName System.Speech; $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer; $synth.GetInstalledVoices() | Where-Object { $_.VoiceInfo.Culture.TwoLetterISOLanguageName -eq 'de' } | ForEach-Object { $_.VoiceInfo.Name + ';' + $_.VoiceInfo.Gender }"
-	cmd := exec.Command(security.GetPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psCmd)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	cmd := exec.Command(psPath, "-NoProfile", "-NonInteractive", "-Command", psCmd)
+	hideCommandWindow(cmd)
 	output, err := cmd.Output()
 	if err == nil {
 		lines := strings.Split(string(output), "\n")

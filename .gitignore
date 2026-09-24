@@ -9,6 +9,8 @@
 
 # Release/build outputs
 **/build/bin/**
+go-aethel/AETHEL-SERVER
+start-server.sh
 *.exe
 *.exe~
 *.test

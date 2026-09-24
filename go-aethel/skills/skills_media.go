@@ -9,9 +9,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
-	"syscall"
-
-	)
+)
 
 // --- 5b. SKILL: MEDIA CONTROL ---
 
@@ -75,7 +73,7 @@ func (s *MediaControlSkill) Execute(args json.RawMessage) (string, error) {
 			[MediaKey]::keybd_event([byte]%s, 0, 2, [UIntPtr]::Zero);
 		`, vk, vk)
 		cmd := exec.Command(security.GetPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd.SysProcAttr = security.HideWindowSysProcAttr()
 		if out, err := cmd.CombinedOutput(); err != nil {
 			security.LogKernelActivity("MEDIA_CONTROL_FAILED", input.Action, "ERROR")
 			return "", fmt.Errorf("media control failed: %v, output: %s", err, strings.TrimSpace(string(out)))
@@ -134,7 +132,7 @@ func (s *YouTubeControlSkill) Parameters() map[string]interface{} {
 func openVisibleURL(targetURL string) error {
 	if runtime.GOOS == "windows" {
 		cmd := exec.Command(TrustedExecutable("rundll32.exe"), "url.dll,FileProtocolHandler", targetURL)
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd.SysProcAttr = security.HideWindowSysProcAttr()
 		return cmd.Start()
 	}
 	if runtime.GOOS == "darwin" {
@@ -149,7 +147,7 @@ func sendWindowsKeys(sendKeys string) error {
 		[System.Windows.Forms.SendKeys]::SendWait('%s');
 	`, strings.ReplaceAll(sendKeys, "'", "''"))
 	cmd := exec.Command(security.GetPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	cmd.SysProcAttr = security.HideWindowSysProcAttr()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("send keys failed: %v, output: %s", err, strings.TrimSpace(string(out)))

@@ -11,6 +11,7 @@ require (
 	github.com/k2-fsa/sherpa-onnx-go v1.13.3
 	github.com/parquet-go/parquet-go v0.32.0
 	github.com/wailsapp/wails/v2 v2.15.0
+	golang.org/x/crypto v0.53.0
 	golang.org/x/net v0.56.0
 	golang.org/x/sys v0.47.0
 	golang.org/x/text v0.39.0
@@ -76,7 +77,6 @@ require (
 	github.com/wailsapp/go-webview2 v1.0.22 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
-	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
 	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect

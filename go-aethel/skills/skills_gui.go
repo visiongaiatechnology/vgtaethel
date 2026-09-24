@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-	"syscall"
 	"unicode"
 
 	"go-aethel/security"
@@ -276,7 +275,7 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 			Write-Output ($pos.X.ToString() + ';' + $pos.Y.ToString())
 		`, input.X, input.Y)
 		cmd := exec.Command(security.GetPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd.SysProcAttr = security.HideWindowSysProcAttr()
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			security.LogKernelActivity("GUI_MOVE_FAILED", fmt.Sprintf("x:%d, y:%d", input.X, input.Y), "ERROR")
@@ -319,7 +318,7 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 			%s
 		`, moveToTarget, mouseEventCode)
 		cmd := exec.Command(security.GetPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd.SysProcAttr = security.HideWindowSysProcAttr()
 		err := cmd.Run()
 		if err != nil {
 			security.LogKernelActivity("GUI_CLICK_FAILED", input.Button, "ERROR")
@@ -338,7 +337,7 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 			[System.Windows.Forms.SendKeys]::SendWait('%s');
 		`, escapedText)
 		cmd := exec.Command(security.GetPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd.SysProcAttr = security.HideWindowSysProcAttr()
 		err := cmd.Run()
 		if err != nil {
 			security.LogKernelActivity("GUI_TYPE_FAILED", input.Text, "ERROR")
@@ -357,7 +356,7 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 			[System.Windows.Forms.SendKeys]::SendWait('%s');
 		`, escapedKeys)
 		cmd := exec.Command(security.GetPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd.SysProcAttr = security.HideWindowSysProcAttr()
 		err := cmd.Run()
 		if err != nil {
 			security.LogKernelActivity("GUI_PRESS_FAILED", input.Keys, "ERROR")
@@ -374,7 +373,7 @@ func (s *GUIControlSkill) Execute(args json.RawMessage) (string, error) {
 			Write-Output ($pos.X.ToString() + ';' + $pos.Y.ToString() + ';' + $scr.Width.ToString() + ';' + $scr.Height.ToString())
 		`
 		cmd := exec.Command(security.GetPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd.SysProcAttr = security.HideWindowSysProcAttr()
 		out, err := cmd.Output()
 		if err != nil {
 			security.LogKernelActivity("GUI_POSITION_FAILED", "", "ERROR")
@@ -433,7 +432,7 @@ func validateWindowControlArgs(input GUIWindowControlArgs) error {
 func findWindowsPIDByTitle(pattern string) (string, error) {
 	const script = "Get-Process | Where-Object { $_.MainWindowTitle } | ForEach-Object { Write-Output ($_.Id.ToString() + \"`t\" + ($_.MainWindowTitle -replace \"[\\r\\n\\t]\", \" \")) }"
 	cmd := exec.Command(security.GetPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", script)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	cmd.SysProcAttr = security.HideWindowSysProcAttr()
 	output, err := cmd.Output()
 	if err != nil {
 		return "", errors.New("window title inventory failed")
@@ -547,7 +546,7 @@ func (s *GUIWindowControlSkill) Execute(args json.RawMessage) (string, error) {
 				$results | ConvertTo-Json
 			`
 			cmd := exec.Command(security.GetPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
-			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+			cmd.SysProcAttr = security.HideWindowSysProcAttr()
 			out, err := cmd.CombinedOutput()
 			if err != nil {
 				return "", fmt.Errorf("PowerShell windows list failed: %v, output: %s", err, string(out))
@@ -604,7 +603,7 @@ func (s *GUIWindowControlSkill) Execute(args json.RawMessage) (string, error) {
 					}
 				`, targetID, targetID)
 				cmd := exec.Command(security.GetPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
-				cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+				cmd.SysProcAttr = security.HideWindowSysProcAttr()
 				out, err := cmd.CombinedOutput()
 				outStr := strings.TrimSpace(string(out))
 				if err != nil || outStr == "NOT_FOUND" {
@@ -642,7 +641,7 @@ func (s *GUIWindowControlSkill) Execute(args json.RawMessage) (string, error) {
 					}
 				`, targetID, input.X, input.Y, input.Width, input.Height, input.X, input.Y, input.Width, input.Height)
 				cmd := exec.Command(security.GetPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
-				cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+				cmd.SysProcAttr = security.HideWindowSysProcAttr()
 				out, err := cmd.CombinedOutput()
 				outStr := strings.TrimSpace(string(out))
 				if err != nil || outStr == "NOT_FOUND" {
@@ -665,7 +664,7 @@ func (s *GUIWindowControlSkill) Execute(args json.RawMessage) (string, error) {
 					}
 				`, targetID)
 				cmd := exec.Command(security.GetPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
-				cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+				cmd.SysProcAttr = security.HideWindowSysProcAttr()
 				out, err := cmd.CombinedOutput()
 				if err != nil || strings.TrimSpace(string(out)) != "SUCCESS" {
 					return "", fmt.Errorf("Schließen von Fenster %s fehlgeschlagen: %v", targetID, err)

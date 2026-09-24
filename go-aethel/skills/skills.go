@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"go-aethel/security"
@@ -220,7 +219,7 @@ func CapturePrimaryDisplay() error {
 	psScript := strings.ReplaceAll(psScriptTemplate, "__SCREENSHOT_PATH__", strings.ReplaceAll(screenshotPath, "'", "''"))
 
 	cmd := exec.Command(security.GetPowerShellPath(), "-NoProfile", "-NonInteractive", "-Command", psScript)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	cmd.SysProcAttr = security.HideWindowSysProcAttr()
 	if err := cmd.Run(); err != nil {
 		return err
 	}

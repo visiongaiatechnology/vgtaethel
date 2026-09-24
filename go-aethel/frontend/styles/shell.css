@@ -52,3 +52,12 @@
 .aethel-win-btn.win-btn-close:hover { color: #ffffff !important; border-color: rgba(255, 80, 95, 0.8) !important; background: rgba(235, 45, 60, 0.85) !important; box-shadow: 0 0 16px rgba(235, 45, 60, 0.5) !important; }
 .aethel-win-btn:active { transform: scale(0.93); }
 
+/* ── SERVER MODE AUTHENTICATION GATE & LOCK CONTROL ── */
+.aethel-auth-gate { z-index: 200000 !important; background: radial-gradient(circle at 50% 25%, rgba(12, 34, 48, 0.92), rgba(3, 8, 15, 0.97)) !important; backdrop-filter: blur(28px) saturate(140%) !important; }
+.aethel-auth-card { max-width: 440px !important; width: calc(100% - 32px) !important; border: 1px solid rgba(85, 229, 255, 0.32) !important; box-shadow: 0 24px 80px rgba(0, 0, 0, 0.75), 0 0 40px rgba(85, 229, 255, 0.12) !important; text-align: center; }
+.aethel-auth-badge { display: inline-block; margin-bottom: 12px; padding: 4px 10px; font-size: 9px; letter-spacing: 0.18em; color: var(--a-cyan, #55e5ff); border: 1px solid rgba(85, 229, 255, 0.28); border-radius: 999px; background: rgba(85, 229, 255, 0.08); }
+.aethel-auth-form { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; text-align: left; }
+.aethel-auth-form .cyber-button { width: 100%; justify-content: center; margin-top: 6px; }
+.aethel-server-logout-btn { width: auto !important; min-height: 32px !important; padding: 0 10px !important; display: inline-flex; align-items: center; gap: 6px; font-size: 9px; letter-spacing: 0.14em; color: var(--a-text-soft, #d5e7f0) !important; border: 1px solid rgba(255, 148, 77, 0.35) !important; border-radius: var(--a-radius-sm) !important; background: rgba(42, 20, 14, 0.45) !important; cursor: pointer; transition: all 0.15s ease; }
+.aethel-server-logout-btn:hover { color: #ffffff !important; border-color: rgba(255, 110, 90, 0.75) !important; background: rgba(210, 52, 48, 0.45) !important; box-shadow: 0 0 14px rgba(255, 95, 75, 0.3) !important; }
+body.aethel-server-mode .top-system-bar { --wails-draggable: no-drag; }

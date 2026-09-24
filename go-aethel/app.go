@@ -14,8 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
-
 	"go-aethel/agent"
 	"go-aethel/coder"
 	"go-aethel/geoint"
@@ -48,18 +46,24 @@ func NewApp() *App {
 // APIRouter holds all API handlers — set up in startup(), used by APIHandler
 var APIRouter *http.ServeMux
 
-// APIHandler is used as the assetserver.Handler fallback.
-// Wails calls it whenever a request path doesn't match an embedded static file.
-// So /index.html → served from embedded FS; /v1/chat → APIHandler → APIRouter.
-// Everything runs on the same Wails virtual host = no CORS, no navigation, no PowerShell spawn.
+// APIHandler is used as the assetserver.Handler fallback and HTTP server API handler.
 var APIHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w = secureResponseWriter{ResponseWriter: w}
 	r.Body = http.MaxBytesReader(w, r.Body, 16*1024*1024)
-	if APIRouter != nil {
-		APIRouter.ServeHTTP(w, r)
+	if APIRouter == nil {
+		http.Error(w, `{"error":"starting"}`, http.StatusServiceUnavailable)
 		return
 	}
-	http.Error(w, `{"error":"starting"}`, http.StatusServiceUnavailable)
+	if ServerAuth != nil && ServerAuth.IsAuthRequired() && !isPublicAuthPath(r.URL.Path) {
+		if _, ok := ServerAuth.ValidateRequest(r); !ok {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Cache-Control", "no-store")
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = fmt.Fprintf(w, `{"error":"authentication required","auth_required":true,"configured":%t}`, ServerAuth.IsConfigured())
+			return
+		}
+	}
+	APIRouter.ServeHTTP(w, r)
 })
 
 // startup initialises all AETHEL state and registers API handlers.
@@ -340,6 +344,7 @@ func (a *App) startup(ctx context.Context) {
 
 	// Wire all API handlers — done before the window shows
 	APIRouter = http.NewServeMux()
+	registerAuthRoutes(APIRouter)
 	APIRouter.HandleFunc("/health", handlers.HandleHealth)
 	APIRouter.HandleFunc("/v1/assets/earth-texture", handlers.HandleEarthTexture)
 	APIRouter.HandleFunc("/assets/earth_day.jpg", handlers.HandleEarthTexture)
@@ -510,19 +515,17 @@ func (a *App) shutdown(ctx context.Context) {
 
 // HideToTray hides the window (callable from frontend via Wails binding)
 func (a *App) HideToTray() {
-	runtime.Hide(a.ctx)
+	platformHideWindow(a.ctx)
 }
 
 // ShowWindow brings AETHEL back from tray
 func (a *App) ShowWindow() {
-	runtime.Show(a.ctx)
+	platformShowWindow(a.ctx)
 }
 
 // SelectDirectory opens a native directory picker dialog and returns the selected path
 func (a *App) SelectDirectory() string {
-	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Projektverzeichnis für Aethel freigeben",
-	})
+	dir, err := platformOpenDirectoryDialog(a.ctx, "Projektverzeichnis für Aethel freigeben")
 	if err != nil {
 		log.Printf("Failed to open directory dialog: %v", err)
 		return ""
@@ -533,7 +536,7 @@ func (a *App) SelectDirectory() string {
 // SelectCodeProject grants the explicitly selected project read/write access
 // for the current coding session. Aethel runtime data is never auto-selected.
 func (a *App) SelectCodeProject() map[string]string {
-	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{Title: "Projekt in VGT Code öffnen"})
+	dir, err := platformOpenDirectoryDialog(a.ctx, "Projekt in VGT Code öffnen")
 	if err != nil {
 		log.Printf("VGT Code project dialog failed: %v", err)
 		return map[string]string{"status": "error", "message": "Projekt-Auswahl fehlgeschlagen."}
@@ -601,30 +604,21 @@ func isAPIPath(p string) bool {
 
 // WindowMinimise minimises the Wails application window.
 func (a *App) WindowMinimise() {
-	if a.ctx != nil {
-		runtime.WindowMinimise(a.ctx)
-	}
+	platformWindowMinimise(a.ctx)
 }
 
 // WindowToggleMaximise toggles between maximised and restored window state.
 func (a *App) WindowToggleMaximise() {
-	if a.ctx != nil {
-		runtime.WindowToggleMaximise(a.ctx)
-	}
+	platformWindowToggleMaximise(a.ctx)
 }
 
 // WindowClose gracefully shuts down the Wails application.
 func (a *App) WindowClose() {
-	if a.ctx != nil {
-		runtime.Quit(a.ctx)
-	}
+	platformWindowClose(a.ctx)
 }
 
 // WindowIsMaximised returns true if the application window is currently maximised.
 func (a *App) WindowIsMaximised() bool {
-	if a.ctx != nil {
-		return runtime.WindowIsMaximised(a.ctx)
-	}
-	return false
+	return platformWindowIsMaximised(a.ctx)
 }
 

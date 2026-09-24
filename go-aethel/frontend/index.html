@@ -44,6 +44,58 @@
     <div class="glow-orb orange"></div>
     <div class="glow-orb cyan"></div>
 
+    <!-- Server Mode Authentication Gate -->
+    <div id="aethel-auth-gate" class="modal-overlay aethel-auth-gate hidden" role="dialog" aria-modal="true" aria-labelledby="auth-gate-title">
+        <div class="glass-card setup-card aethel-auth-card">
+            <div class="aethel-auth-badge font-mono" id="auth-gate-mode-badge">SERVER ACCESS // ARGON2ID + AES-256-GCM</div>
+            <div class="logo-animation">
+                <svg viewBox="0 0 24 24" width="46" height="46" stroke="var(--vgt-cyan)" stroke-width="1.5" fill="none" class="pulse-icon">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    <rect x="9" y="10" width="6" height="5" rx="1" />
+                    <path d="M10 10V8a2 2 0 1 1 4 0v2" />
+                </svg>
+            </div>
+            <h2 id="auth-gate-title">OPERATOR AUTHENTIFIZIERUNG</h2>
+            <p class="subtitle" id="auth-gate-subtitle">Dieser Aethel-Server ist geschützt. Bitte gib dein Operator-Passwort ein, um die Sitzung freizuschalten.</p>
+
+            <form id="aethel-auth-form" class="aethel-auth-form" autocomplete="off">
+                <div class="input-group">
+                    <label for="auth-gate-password">
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--vgt-cyan)" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        OPERATOR-PASSWORT
+                    </label>
+                    <input type="password" id="auth-gate-password" placeholder="••••••••••••" autocomplete="current-password" required>
+                </div>
+
+                <div id="auth-gate-confirm-group" class="input-group hidden">
+                    <label for="auth-gate-password-confirm">
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--vgt-cyan)" stroke-width="2" fill="none"><path d="M20 6L9 17l-5-5"/></svg>
+                        PASSWORT BESTÄTIGEN (MIN. 10 ZEICHEN)
+                    </label>
+                    <input type="password" id="auth-gate-password-confirm" placeholder="••••••••••••" autocomplete="new-password">
+                </div>
+
+                <div id="auth-gate-error" class="error-msg hidden">
+                    <span class="dot red-dot"></span>
+                    <span id="auth-gate-error-text">Ungültiges Operator-Passwort.</span>
+                </div>
+
+                <button type="submit" id="auth-gate-submit" class="cyber-button">
+                    <span id="auth-gate-submit-label">SITZUNG ENTSPERREN // LOGIN</span>
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+            </form>
+
+            <div class="card-footer">
+                <span class="secure-badge">
+                    <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    ARGON2ID + AES-256-GCM SESSION GATE
+                </span>
+                <p class="footnote">Brute-Force Rate-Limit aktiv · HttpOnly SameSite=Strict Cookie</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Onboarding / Setup Wizard -->
     <div id="setup-wizard" class="modal-overlay hidden">
         <div class="glass-card setup-card">
@@ -232,6 +284,10 @@
                     <span id="hud-integrity-dot" class="pulse-dot green"></span>
                     <span id="hud-integrity-label" class="font-mono">SECURE</span>
                 </div>
+                <button id="btn-server-logout" class="hud-action aethel-server-logout-btn hidden" title="Server-Sitzung sperren / Abmelden" aria-label="Abmelden">
+                    <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    <span class="font-mono">LOCK</span>
+                </button>
                 <div class="win-controls-divider" aria-hidden="true"></div>
                 <div class="aethel-window-controls" role="toolbar" aria-label="Fenstersteuerung">
                     <button id="win-btn-minimize" class="aethel-win-btn win-btn-minimize" title="Minimieren" aria-label="Minimieren">

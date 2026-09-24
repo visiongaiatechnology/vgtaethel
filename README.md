@@ -747,6 +747,8 @@ go build -ldflags="-s -w" -o aethel.exe .
 
 ## 🚀 Quick Start
 
+### Option A: Windows 10/11 Desktop (Custom Frameless Wails Window)
+
 ```powershell
 # 1. Enter the authoritative desktop runtime
 cd go-aethel
@@ -758,8 +760,28 @@ go vet -buildvcs=false ./...
 # 3. Build with the pinned Wails 2.15 toolchain
 wails build -o AETHEL.exe -trimpath -nocolour
 
-# 4. Start the production artifact
+# 4. Start the desktop application
 .\build\bin\AETHEL.exe
+```
+
+### Option B: Linux Server (Headless Web Runtime + Login Protection)
+
+On Linux servers, AETHEL automatically runs in **Headless Server Mode**, serving the embedded frontend and REST API over a configurable port protected by an **Argon2id + AES-256-GCM Login Gate**:
+
+```bash
+# 1. Clone the repository on your Linux server
+git clone https://github.com/visiongaiatechnology/vgtaethel.git
+cd vgtaethel
+
+# 2. Run the interactive server installer (sets operator password, builds static binary, optional systemd unit)
+chmod +x install-server.sh
+./install-server.sh
+```
+
+You can also run `install-server.sh` non-interactively in automated server provisioning:
+
+```bash
+AETHEL_PORT=8080 AETHEL_ADMIN_PASSWORD="YourStrongPassword123!" AETHEL_INSTALL_SYSTEMD=1 ./install-server.sh
 ```
 
 API keys and provider settings are entered through AETHEL's first-run setup and encrypted local configuration. Never commit `vgt_workspace`, `.env`, keys, sessions or generated dossiers.
@@ -771,13 +793,14 @@ API keys and provider settings are entered through AETHEL's first-run setup and 
 | Metric | Value |
 |---|---|
 | **Language** | Go 1.26.6 |
-| **Framework** | Wails 2.15.0 Desktop (WebView2 — embedded frontend) |
+| **Framework** | Wails 2.15.0 Desktop (Windows) / Native Hardened HTTP(S) Server (Linux) |
 | **Architecture** | Local-first modular Go runtime with pinned Go modules and native Sherpa-ONNX runtime ([`ARCHITECTURE.md`](ARCHITECTURE.md)) |
-| **Platform** | Windows 10/11 x64 (official) |
+| **Platform** | Windows 10/11 x64 (Desktop) · Linux x86_64 / arm64 (Headless Server) |
 | **Backend Source Files** | 250+ Go source and test files |
 | **Frontend Modules** | 65+ JavaScript modules (embedded via `go:embed`) |
 | **Vault Encryption** | AES-256-GCM |
-| **Key Storage** | Windows DPAPI (`config.key.dpapi`) |
+| **Server Auth** | Argon2id (`t=3, m=64MiB`) + AES-256-GCM Sealed Store + HttpOnly/CSRF Session Gate |
+| **Key Storage** | Windows DPAPI (`config.key.dpapi`) / Sealed Key Vault (Linux `0600`) |
 | **Local State** | `AETHEL-SEAL-v1:` sealed encrypted stores |
 | **Audit Log** | SHA-256 blockchain-chained + `ValidateChain()` |
 | **TTS Primary** | Sherpa-ONNX (offline ONNX neural models via CGo runtime) |
@@ -791,7 +814,17 @@ API keys and provider settings are entered through AETHEL's first-run setup and 
 
 ## 📋 Changelog
 
-### 1.0.0-beta.4.1 — Custom Frameless Window & Cybernetic Titlebar *(Current)*
+### 1.0.0-beta.4.2 — Dual Runtime Detection, Linux Server Mode & Login Gate *(Current)*
+
+- **Automatic Platform & Runtime Detection:** Automatically launches the custom frameless Wails desktop window on Windows and switches to Headless HTTP/HTTPS Server Mode on Linux servers (or when `--server` / `AETHEL_SERVER_MODE=1` is passed).
+- **Argon2id + AES-256-GCM Server Login Protection:** Added `ServerAuthManager` protecting all `/v1/*` and `/browser/*` endpoints in server mode with OWASP-grade Argon2id password hashing, sealed disk persistence (`server_auth.seal`), `HttpOnly` `SameSite=Strict` session cookies, `X-Aethel-CSRF` token validation on mutating requests, and per-IP brute-force lockout protection.
+- **Cybernetic Login Gate & Session Lock UI:** Integrated `#aethel-auth-gate` login/setup screen in Aethel's dark-glass design and a header `LOCK` (logout) button, while automatically hiding desktop window controls when accessed via browser.
+- **Zero-GUI-Dependency Linux Builds:** Isolated Wails desktop bindings (`desktop_windows.go` / `desktop_other.go`), DuckDB CGo tags, and Sherpa-ONNX stubs so Linux server builds compile cleanly with `CGO_ENABLED=0 GOOS=linux`.
+- **1-Command Server Installer (`install-server.sh`):** Interactive and automated Linux server installation script with Go toolchain verification, password provisioning (`--set-password-stdin`), binary compilation, and hardened `systemd` unit setup.
+
+---
+
+### 1.0.0-beta.4.1 — Custom Frameless Window & Cybernetic Titlebar
 
 - **Frameless Window Architecture:** Eliminated the native OS window titlebar and borders via Wails `Frameless: true` and Windows dark theme configuration.
 - **Cybernetic Glass Titlebar:** Integrated custom window controls (`—` minimize, `▢` maximize/restore, `✕` close) directly into `.top-system-bar` in Aethel's signature cybernetic dark-glass aesthetic.
