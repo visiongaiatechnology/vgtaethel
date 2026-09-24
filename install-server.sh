@@ -104,7 +104,11 @@ ensure_go_toolchain() {
     echo -e "${GREEN}  ✓ Go erfolgreich bereitgestellt: $(go version)${NC}"
 }
 
-ensure_go_toolchain
+if [[ -x "${BINARY_PATH}" ]] && [[ "${1:-}" != "--rebuild" ]]; then
+    echo -e "${GREEN}  ✓ Vorab kompiliertes Release-Binary gefunden: ${BINARY_PATH}${NC}"
+else
+    ensure_go_toolchain
+fi
 
 # 3. Port & Operator Password Prompt
 echo -e "\n${CYAN}[2/5] Server-Netzwerk & Login-Schutz konfigurieren:${NC}"
@@ -154,17 +158,23 @@ else
     fi
 fi
 
-# 4. Compile Standalone Headless Server Binary
-echo -e "\n${CYAN}[3/5] Kompiliere AETHEL Server-Binary (CGO_ENABLED=0, eingebettetes Frontend)...${NC}"
+# 4. Compile or Verify Standalone Headless Server Binary
 mkdir -p "${WORKSPACE_DIR}"
 chmod 700 "${WORKSPACE_DIR}"
 
-(
-    cd "${APP_DIR}"
-    CGO_ENABLED=0 GOOS=linux GOARCH="${GOARCH}" go build -trimpath -ldflags="-s -w" -o "${BINARY_PATH}" .
-)
-chmod 750 "${BINARY_PATH}"
-echo -e "${GREEN}  ✓ Binary kompiliert: ${BINARY_PATH}${NC}"
+if [[ -x "${BINARY_PATH}" ]] && [[ "${1:-}" != "--rebuild" ]]; then
+    echo -e "\n${CYAN}[3/5] Nutze vorab kompiliertes AETHEL Server-Binary...${NC}"
+    chmod 750 "${BINARY_PATH}"
+    echo -e "${GREEN}  ✓ Binary bereit: ${BINARY_PATH}${NC}"
+else
+    echo -e "\n${CYAN}[3/5] Kompiliere AETHEL Server-Binary (CGO_ENABLED=0, eingebettetes Frontend)...${NC}"
+    (
+        cd "${APP_DIR}"
+        CGO_ENABLED=0 GOOS=linux GOARCH="${GOARCH}" go build -trimpath -ldflags="-s -w" -o "${BINARY_PATH}" .
+    )
+    chmod 750 "${BINARY_PATH}"
+    echo -e "${GREEN}  ✓ Binary kompiliert: ${BINARY_PATH}${NC}"
+fi
 
 # 5. Provision Password into Sealed Authority Store
 echo -e "\n${CYAN}[4/5] Versiegele Operator-Passwort (Argon2id + AES-256-GCM)...${NC}"
